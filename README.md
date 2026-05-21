@@ -134,7 +134,8 @@ Solo registran URLs en Next.js. Cada archivo importa el componente real desde `m
 
 ```
 pages/
-  index.tsx                                    ← landing orbita.com
+  inicio.tsx                                   ← landing pública (/inicio) — ThemeProvider + Hero + ScrollSequence + etc.
+  index.tsx                                    ← landing orbita.com (redirige o es el mismo que /inicio)
   login.tsx
   signup.tsx
   home.tsx                                     ← dashboard del dueño (sus negocios)
@@ -144,11 +145,18 @@ pages/
       setup.tsx
       success.tsx
   admin/
-    index.tsx                                  ← dashboard global multi-negocios
+    index.tsx                                  ← /admin — panel de administración (placeholder, en desarrollo)
     [negocioId]/
       [moduloPadre]/
         [seccion].tsx                          ← ruta dinámica (conecta URL con módulo)
 ```
+
+#### URLs disponibles
+
+| URL | Archivo | Estado |
+|-----|---------|--------|
+| `/inicio` | `pages/inicio.tsx` | Landing page pública completa con canvas, módulos y testimonios |
+| `/admin` | `pages/admin/index.tsx` | Placeholder — panel de administración en desarrollo |
 
 La ruta dinámica `[seccion].tsx` usa un `componentMap` que conecta cada sección con su componente:
 

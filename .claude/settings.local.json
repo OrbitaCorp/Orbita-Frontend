@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Get-ChildItem -Recurse c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\src\\\\modules)"
+      "Bash(Get-ChildItem -Recurse c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\src\\\\modules)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\Orbita-corp\\\\\" -Force)",
+      "PowerShell(ls \"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\Orbita-corp\\\\\" | ForEach-Object { $_.Name })"
     ]
   }
 }

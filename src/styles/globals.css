@@ -1,0 +1,275 @@
+@import "tailwindcss";
+
+/* ─── Tema Tailwind v4 (utilidades custom) ──────────────────────────────── */
+
+@theme {
+  --font-family-sora: 'Sora', 'Inter', sans-serif;
+  --font-family-mono: '"Geist Mono"', '"Fira Code"', monospace;
+
+  --animate-twinkle:      twinkle 6s infinite;
+  --animate-fade-up:      fadeUp 1s ease forwards;
+  --animate-blink:        blink 1.4s infinite;
+  --animate-float:        float 4s ease-in-out infinite;
+  --animate-pulse-ring:   pulseRing 1.8s ease-out infinite;
+}
+
+/* ─── Tokens de color (admin / design system) ───────────────────────────── */
+
+:root {
+  --color-bg:           #FFFFFF;
+  --color-surface:      #F8FAFC;
+  --color-surface-alt:  #F1F5F9;
+  --color-border:       #E2E8F0;
+  --color-border-strong:#CBD5E1;
+
+  --color-text:         #0F172A;
+  --color-body:         #334155;
+  --color-muted:        #64748B;
+  --color-subtle:       #94A3B8;
+
+  --color-primary:      #3B82F6;
+  --color-primary-h:    #2563EB;
+  --color-primary-bg:   #EFF6FF;
+
+  --color-success:      #10B981;
+  --color-success-bg:   #ECFDF5;
+  --color-warning:      #F59E0B;
+  --color-warning-bg:   #FFFBEB;
+  --color-error:        #EF4444;
+  --color-error-bg:     #FEF2F2;
+  --color-info:         #3B82F6;
+  --color-info-bg:      #EFF6FF;
+}
+
+.dark {
+  --color-bg:           #0F172A;
+  --color-surface:      #1E293B;
+  --color-surface-alt:  #334155;
+  --color-border:       #334155;
+  --color-border-strong:#475569;
+
+  --color-text:         #F1F5F9;
+  --color-body:         #CBD5E1;
+  --color-muted:        #94A3B8;
+  --color-subtle:       #64748B;
+
+  --color-primary:      #60A5FA;
+  --color-primary-h:    #93C5FD;
+  --color-primary-bg:   #1E3A5F;
+
+  --color-success:      #34D399;
+  --color-success-bg:   #064E3B;
+  --color-warning:      #FBBF24;
+  --color-warning-bg:   #451A03;
+  --color-error:        #F87171;
+  --color-error-bg:     #450A0A;
+  --color-info:         #60A5FA;
+  --color-info-bg:      #1E3A5F;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar { display: none; }
+
+body { margin: 0; min-height: 100vh; overflow-x: hidden; }
+
+/* ─── Landing page · fondo por tema ─────────────────────────────────────── */
+
+html.dark body {
+  background: linear-gradient(180deg,
+    #080f22 0%, #050d1c 18%, #020617 40%, #020617 70%, #04091a 90%, #020511 100%
+  ) fixed;
+  color: #f1f5f9;
+}
+html.light body { background: #eef4ff; color: #0f172a; }
+
+@media (max-width: 1024px) {
+  html.dark body { background: #020617; }
+}
+
+/* ─── Animaciones del design system ─────────────────────────────────────── */
+
+@keyframes orbita-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes orbita-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes orbita-modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+@keyframes orbita-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ─── Animaciones landing ───────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  0%   { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; }
+  50%       { opacity: 0.7; }
+}
+@keyframes blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1);   }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes pulseRing {
+  0%   { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(2.2);  opacity: 0; }
+}
+@keyframes slideInRight {
+  0%   { transform: translateX(110%); opacity: 0; }
+  100% { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOutRight {
+  0%   { transform: translateX(0);    opacity: 1; }
+  100% { transform: translateX(110%); opacity: 0; }
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes orbitSpin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+@keyframes counterSpinSat {
+  0%   { transform: translate(-50%,-50%) rotate(0deg)    scale(0.82); opacity: 0.4; }
+  50%  { transform: translate(-50%,-50%) rotate(-180deg) scale(1.12) translateY(-6px); opacity: 1; }
+  100% { transform: translate(-50%,-50%) rotate(-360deg) scale(0.82); opacity: 0.4; }
+}
+@keyframes hubSpin    { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+@keyframes hubCounter { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+@keyframes legalIn {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+/* ─── Landing page · clases CSS ─────────────────────────────────────────── */
+
+.typing-dot { animation: blink 1.4s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+.msg-enter { animation: msgIn 0.3s ease forwards; }
+
+.shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+.dark .shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 400% 100%;
+}
+
+#main-canvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
+}
+
+.orbit-path {
+  position: absolute; inset: 0;
+  animation: orbitSpin var(--dur, 30s) linear infinite;
+  transform-style: preserve-3d;
+}
+.ring-2 .orbit-path { animation-direction: reverse; }
+.ring-2 .sat { animation-direction: reverse; }
+
+.sat {
+  position: absolute; top: 0; left: 0;
+  animation: counterSpinSat var(--dur, 30s) linear infinite;
+}
+
+.hub-orbit-wrap {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  animation: hubSpin 60s linear infinite;
+  transform-origin: center;
+}
+.hub-node-inner { animation: hubCounter 60s linear infinite; transform-origin: center; }
+
+.progress-bar {
+  position: fixed; left: 24px; top: 50%; transform: translateY(-50%);
+  width: 2px; height: 160px;
+  background: rgba(255,255,255,0.1); z-index: 100; border-radius: 2px;
+}
+.light .progress-bar { background: rgba(37,99,235,0.15); }
+.progress-fill { position: absolute; top: 0; left: 0; width: 100%; height: 0%; background: #3b82f6; border-radius: 2px; }
+
+.slide-container { position: relative; height: 150vh; }
+.sticky-slide {
+  position: sticky; top: 0; height: 100vh;
+  overflow: hidden; display: flex; align-items: center;
+}
+.sticky-slide > section {
+  width: 100%;
+  padding-top:    clamp(1rem, 3vh, 2.5rem);
+  padding-bottom: clamp(1rem, 3vh, 2.5rem);
+}
+
+.hero-height { height: 100vh; }
+@supports (height: 100svh) { .hero-height { height: 100svh; } }
+
+.section-content {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  opacity: 0; visibility: hidden; gap: 60px;
+}
+
+@media (max-width: 1024px) {
+  .progress-bar { display: none; }
+}
+@media (max-width: 768px) {
+  .section-content {
+    flex-direction: column; gap: 20px;
+    justify-content: center; align-items: center; padding-top: 72px;
+  }
+}
+
+.arc-card {
+  position: absolute; width: 130px; height: 170px;
+  border-radius: 14px; overflow: hidden;
+  border: 2px solid var(--card-border, #1e293b);
+  box-shadow: 0 12px 30px -6px rgba(0,0,0,0.5);
+}
+.arc-card img { width: 100%; height: 100%; object-fit: cover; opacity: 0.75; }
+.arc-card::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(2,6,23,0.95) 0%, transparent 55%);
+  z-index: 1; pointer-events: none;
+}
+.arc-label {
+  position: absolute; bottom: 12px; left: 0; width: 100%;
+  text-align: center; z-index: 2;
+  font-size: 11px; font-weight: 700; color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,1);
+}
+.light .arc-card::after { background: linear-gradient(to top, rgba(248,250,252,0.9) 0%, transparent 55%); }
+.light .arc-label { color: #0F172A; text-shadow: none; }
+
+.legal-modal-in { animation: legalIn 0.2s ease-out; }
