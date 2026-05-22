@@ -3,30 +3,38 @@ import { useState } from 'react';
 // ─── Line Chart ───────────────────────────────────────────────────────────────
 
 interface LineChartProps {
-  data:    number[];
-  labels:  string[];
-  color?:  string;
-  height?: number;
-  max?:    number;
+    data:          number[]
+    labels:        string[]
+    color?:        string
+    height?:       number
+    max?:          number
+    // NUEVO: función opcional para formatear el valor en el tooltip.
+    // Si no se pasa, muestra el número crudo.
+    // Ejemplo de uso: formatValue={v => '$' + v.toLocaleString('es-AR')}
+    formatValue?:  (v: number) => string
 }
 
-export function LineChart({ data, labels, color = 'var(--color-primary)', height = 140, max }: LineChartProps) {
+export function LineChart({ data, labels, color = 'var(--color-primary)', height = 140, max, formatValue }: LineChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
   const w       = 280;
   const pad     = { l: 30, r: 8, t: 10, b: 22 };
   const innerW  = w - pad.l - pad.r;
   const innerH  = height - pad.t - pad.b;
   const maxVal  = max ?? Math.max(...data);
+  
+  
 
   const pts = data.map((v, i) => ({
     x: pad.l + (i / (data.length - 1)) * innerW,
     y: pad.t + innerH - (v / maxVal) * innerH,
     v, i,
+    
   }));
 
   const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
   const areaPath = `${linePath} L ${pts[pts.length - 1].x},${pad.t + innerH} L ${pts[0].x},${pad.t + innerH} Z`;
   const hp       = hovered !== null ? pts[hovered] : null;
+  
 
   return (
     <div style={{ position: 'relative' }}>
@@ -86,8 +94,9 @@ export function LineChart({ data, labels, color = 'var(--color-primary)', height
           fontSize:      11,
           pointerEvents: 'none',
           fontFamily:    '"Geist Mono", monospace',
+          
         }}>
-          {labels[hp.i]} · {hp.v}
+          {labels[hp.i]} · {formatValue ? formatValue(hp.v) : hp.v}
         </div>
       )}
     </div>

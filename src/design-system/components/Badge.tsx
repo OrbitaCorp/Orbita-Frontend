@@ -4,7 +4,10 @@ export type BadgeStatus =
   | 'cancelado'
   | 'completado'
   | 'en-proceso'
-  | 'enviado';
+  | 'enviado'
+  | 'preparacion'
+  | 'entregado'
+  ;
 
 interface BadgeConfig {
   label: string;
@@ -20,6 +23,9 @@ const config: Record<BadgeStatus, BadgeConfig> = {
   completado: { label: 'Completado',  dot: '#3B82F6', light: { bg: '#EFF6FF', fg: '#1E40AF' }, dark: { bg: 'rgba(96,165,250,0.14)',  fg: '#93C5FD' } },
   'en-proceso': { label: 'En proceso', dot: '#8B5CF6', light: { bg: '#F5F3FF', fg: '#5B21B6' }, dark: { bg: 'rgba(167,139,250,0.14)', fg: '#A78BFA' } },
   enviado:    { label: 'Enviado',     dot: '#3B82F6', light: { bg: '#EFF6FF', fg: '#1E40AF' }, dark: { bg: 'rgba(96,165,250,0.14)',  fg: '#60A5FA' } },
+  preparacion:  { label: 'En prep.',     dot: '#8B5CF6', light: { bg: '#F5F3FF', fg: '#5B21B6' }, dark: { bg: 'rgba(167,139,250,0.14)', fg: '#A78BFA' } },
+  entregado:    { label: 'Entregado',    dot: '#10B981', light: { bg: '#ECFDF5', fg: '#065F46' }, dark: { bg: 'rgba(52,211,153,0.12)',  fg: '#34D399' } },
+
 };
 
 interface BadgeProps {
