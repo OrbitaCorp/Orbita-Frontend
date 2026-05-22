@@ -1,0 +1,9 @@
+<svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arco exterior (círculo incompleto, efecto "G") -->
+  <circle cx="15" cy="15" r="13" stroke="#2563eb" stroke-width="3.2"
+          stroke-dasharray="60 22" stroke-linecap="round"/>
+  <!-- Punto superior derecho -->
+  <circle cx="25.5" cy="7.5" r="4" fill="#93c5fd"/>
+  <!-- Punto central -->
+  <circle cx="15" cy="15" r="4.5" fill="#1e3a8a"/>
+</svg>
