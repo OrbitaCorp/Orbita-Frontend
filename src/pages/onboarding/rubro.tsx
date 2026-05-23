@@ -1,1 +1,5 @@
-export default function RubroPage() { return null; }
+import { ElegirRubro } from '@/modules/onboarding/ElegirRubro'
+
+export default function RubroPage() {
+  return <ElegirRubro />
+}

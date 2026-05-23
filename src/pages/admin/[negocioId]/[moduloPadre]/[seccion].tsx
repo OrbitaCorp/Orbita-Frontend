@@ -16,6 +16,7 @@ const componentMap: Record<string, Record<string, ComponentType>> = {
     ventas: {
         dashboard: dynamic(() => import('@/modules/ventas/admin/reportes/Dashboard'), { ssr: false }),pedidos:        dynamic(() => import('@/modules/ventas/admin/pedidos/PedidoLista'), { ssr: false }),
         catalogo:       dynamic(() => import('@/modules/ventas/admin/catalogo/ProductoLista'), { ssr: false }),
+        categorias:     dynamic(() => import('@/modules/ventas/admin/catalogo/Categorias'), { ssr: false }),
         clientes:       dynamic(() => import('@/modules/ventas/admin/clientes/ClienteLista'), { ssr: false }),
         reportes:       dynamic(() => import('@/modules/ventas/admin/reportes/ReporteVentas'), { ssr: false }),
         configuracion:  dynamic(() => import('@/modules/ventas/admin/configuracion/ConfigGeneral'), { ssr: false }),

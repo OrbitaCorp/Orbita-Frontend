@@ -164,6 +164,15 @@ html.light body { background: #eef4ff; color: #0f172a; }
 }
 @keyframes hubSpin    { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
 @keyframes hubCounter { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes scaleIn {
+  from { transform: scale(0);  opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+@keyframes satelliteOrbit {
+  from { transform: rotate(0deg)   translateX(52px) rotate(0deg);    }
+  to   { transform: rotate(360deg) translateX(52px) rotate(-360deg); }
+}
 @keyframes legalIn {
   from { opacity: 0; transform: scale(0.97) translateY(8px); }
   to   { opacity: 1; transform: scale(1)    translateY(0);   }

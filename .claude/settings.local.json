@@ -6,7 +6,10 @@
       "PowerShell(ls \"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\Orbita-corp\\\\\" | ForEach-Object { $_.Name })",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(Get-ChildItem -Recurse \"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\src\\\\modules\\\\ventas\\\\admin\\\\\" -Force | Select-Object -ExpandProperty FullName | ForEach-Object { $_ -replace [regex]::Escape\\(\"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\\"\\), \"\" })",
+      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\src\\\\modules\\\\ventas\\\\admin\\\\\" -Filter \"*.ts\" -Name)",
+      "PowerShell(\\(Get-Item \"c:\\\\Users\\\\Mateo\\\\Desktop\\\\Orbita\\\\Orbita-Frontend\\\\src\\\\modules\\\\ventas\\\\admin\\\\reportes\\\\Dashboard.tsx\"\\).Length)"
     ]
   }
 }

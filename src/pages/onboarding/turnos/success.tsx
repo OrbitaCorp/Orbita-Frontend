@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Check, type LucideIcon, Orbit, Package, Settings2, Key, Rocket } from 'lucide-react'
+import { Check, type LucideIcon, Orbit, CalendarDays, Settings2, Key, Rocket } from 'lucide-react'
 
 const MENSAJES: { Icon: LucideIcon; texto: string }[] = [
-  { Icon: Orbit,     texto: 'Iniciando tu espacio en órbita...'        },
-  { Icon: Package,   texto: 'Cargando el catálogo de productos...'     },
-  { Icon: Settings2, texto: 'Configurando los módulos de tu tienda...' },
-  { Icon: Key,       texto: 'Activando tu cuenta...'                   },
-  { Icon: Rocket,    texto: '¡Todo listo para despegar!'               },
+  { Icon: Orbit,        texto: 'Iniciando tu espacio en órbita...'    },
+  { Icon: CalendarDays, texto: 'Configurando la agenda de turnos...'  },
+  { Icon: Settings2,    texto: 'Preparando el sistema de reservas...' },
+  { Icon: Key,          texto: 'Activando tu cuenta...'               },
+  { Icon: Rocket,       texto: '¡Todo listo para despegar!'           },
 ]
 
 const DURACION_MS = 680
 
-export default function TiendaSuccessPage() {
+export default function TurnosSuccessPage() {
   const router  = useRouter()
   const [msgIdx, setMsgIdx] = useState(0)
   const [fase,   setFase]   = useState<'cargando' | 'listo'>('cargando')
@@ -126,7 +126,7 @@ export default function TiendaSuccessPage() {
         {fase === 'listo' && (
           <div style={{ animation: 'fadeUp 0.4s ease 0.2s both' }}>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text)', margin: '0 0 6px' }}>
-              ¡Tu tienda está lista!
+              ¡Tu negocio está listo!
             </h2>
             <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0 }}>
               Redirigiendo a tu panel…

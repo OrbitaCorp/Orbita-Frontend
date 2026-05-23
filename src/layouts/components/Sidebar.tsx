@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Home, ShoppingBag, Package, Users, Store, BarChart2, CreditCard, ChevronDown, Settings, HelpCircle, Tag, Percent, Truck, MessageSquare  } from 'lucide-react'
+import { Home, ShoppingBag, Package, Users, BarChart2, CreditCard, ChevronDown, Settings, HelpCircle, Tag, Truck, MessageSquare, FolderOpen } from 'lucide-react'
 
 export default function Sidebar() {
     const { query } = useRouter()
@@ -13,6 +13,7 @@ export default function Sidebar() {
     const navItems = [
     { label: 'Pedidos',    Icon: ShoppingBag,   href: `/admin/${negocioId}/ventas/pedidos` },
     { label: 'Catálogo',   Icon: Package,       href: `/admin/${negocioId}/ventas/catalogo` },
+    { label: 'Categorías', Icon: FolderOpen,    href: `/admin/${negocioId}/ventas/categorias` },
     { label: 'Clientes',   Icon: Users,         href: `/admin/${negocioId}/ventas/clientes` },
     { label: 'Reportes',   Icon: BarChart2,     href: `/admin/${negocioId}/ventas/reportes` },
     { label: 'POS',        Icon: CreditCard,    href: `/admin/${negocioId}/ventas/pos` },

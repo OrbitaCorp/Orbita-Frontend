@@ -1,27 +1,38 @@
-// import type { AppProps } from 'next/app';
-// import '../styles/globals.css';
-
-// export default function App({ Component, pageProps }: AppProps) {
-//   return <Component {...pageProps} />;
-// }
-// Sin esto, al recargar la página el usuario ve un flash blanco
-// antes de que React aplique el tema oscuro (porque useEffect
-// corre después del primer render).
-//
-// La solución: un script inline que corre ANTES de que React hidrate,
-// aplicando el tema directamente desde localStorage.
-
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
 import type { AppProps } from 'next/app'
 import '@/styles/globals.css'
+import 'leaflet/dist/leaflet.css'
+import { PageLoader } from '@/components/PageLoader'
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Carga inicial: ocultar el loader después de que React hidrata
+    const timer = setTimeout(() => setLoading(false), 500)
+
+    const onStart    = () => setLoading(true)
+    const onFinish   = () => setLoading(false)
+
+    router.events.on('routeChangeStart',    onStart)
+    router.events.on('routeChangeComplete', onFinish)
+    router.events.on('routeChangeError',    onFinish)
+
+    return () => {
+      clearTimeout(timer)
+      router.events.off('routeChangeStart',    onStart)
+      router.events.off('routeChangeComplete', onFinish)
+      router.events.off('routeChangeError',    onFinish)
+    }
+  }, [router.events])
+
   return (
     <>
       {/*
-        Script que corre sincrónicamente antes del render.
-        dangerouslySetInnerHTML es necesario — no hay otra forma
-        de inyectar un script inline en Next.js Pages Router.
-        El contenido es seguro: solo lee localStorage y agrega una clase.
+        Script sincrónico — corre antes de que React hidrate.
+        Aplica el tema oscuro desde localStorage para evitar flash blanco.
       */}
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
@@ -32,6 +43,7 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         })();
       `}} />
+      <PageLoader visible={loading} />
       <Component {...pageProps} />
     </>
   )

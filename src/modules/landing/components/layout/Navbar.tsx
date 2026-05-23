@@ -88,7 +88,7 @@ export function Navbar() {
             Iniciar sesión
           </a>
 
-          <a href="/signup" className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/25 hover:-translate-y-0.5">
+          <a href="/onboarding/rubro" className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/25 hover:-translate-y-0.5">
             Crear tu espacio
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -110,7 +110,7 @@ export function Navbar() {
               {l.label}
             </a>
           ))}
-          <a href="/signup" className="mt-2 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold">
+          <a href="/onboarding/rubro" className="mt-2 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold">
             Crear tu espacio →
           </a>
         </div>
