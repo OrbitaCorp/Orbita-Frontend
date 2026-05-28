@@ -1,7 +1,11 @@
+// Cuando alguien entra a /admin sin especificar negocio ni sección, lo mandamos directo al dashboard de 'rama-tienda'.
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
+
 export default function AdminPage() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif', color: '#64748b' }}>
-      Panel de administración — próximamente
-    </div>
-  );
+    const router = useRouter()
+    useEffect(() => {
+        router.replace('/admin/rama-tienda/ventas/dashboard')
+    }, [])
+    return null
 }
