@@ -217,7 +217,7 @@ export default function DesignSystemPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 400 }}>
               <Toast variant="success" title="Pedido confirmado"   description="#ORB-2847 pasó a estado en preparación." />
               <Toast variant="error"   title="Error al guardar"    description="Verificá tu conexión e intentá de nuevo." persistent onClose={() => {}} />
-              <Toast variant="warning" title="Stock bajo"          description="Quedan 2 unidades de "Buzo capucha azul"." />
+              <Toast variant="warning" title="Stock bajo"          description={'Quedan 2 unidades de "Buzo capucha azul".'} />
               <Toast variant="info"    title="Nueva versión"       description="Actualizamos el panel de pedidos con mejoras." />
             </div>
           </Section>
