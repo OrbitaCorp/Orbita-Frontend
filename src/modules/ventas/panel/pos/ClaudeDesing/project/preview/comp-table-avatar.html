@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--color-bg); display:flex; gap:34px; align-items:center; font-family:var(--font-sans); }
+  .avatars { display:flex; gap:8px; }
+  .av { border-radius:50%; display:grid; place-items:center; font-weight:700; flex-shrink:0; }
+  .table { flex:1; border:1px solid var(--color-border); border-radius:10px; overflow:hidden; }
+  .th, .tr { display:grid; grid-template-columns:1.5fr 1fr 1fr; padding:0 14px; align-items:center; }
+  .th { height:38px; background:var(--color-surface-alt); }
+  .th span { font-size:11px; font-weight:600; color:var(--color-muted); text-transform:uppercase; letter-spacing:.05em; }
+  .tr { height:46px; border-top:1px solid var(--color-border); font-size:13px; color:var(--color-body); }
+  .m { font-family:var(--font-mono); }
+</style></head>
+<body>
+  <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+    <div class="avatars">
+      <div class="av" style="width:36px;height:36px;font-size:15px;background:oklch(0.88 0.08 200);color:oklch(0.35 0.12 200)">M</div>
+      <div class="av" style="width:36px;height:36px;font-size:15px;background:oklch(0.88 0.08 40);color:oklch(0.35 0.12 40)">A</div>
+      <div class="av" style="width:36px;height:36px;font-size:15px;background:oklch(0.88 0.08 300);color:oklch(0.35 0.12 300)">L</div>
+    </div>
+    <span style="font-size:11px;color:var(--color-subtle);font-family:var(--font-mono)">Avatar · hue por nombre</span>
+  </div>
+  <div class="table">
+    <div class="th"><span>Pedido</span><span>Estado</span><span style="text-align:right">Total</span></div>
+    <div class="tr"><span class="m">#A-1042</span><span>Confirmado</span><span class="m" style="text-align:right;color:var(--color-text)">$12.480</span></div>
+    <div class="tr"><span class="m">#A-1041</span><span>Pendiente</span><span class="m" style="text-align:right;color:var(--color-text)">$3.900</span></div>
+  </div>
+</body></html>

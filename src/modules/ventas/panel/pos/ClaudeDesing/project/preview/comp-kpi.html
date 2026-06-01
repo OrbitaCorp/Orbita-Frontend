@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--color-surface); display:flex; gap:16px; font-family:var(--font-sans); }
+  .kpi { flex:1; background:var(--color-bg); border:1px solid var(--color-border); border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); }
+  .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+  .lbl { font-size:12px; font-weight:600; color:var(--color-muted); text-transform:uppercase; letter-spacing:.04em; }
+  .ico { width:32px; height:32px; border-radius:8px; display:grid; place-items:center; }
+  .val { font-size:30px; font-weight:700; color:var(--color-text); font-family:var(--font-mono); letter-spacing:-.02em; line-height:1; margin-bottom:10px; }
+  .foot { display:flex; align-items:center; justify-content:space-between; }
+  .delta { display:inline-flex; align-items:center; gap:4px; height:22px; padding:0 8px; border-radius:6px; font-size:12px; font-weight:600; font-family:var(--font-mono); }
+  .note { font-size:11px; color:var(--color-muted); }
+  svg { width:16px; height:16px; }
+</style></head>
+<body>
+  <div class="kpi">
+    <div class="top"><span class="lbl">Ventas hoy</span><div class="ico" style="background:#3B82F61A;color:#3B82F6"><i data-lucide="trending-up"></i></div></div>
+    <div class="val">$ 248.350</div>
+    <div class="foot"><span class="delta" style="background:#D1FAE5;color:#047857">▲ 12,4%</span><span class="note">vs ayer</span></div>
+  </div>
+  <div class="kpi">
+    <div class="top"><span class="lbl">Tickets</span><div class="ico" style="background:#10B9811A;color:#10B981"><i data-lucide="receipt"></i></div></div>
+    <div class="val">42</div>
+    <div class="foot"><span class="delta" style="background:#FEE2E2;color:#DC2626">▼ 3,1%</span><span class="note">vs ayer</span></div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>lucide.createIcons();</script>
+</body></html>

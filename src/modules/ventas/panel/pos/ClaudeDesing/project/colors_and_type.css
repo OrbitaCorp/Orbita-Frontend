@@ -1,0 +1,159 @@
+/* ============================================================================
+   ORBITA · colors_and_type.css
+   Single source of truth for color + type tokens.
+   Mirrors design-system/tokens/{colors,typography,spacing}.ts from the codebase.
+   Fonts: Geist Sans / Geist Mono (Google Fonts). Import in <head>:
+   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+   ============================================================================ */
+
+/* ---- LIGHT MODE (default / :root) ---------------------------------------- */
+:root {
+  /* Surfaces & neutrals */
+  --color-bg:            #FFFFFF;   /* app background · level 0 */
+  --color-surface:       #F8FAFC;   /* cards, panels, section backgrounds */
+  --color-surface-alt:   #F1F5F9;   /* list hover, secondary fills */
+  --color-border:        #E2E8F0;   /* input/card/divider borders */
+  --color-border-strong: #CBD5E1;   /* focused component borders */
+
+  /* Text */
+  --color-text:          #0F172A;   /* titles, primary text */
+  --color-body:          #334155;   /* paragraphs, descriptions */
+  --color-muted:         #64748B;   /* labels, placeholders, metadata */
+  --color-subtle:        #94A3B8;   /* disabled text, hints */
+
+  /* Primary (blue) */
+  --color-primary-50:    #EFF6FF;
+  --color-primary-100:   #DBEAFE;
+  --color-primary:       #3B82F6;   /* primary buttons, links, active icons */
+  --color-primary-h:     #2563EB;   /* primary hover */
+  --color-primary-700:   #1D4ED8;   /* active / pressed */
+  --color-primary-900:   #1E3A8A;   /* text on light primary bg */
+  --color-primary-bg:    #EFF6FF;   /* selected/active nav backgrounds */
+
+  /* Semantic */
+  --color-success:       #10B981;
+  --color-success-bg:    #ECFDF5;
+  --color-warning:       #F59E0B;
+  --color-warning-bg:    #FFFBEB;
+  --color-error:         #EF4444;
+  --color-error-bg:      #FEF2F2;
+  --color-info:          #3B82F6;
+  --color-info-bg:       #EFF6FF;
+
+  /* Elevation */
+  --shadow-sm:    0 1px 3px rgba(15,23,42,0.06);
+  --shadow-card:  0 4px 12px rgba(15,23,42,0.10), 0 2px 4px rgba(15,23,42,0.06);
+  --shadow-pop:   0 8px 24px rgba(15,23,42,0.10);
+  --shadow-modal: 0 16px 40px rgba(15,23,42,0.20);
+
+  /* Typography families */
+  --font-sans: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "Fira Code", "Fira Mono", monospace;
+
+  /* Radii */
+  --radius-sm:   4px;    /* chips, tooltips */
+  --radius-md:   8px;    /* inputs, buttons */
+  --radius-lg:   12px;   /* cards, modals, panels */
+  --radius-full: 9999px; /* pill badges, avatars */
+
+  /* Spacing scale · base 4px */
+  --space-1:  0.25rem;  /*  4px */
+  --space-2:  0.5rem;   /*  8px */
+  --space-3:  0.75rem;  /* 12px */
+  --space-4:  1rem;     /* 16px */
+  --space-5:  1.25rem;  /* 20px */
+  --space-6:  1.5rem;   /* 24px */
+  --space-8:  2rem;     /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+
+  /* Fixed layout */
+  --sidebar-expanded:  240px;
+  --sidebar-collapsed: 64px;
+  --header-height:     64px;
+  --max-content-width: 1280px;
+  --content-padding-x: 24px;
+
+  /* Motion */
+  --duration-fast:  150ms;  /* button hover, immediate feedback */
+  --duration-base:  200ms;  /* card hover, modal in, page */
+  --duration-slow:  300ms;  /* sidebar, toast in */
+  --duration-xslow: 1500ms; /* skeleton shimmer loop */
+  --ease-base:   ease;
+  --ease-out:    ease-out;
+  --ease-in:     ease-in;
+  --ease-inout:  ease-in-out;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* toast attention */
+
+  /* Z-index */
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-modal:    300;
+  --z-toast:    400;
+}
+
+/* ---- DARK MODE ----------------------------------------------------------- */
+.dark {
+  --color-bg:            #0F172A;   /* level 0 */
+  --color-surface:       #1E293B;   /* cards & panels · level 1 */
+  --color-surface-alt:   #334155;   /* hover, elevated · level 2 */
+  --color-surface-high:  #475569;   /* tooltips, popovers · level 3 */
+  --color-border:        #334155;
+  --color-border-strong: #475569;
+
+  --color-text:          #F1F5F9;
+  --color-body:          #CBD5E1;
+  --color-muted:         #94A3B8;
+  --color-subtle:        #64748B;
+
+  --color-primary:       #60A5FA;   /* blue-400 */
+  --color-primary-h:     #93C5FD;   /* blue-300 */
+  --color-primary-bg:    rgba(96,165,250,0.14);
+
+  --color-success:       #34D399;
+  --color-success-bg:    rgba(52,211,153,0.12);
+  --color-warning:       #FBBF24;
+  --color-warning-bg:    rgba(251,191,36,0.14);
+  --color-error:         #F87171;
+  --color-error-bg:      rgba(248,113,113,0.12);
+  --color-info:          #60A5FA;
+  --color-info-bg:       rgba(96,165,250,0.14);
+
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.30);
+  --shadow-card:  0 8px 24px rgba(0,0,0,0.40);
+  --shadow-pop:   0 8px 24px rgba(0,0,0,0.45);
+  --shadow-modal: 0 16px 40px rgba(0,0,0,0.55);
+}
+
+/* ============================================================================
+   SEMANTIC TYPE STYLES — Geist scale (10 levels)
+   Use these classes directly, or copy the values into component styles.
+   ============================================================================ */
+.t-display-xl { font-family: var(--font-sans); font-size: 3rem;     font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; } /* 48px — hero */
+.t-display-l  { font-family: var(--font-sans); font-size: 2.25rem;  font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; } /* 36px — module title */
+.t-h1         { font-family: var(--font-sans); font-size: 1.875rem; font-weight: 700; line-height: 1.2; } /* 30px */
+.t-h2         { font-family: var(--font-sans); font-size: 1.5rem;   font-weight: 600; line-height: 1.2; } /* 24px */
+.t-h3         { font-family: var(--font-sans); font-size: 1.25rem;  font-weight: 600; line-height: 1.2; } /* 20px */
+.t-body-lg    { font-family: var(--font-sans); font-size: 1.125rem; font-weight: 400; line-height: 1.6; } /* 18px */
+.t-body       { font-family: var(--font-sans); font-size: 1rem;     font-weight: 400; line-height: 1.6; } /* 16px */
+.t-body-sm    { font-family: var(--font-sans); font-size: 0.875rem; font-weight: 400; line-height: 1.6; } /* 14px — form labels, metadata */
+.t-caption    { font-family: var(--font-sans); font-size: 0.75rem;  font-weight: 400; line-height: 1.6; } /* 12px — timestamps, legal */
+.t-mono       { font-family: var(--font-mono); font-size: 0.875rem; font-weight: 400; line-height: 1.6; } /* 14px — prices, IDs, code */
+
+/* Uppercase micro-labels (table headers, kpi labels) use tracking */
+.t-overline   { font-family: var(--font-sans); font-size: 0.6875rem; font-weight: 600; line-height: 1.2;
+                text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted); }
+
+/* Base element defaults */
+body { font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg);
+       -webkit-font-smoothing: antialiased; }
+
+/* Skeleton shimmer keyframe + spinner (shared) */
+@keyframes orbita-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes orbita-spin    { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

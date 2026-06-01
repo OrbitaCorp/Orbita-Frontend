@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls src/modules/ventas/panel/pos/screens/)",
+      "Bash(ls src/modules/ventas/panel/pos/components/modals/)",
+      "Bash(ls src/modules/ventas/panel/pos/mock/)",
+      "Bash(npx tsc *)",
+      "Bash(grep -E \"ventas/panel/pos|ventas\\\\\\\\\\\\\\\\panel\\\\\\\\\\\\\\\\pos\")"
+    ]
+  }
+}

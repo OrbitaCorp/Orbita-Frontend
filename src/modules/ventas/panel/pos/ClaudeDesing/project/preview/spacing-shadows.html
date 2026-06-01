@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 26px; background: var(--color-bg); display:flex; gap:24px; align-items:center; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .box { width:96px; height:64px; background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius-lg); }
+  .lbl { font-family:var(--font-mono); font-size:11px; color:var(--color-muted); }
+  .lbl b { color:var(--color-text); font-weight:600; }
+</style></head>
+<body>
+  <div class="col"><div class="box" style="box-shadow:var(--shadow-sm)"></div><span class="lbl"><b>sm</b> · resting</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--shadow-card)"></div><span class="lbl"><b>card</b> · hover</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--shadow-pop)"></div><span class="lbl"><b>pop</b> · menu</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--shadow-modal)"></div><span class="lbl"><b>modal</b></span></div>
+</body></html>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--color-bg); display:flex; gap:18px; align-items:flex-end; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .box { width:88px; height:72px; background:var(--color-surface); border:1.5px solid var(--color-primary); }
+  .lbl { font-family:var(--font-mono); font-size:11px; color:var(--color-muted); }
+  .lbl b { color:var(--color-text); font-weight:600; }
+</style></head>
+<body>
+  <div class="col"><div class="box" style="border-radius:4px"></div><span class="lbl"><b>sm</b> · 4px</span></div>
+  <div class="col"><div class="box" style="border-radius:8px"></div><span class="lbl"><b>md</b> · 8px</span></div>
+  <div class="col"><div class="box" style="border-radius:12px"></div><span class="lbl"><b>lg</b> · 12px</span></div>
+  <div class="col"><div class="box" style="border-radius:9999px;width:72px"></div><span class="lbl"><b>full</b> · 9999</span></div>
+</body></html>

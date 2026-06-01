@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--color-surface); display:flex; gap:16px; font-family:var(--font-sans); }
+  .card { flex:1; background:var(--color-bg); border:1px solid var(--color-border); border-radius:12px; padding:20px; box-shadow:var(--shadow-sm); }
+  .card.hover { border-color:var(--color-border-strong); box-shadow:var(--shadow-card); transform:translateY(-1px); }
+  .h { font-size:15px; font-weight:600; color:var(--color-text); margin:0 0 4px; }
+  .p { font-size:13px; color:var(--color-body); margin:0; line-height:1.5; }
+  .tag { font-size:11px; font-family:var(--font-mono); color:var(--color-subtle); margin-top:14px; display:block; }
+</style></head>
+<body>
+  <div class="card">
+    <p class="h">Card · resting</p>
+    <p class="p">Surface fill, 1px borde, radio 12px, sombra sm.</p>
+    <span class="tag">border · shadow-sm</span>
+  </div>
+  <div class="card hover">
+    <p class="h">Card · hover</p>
+    <p class="p">Eleva −1px, borde fuerte, sombra card.</p>
+    <span class="tag">border-strong · shadow-card · −1px</span>
+  </div>
+</body></html>
