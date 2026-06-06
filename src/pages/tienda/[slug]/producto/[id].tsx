@@ -1,1 +1,1 @@
-export { default } from '@/modules/ventas/cliente/ProductoDetalle'
+export { default } from '@/modules/ventas/cliente/producto/ProductoDetalle'

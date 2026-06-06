@@ -1,1 +1,1 @@
-export { default } from '@/modules/ventas/cliente/Inicio'
+export { default } from '@/modules/ventas/cliente/inicio/Inicio'

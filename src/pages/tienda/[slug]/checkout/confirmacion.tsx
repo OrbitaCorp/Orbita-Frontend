@@ -1,1 +1,1 @@
-export { default } from '@/modules/ventas/cliente/Confirmacion'
+export { default } from '@/modules/ventas/cliente/checkout/Confirmacion'

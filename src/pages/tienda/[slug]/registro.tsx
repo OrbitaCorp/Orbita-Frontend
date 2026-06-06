@@ -1,1 +1,1 @@
-export { default } from '@/modules/ventas/cliente/Registro'
+export { default } from '@/modules/ventas/cliente/auth/Registro'
