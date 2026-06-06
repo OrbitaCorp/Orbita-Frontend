@@ -1,180 +1,80 @@
-import type { Categoria, Producto } from '../types/catalogo.types'
+// src/modules/ventas/admin/catalogo/mock/catalogo.mock.ts
+// TODO: eliminar cuando el backend esté listo.
+// Productos y categorías de ejemplo — Rama Indumentaria.
 
-export const MOCK_CATEGORIAS: Categoria[] = [
-  { id: 'cat-1', nombre: 'Indumentaria', slug: 'indumentaria', conteoProductos: 6 },
-  { id: 'cat-2', nombre: 'Calzado',      slug: 'calzado',      conteoProductos: 2 },
-  { id: 'cat-3', nombre: 'Accesorios',   slug: 'accesorios',   conteoProductos: 2 },
-  { id: 'cat-4', nombre: 'Remeras',      slug: 'remeras',      parentId: 'cat-1', conteoProductos: 3 },
-  { id: 'cat-5', nombre: 'Pantalones',   slug: 'pantalones',   parentId: 'cat-1', conteoProductos: 3 },
+import type { Producto, Categoria, CatNode } from '../types/catalogo.types'
+
+export const PRODUCTOS_DB: Producto[] = [
+    { id: 'p1', nombre: 'Remera oversize negra',      sku: 'RM-OVR-NG', cat: 'Remeras',    precio: 24900, precioAnt: null,   stock: 18, stockMin: 5,  estado: 'publicado', variantes: ['XS', 'S', 'M', 'L', 'XL'], colores: ['Negro', 'Blanco', 'Gris'],     imagenes: 1, hue: 220 },
+    { id: 'p2', nombre: 'Pantalón cargo verde oliva', sku: 'PT-CRG-VR', cat: 'Pantalones', precio: 48900, precioAnt: 62000,  stock: 3,  stockMin: 5,  estado: 'publicado', variantes: ['38', '40', '42', '44'],    colores: ['Verde', 'Negro'],              imagenes: 2, hue: 140 },
+    { id: 'p3', nombre: 'Buzo frisa con capucha',     sku: 'BZ-FRS-CH', cat: 'Buzos',      precio: 38500, precioAnt: null,   stock: 7,  stockMin: 5,  estado: 'publicado', variantes: ['S', 'M', 'L', 'XL', 'XXL'], colores: ['Azul', 'Gris', 'Negro'],       imagenes: 3, hue: 215 },
+    { id: 'p4', nombre: 'Campera bomber beige',       sku: 'CP-BMB-BG', cat: 'Camperas',   precio: 89000, precioAnt: 110000, stock: 0,  stockMin: 5,  estado: 'sin_stock', variantes: ['S', 'M', 'L', 'XL'],       colores: ['Beige', 'Negro'],              imagenes: 2, hue: 35  },
+    { id: 'p5', nombre: 'Gorra trucker bordada',      sku: 'GR-TRK-BD', cat: 'Accesorios', precio: 15900, precioAnt: null,   stock: 24, stockMin: 10, estado: 'publicado', variantes: ['Única'],                   colores: ['Negro', 'Beige', 'Terracota'], imagenes: 1, hue: 30  },
+    { id: 'p6', nombre: 'Jean tiro medio celeste',    sku: 'JN-TRM-CL', cat: 'Pantalones', precio: 56000, precioAnt: 68000,  stock: 12, stockMin: 5,  estado: 'borrador',  variantes: ['38', '40', '42', '44', '46'], colores: ['Celeste', 'Negro'],         imagenes: 0, hue: 200 },
 ]
 
-export const MOCK_PRODUCTOS: Producto[] = [
-  {
-    id: 'p-001', sku: 'REM-BAS-001',
-    nombre: 'Remera Básica Algodón',
-    descripcion: 'Remera de algodón 100% premium, confeccionada en jersey simple. Disponible en múltiples colores y talles.',
-    precio: 8500, precioTachado: 11000,
-    stock: 47, stockMinimo: 10,
-    estado: 'activo', categorias: ['cat-1', 'cat-4'],
-    imagenes: [],
-    variantes: [
-      { id: 'v-001-1', sku: 'REM-BAS-001-S-NG', atributos: { Talle: 'S', Color: 'Negro'  }, precio: 8500, stock: 12 },
-      { id: 'v-001-2', sku: 'REM-BAS-001-M-NG', atributos: { Talle: 'M', Color: 'Negro'  }, precio: 8500, stock: 15 },
-      { id: 'v-001-3', sku: 'REM-BAS-001-L-NG', atributos: { Talle: 'L', Color: 'Negro'  }, precio: 8500, stock: 8  },
-      { id: 'v-001-4', sku: 'REM-BAS-001-S-BL', atributos: { Talle: 'S', Color: 'Blanco' }, precio: 8500, stock: 12 },
-    ],
-    historialPrecios: [
-      { fecha: '2025-01-01', precio: 7200 },
-      { fecha: '2025-02-15', precio: 8000 },
-      { fecha: '2025-04-01', precio: 8500 },
-    ],
-    creadoEn: '2025-01-15', actualizadoEn: '2025-04-01',
-    vendidos: 234, vistas: 1820,
-  },
-  {
-    id: 'p-002', sku: 'BUZ-HOD-002',
-    nombre: 'Buzo Hoodie Premium',
-    descripcion: 'Buzo con capucha y bolsillo canguro, tela french terry 380g. Costuras reforzadas y cordón grueso.',
-    precio: 18500, precioTachado: 24000,
-    stock: 23, stockMinimo: 5,
-    estado: 'activo', categorias: ['cat-1'],
-    imagenes: [],
-    variantes: [
-      { id: 'v-002-1', sku: 'BUZ-HOD-002-M-GR', atributos: { Talle: 'M', Color: 'Gris'  }, precio: 18500, stock: 10 },
-      { id: 'v-002-2', sku: 'BUZ-HOD-002-L-GR', atributos: { Talle: 'L', Color: 'Gris'  }, precio: 18500, stock: 8  },
-      { id: 'v-002-3', sku: 'BUZ-HOD-002-XL-NG', atributos: { Talle: 'XL', Color: 'Negro' }, precio: 18500, stock: 5  },
-    ],
-    historialPrecios: [
-      { fecha: '2025-02-01', precio: 15000 },
-      { fecha: '2025-03-20', precio: 17000 },
-      { fecha: '2025-05-01', precio: 18500 },
-    ],
-    creadoEn: '2025-02-01', actualizadoEn: '2025-05-01',
-    vendidos: 118, vistas: 940,
-  },
-  {
-    id: 'p-003', sku: 'PNT-CAR-003',
-    nombre: 'Pantalón Cargo Urbano',
-    descripcion: 'Pantalón cargo con múltiples bolsillos, tela ripstop. Elástico en cintura.',
-    precio: 22000,
-    stock: 12, stockMinimo: 5,
-    estado: 'activo', categorias: ['cat-1', 'cat-5'],
-    imagenes: [], variantes: [],
-    historialPrecios: [
-      { fecha: '2025-01-10', precio: 18000 },
-      { fecha: '2025-04-01', precio: 22000 },
-    ],
-    creadoEn: '2025-01-10', actualizadoEn: '2025-04-01',
-    vendidos: 67, vistas: 580,
-  },
-  {
-    id: 'p-004', sku: 'ZAP-RUN-004',
-    nombre: 'Zapatilla Running Boost',
-    descripcion: 'Zapatilla de running con suela de amortiguación, upper mesh transpirable. Ideal para distancias largas.',
-    precio: 45000, precioTachado: 58000,
-    stock: 5, stockMinimo: 8,
-    estado: 'activo', categorias: ['cat-2'],
-    imagenes: [],
-    variantes: [
-      { id: 'v-004-1', sku: 'ZAP-RUN-004-39', atributos: { Número: '39' }, precio: 45000, stock: 1 },
-      { id: 'v-004-2', sku: 'ZAP-RUN-004-40', atributos: { Número: '40' }, precio: 45000, stock: 2 },
-      { id: 'v-004-3', sku: 'ZAP-RUN-004-41', atributos: { Número: '41' }, precio: 45000, stock: 2 },
-    ],
-    historialPrecios: [
-      { fecha: '2025-01-01', precio: 38000 },
-      { fecha: '2025-03-15', precio: 42000 },
-      { fecha: '2025-05-01', precio: 45000 },
-    ],
-    creadoEn: '2025-01-05', actualizadoEn: '2025-05-01',
-    vendidos: 45, vistas: 1230,
-  },
-  {
-    id: 'p-005', sku: 'CAM-IMP-005',
-    nombre: 'Campera Impermeable',
-    descripcion: 'Campera cortaviento impermeable con capucha desmontable. Tratamiento DWR.',
-    precio: 38000,
-    stock: 0, stockMinimo: 5,
-    estado: 'agotado', categorias: ['cat-1'],
-    imagenes: [], variantes: [],
-    historialPrecios: [
-      { fecha: '2024-11-01', precio: 30000 },
-      { fecha: '2025-02-01', precio: 35000 },
-      { fecha: '2025-04-15', precio: 38000 },
-    ],
-    creadoEn: '2024-11-01', actualizadoEn: '2025-04-15',
-    vendidos: 89, vistas: 720,
-  },
-  {
-    id: 'p-006', sku: 'BER-VER-006',
-    nombre: 'Bermuda Verano Lino',
-    descripcion: 'Bermuda de lino con frente liso y elástico en la parte trasera de la cintura.',
-    precio: 14000,
-    stock: 0, stockMinimo: 8,
-    estado: 'borrador', categorias: ['cat-1', 'cat-5'],
-    imagenes: [], variantes: [],
-    historialPrecios: [{ fecha: '2025-05-10', precio: 14000 }],
-    creadoEn: '2025-05-10', actualizadoEn: '2025-05-10',
-    vendidos: 0, vistas: 12,
-  },
-  {
-    id: 'p-007', sku: 'GOR-SNP-007',
-    nombre: 'Gorra Snapback Logo',
-    descripcion: 'Gorra snapback con bordado frontal. Estructura de 6 paneles.',
-    precio: 9500,
-    stock: 30, stockMinimo: 10,
-    estado: 'activo', categorias: ['cat-3'],
-    imagenes: [], variantes: [],
-    historialPrecios: [
-      { fecha: '2025-01-01', precio: 8000 },
-      { fecha: '2025-04-01', precio: 9500 },
-    ],
-    creadoEn: '2025-01-20', actualizadoEn: '2025-04-01',
-    vendidos: 156, vistas: 880,
-  },
-  {
-    id: 'p-008', sku: 'REM-GRF-008',
-    nombre: 'Remera Gráfica Estampada',
-    descripcion: 'Remera con estampado de alta definición, tinta ecológica. Algodón peinado 180g.',
-    precio: 11000,
-    stock: 22, stockMinimo: 10,
-    estado: 'activo', categorias: ['cat-1', 'cat-4'],
-    imagenes: [], variantes: [],
-    historialPrecios: [
-      { fecha: '2025-02-01', precio: 9000 },
-      { fecha: '2025-04-15', precio: 11000 },
-    ],
-    creadoEn: '2025-02-10', actualizadoEn: '2025-04-15',
-    vendidos: 98, vistas: 670,
-  },
-  {
-    id: 'p-009', sku: 'JOG-URB-009',
-    nombre: 'Jogger Urbano Fleece',
-    descripcion: 'Jogger de felpa liviana con bolsillos laterales y puños. Perfecto para uso diario.',
-    precio: 19500, precioTachado: 25000,
-    stock: 8, stockMinimo: 5,
-    estado: 'activo', categorias: ['cat-1', 'cat-5'],
-    imagenes: [], variantes: [],
-    historialPrecios: [
-      { fecha: '2025-01-15', precio: 15000 },
-      { fecha: '2025-03-01', precio: 17500 },
-      { fecha: '2025-05-01', precio: 19500 },
-    ],
-    creadoEn: '2025-01-15', actualizadoEn: '2025-05-01',
-    vendidos: 73, vistas: 490,
-  },
-  {
-    id: 'p-010', sku: 'CIN-CUE-010',
-    nombre: 'Cinturón de Cuero',
-    descripcion: 'Cinturón de cuero genuino con hebilla plateada. Disponible en talles 90–110 cm.',
-    precio: 12500,
-    stock: 18, stockMinimo: 5,
-    estado: 'pausado', categorias: ['cat-3'],
-    imagenes: [], variantes: [],
-    historialPrecios: [
-      { fecha: '2025-02-20', precio: 10000 },
-      { fecha: '2025-04-20', precio: 12500 },
-    ],
-    creadoEn: '2025-02-20', actualizadoEn: '2025-04-20',
-    vendidos: 34, vistas: 260,
-  },
+export const CATEGORIAS_DB: Categoria[] = [
+    { id: 'remeras',    nombre: 'Remeras',    emoji: '👕', count: 12, hue: 220 },
+    { id: 'pantalones', nombre: 'Pantalones', emoji: '👖', count: 8,  hue: 140 },
+    { id: 'buzos',      nombre: 'Buzos',      emoji: '🧥', count: 6,  hue: 215 },
+    { id: 'camperas',   nombre: 'Camperas',   emoji: '🧥', count: 5,  hue: 35  },
+    { id: 'accesorios', nombre: 'Accesorios', emoji: '🧢', count: 9,  hue: 30  },
 ]
+
+// Árbol jerárquico de categorías para P3.
+export const CAT_TREE0: CatNode[] = [
+    {
+        id: 'cat1', nombre: 'Remeras', slug: 'remeras', icono: '👕', color: '#3B82F6', productos: 12, activa: true,
+        subcategorias: [
+            {
+                id: 'sub1a', nombre: 'Remeras básicas', slug: 'basicas', icono: '👕', color: '#3B82F6', productos: 5, activa: true,
+                subcategorias: [
+                    { id: 'sub1a1', nombre: 'Manga corta', slug: 'manga-corta', icono: '👕', color: '#3B82F6', productos: 3, activa: true, subcategorias: [] },
+                    { id: 'sub1a2', nombre: 'Manga larga', slug: 'manga-larga', icono: '👕', color: '#3B82F6', productos: 2, activa: true, subcategorias: [] },
+                ],
+            },
+            { id: 'sub1b', nombre: 'Remeras oversize', slug: 'oversize', icono: '👕', color: '#3B82F6', productos: 4, activa: true, subcategorias: [] },
+            { id: 'sub1c', nombre: 'Remeras estampadas', slug: 'estampadas', icono: '👕', color: '#3B82F6', productos: 3, activa: true, subcategorias: [] },
+        ],
+    },
+    {
+        id: 'cat2', nombre: 'Pantalones', slug: 'pantalones', icono: '👖', color: '#10B981', productos: 8, activa: true,
+        subcategorias: [
+            {
+                id: 'sub2a', nombre: 'Jeans', slug: 'jeans', icono: '👖', color: '#10B981', productos: 3, activa: true,
+                subcategorias: [
+                    { id: 'sub2a1', nombre: 'Tiro alto', slug: 'tiro-alto', icono: '👖', color: '#10B981', productos: 1, activa: true, subcategorias: [] },
+                    { id: 'sub2a2', nombre: 'Tiro medio', slug: 'tiro-medio', icono: '👖', color: '#10B981', productos: 2, activa: true, subcategorias: [] },
+                ],
+            },
+            { id: 'sub2b', nombre: 'Joggers', slug: 'joggers', icono: '👖', color: '#10B981', productos: 3, activa: true, subcategorias: [] },
+            { id: 'sub2c', nombre: 'Cargos', slug: 'cargos', icono: '👖', color: '#10B981', productos: 2, activa: true, subcategorias: [] },
+        ],
+    },
+    {
+        id: 'cat3', nombre: 'Buzos', slug: 'buzos', icono: '🧥', color: '#8B5CF6', productos: 6, activa: true,
+        subcategorias: [
+            { id: 'sub3a', nombre: 'Con capucha', slug: 'capucha', icono: '🧥', color: '#8B5CF6', productos: 4, activa: true, subcategorias: [] },
+            { id: 'sub3b', nombre: 'Sin capucha', slug: 'sin-capucha', icono: '🧥', color: '#8B5CF6', productos: 2, activa: true, subcategorias: [] },
+        ],
+    },
+    { id: 'cat4', nombre: 'Camperas', slug: 'camperas', icono: '🧣', color: '#F59E0B', productos: 5, activa: true, subcategorias: [] },
+    { id: 'cat5', nombre: 'Accesorios', slug: 'accesorios', icono: '👟', color: '#EC4899', productos: 9, activa: true, subcategorias: [] },
+]
+
+export const CAT_EMOJIS = ['👕', '👖', '🧥', '🧣', '👟', '👗', '🎒', '🕶️', '🧤', '🧢', '💄', '👜', '💍', '⌚', '🏃']
+export const CAT_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#0F172A', '#6B7280']
+
+export function generarSKU(nombre: string): string {
+    const partes = (nombre || '').toUpperCase().split(' ').filter(p => p.length > 2)
+    return partes.map(p => p.slice(0, 2)).join('-').slice(0, 12) || 'PROD-001'
+}
+
+// Slug con reemplazo explícito de acentos del español (robusto y legible).
+export function slugify(s: string): string {
+    const acentos: Record<string, string> = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u', ñ: 'n' }
+    return s.toLowerCase()
+        .replace(/[áéíóúüñ]/g, c => acentos[c] ?? c)
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+}

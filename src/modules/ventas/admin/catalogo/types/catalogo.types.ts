@@ -1,45 +1,41 @@
-export type EstadoProducto = 'activo' | 'borrador' | 'agotado' | 'pausado'
+// src/modules/ventas/admin/catalogo/types/catalogo.types.ts
+// Tipos del módulo de catálogo (productos + categorías).
 
-export type Variante = {
-  id:            string
-  sku:           string
-  atributos:     Record<string, string>
-  precio:        number
-  precioTachado?: number
-  stock:         number
-  imagen?:       string
+export type EstadoProducto = 'publicado' | 'borrador' | 'sin_stock'
+
+export interface Producto {
+    id:        string
+    nombre:    string
+    sku:       string
+    cat:       string
+    precio:    number
+    precioAnt: number | null
+    stock:     number
+    stockMin:  number
+    estado:    EstadoProducto
+    variantes: string[]
+    colores:   string[]
+    imagenes:  number
+    hue:       number
 }
 
-export type HistorialPrecio = {
-  fecha:  string
-  precio: number
+// Categoría plana (para selects y filtros).
+export interface Categoria {
+    id:     string
+    nombre: string
+    emoji:  string
+    count:  number
+    hue:    number
 }
 
-export type Categoria = {
-  id:               string
-  nombre:           string
-  slug:             string
-  parentId?:        string
-  imagen?:          string
-  conteoProductos:  number
-}
-
-export type Producto = {
-  id:              string
-  sku:             string
-  nombre:          string
-  descripcion:     string
-  precio:          number
-  precioTachado?:  number
-  stock:           number
-  stockMinimo:     number
-  estado:          EstadoProducto
-  categorias:      string[]
-  imagenes:        string[]
-  variantes:       Variante[]
-  historialPrecios: HistorialPrecio[]
-  creadoEn:        string
-  actualizadoEn:   string
-  vendidos:        number
-  vistas:          number
+// Nodo del árbol jerárquico de categorías (P3).
+export interface CatNode {
+    id:            string
+    nombre:        string
+    slug:          string
+    icono:         string
+    color:         string
+    productos:     number
+    activa:        boolean
+    subcategorias: CatNode[]
 }

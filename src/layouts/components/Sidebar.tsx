@@ -1,205 +1,220 @@
-import { useState, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import Link from 'next/link'
+// Sidebar del panel admin — diseño del prototipo "Panel Admin 34":
+// logo orbital, botón "Publicar tienda", buscador con resultados en vivo y
+// módulos expandibles con badges, dots de alerta y sub-secciones.
+
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Home, ShoppingBag, Package, Users, BarChart2, CreditCard, ChevronDown, Settings, HelpCircle, Tag, Truck, MessageSquare, FolderOpen } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Users, Package, CreditCard, MessageSquare, Tag, Settings, Search, Globe } from 'lucide-react'
+import type { ComponentType } from 'react'
 
-export default function Sidebar() {
-    const { query } = useRouter()
-    const negocioId = (query.negocioId as string) ?? 'rama-tienda'
-    const seccionActiva = (query.seccion as string) ?? ''
+import { MOCK_PEDIDOS } from '@/modules/ventas/admin/pedidos/mock/pedidos.mock'
+import { MOCK_CLIENTES } from '@/modules/ventas/admin/clientes/mock/clientes.mock'
+import { PRODUCTOS_DB } from '@/modules/ventas/admin/catalogo/mock/catalogo.mock'
+import { fmtMoney } from '@/lib/utils'
 
-     // Ítems del menú principal — cada href usa negocioId dinámico para construir la ruta correcta
-    const navItems = [
-    { label: 'Pedidos',    Icon: ShoppingBag,   href: `/admin/${negocioId}/ventas/pedidos` },
-    { label: 'Catálogo',   Icon: Package,       href: `/admin/${negocioId}/ventas/catalogo` },
-    { label: 'Categorías', Icon: FolderOpen,    href: `/admin/${negocioId}/ventas/categorias` },
-    { label: 'Clientes',   Icon: Users,         href: `/admin/${negocioId}/ventas/clientes` },
-    { label: 'Reportes',   Icon: BarChart2,     href: `/admin/${negocioId}/ventas/reportes` },
-    { label: 'POS',        Icon: CreditCard,    href: `/admin/${negocioId}/ventas/pos` },
-    { label: 'Inventario', Icon: Truck,         href: `/admin/${negocioId}/ventas/inventario` },
-    { label: 'Descuentos', Icon: Tag,           href: `/admin/${negocioId}/ventas/descuentos` },
-    { label: 'Mensajes',   Icon: MessageSquare, href: `/admin/${negocioId}/ventas/mensajes` },
+type IconType = ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>
+interface Sub { label: string; seccion: string; vista?: string }
+interface Modulo { id: string; label: string; Icon: IconType; seccion: string; badge?: number; alert?: boolean; subs?: Sub[] }
+
+const MODULOS: Modulo[] = [
+    { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard, seccion: 'dashboard' },
+    {
+        id: 'pedidos', label: 'Pedidos', Icon: ShoppingBag, seccion: 'pedidos', badge: 4, alert: true,
+        subs: [
+            { label: 'Lista', seccion: 'pedidos' },
+            { label: 'Cola de prep.', seccion: 'pedidos', vista: 'cola' },
+            { label: 'Historial', seccion: 'pedidos', vista: 'historial' },
+            { label: 'Devoluciones', seccion: 'pedidos', vista: 'devoluciones' },
+            { label: 'Notas de crédito', seccion: 'pedidos', vista: 'notas' },
+            { label: 'Nuevo +', seccion: 'pedidos', vista: 'nuevo' },
+        ],
+    },
+    {
+        id: 'clientes', label: 'Clientes', Icon: Users, seccion: 'clientes',
+        subs: [
+            { label: 'Lista', seccion: 'clientes' },
+            { label: 'Reporte de clientes', seccion: 'reportes', vista: 'clientes' },
+        ],
+    },
+    {
+        id: 'productos', label: 'Productos', Icon: Package, seccion: 'catalogo',
+        subs: [
+            { label: 'Lista de productos', seccion: 'catalogo' },
+            { label: 'Crear producto', seccion: 'catalogo', vista: 'nuevo' },
+            { label: 'Categorías', seccion: 'categorias' },
+            { label: 'Inventario', seccion: 'inventario' },
+            { label: 'Reporte de productos', seccion: 'reportes', vista: 'productos' },
+        ],
+    },
+    {
+        id: 'pos', label: 'POS', Icon: CreditCard, seccion: 'pos',
+        subs: [
+            { label: 'Cobro rápido', seccion: 'pos' },
+            { label: 'Abrir caja', seccion: 'pos', vista: 'apertura' },
+            { label: 'Cerrar caja', seccion: 'pos', vista: 'cierre' },
+            { label: 'Historial cajas', seccion: 'pos', vista: 'historial' },
+        ],
+    },
+    {
+        id: 'mensajes', label: 'Mensajes', Icon: MessageSquare, seccion: 'mensajes', badge: 3, alert: true,
+        subs: [
+            { label: 'Bandeja', seccion: 'mensajes' },
+            { label: 'Plantillas', seccion: 'mensajes', vista: 'plantillas' },
+        ],
+    },
+    {
+        id: 'descuentos', label: 'Descuentos', Icon: Tag, seccion: 'descuentos',
+        subs: [
+            { label: 'Lista cupones', seccion: 'descuentos' },
+            { label: 'Nuevo cupón', seccion: 'descuentos', vista: 'nuevo' },
+            { label: 'Promos auto', seccion: 'descuentos', vista: 'promos' },
+            { label: 'Rendimiento', seccion: 'descuentos', vista: 'rendimiento' },
+        ],
+    },
+    {
+        id: 'config', label: 'Configuración', Icon: Settings, seccion: 'configuracion',
+        subs: [
+            { label: 'General', seccion: 'configuracion' },
+            { label: 'Apariencia', seccion: 'configuracion', vista: 'apariencia' },
+            { label: 'Equipo', seccion: 'configuracion', vista: 'equipo' },
+            { label: 'Notificaciones', seccion: 'configuracion', vista: 'notificaciones' },
+        ],
+    },
 ]
 
-    const cuentaItems = [
-        { label: 'Configuración', Icon: Settings,   href: `/admin/${negocioId}/ventas/configuracion` },
-        { label: 'Soporte',       Icon: HelpCircle, href: '#' },
-    ]
+// Mapea la sección actual de la URL al módulo padre del sidebar.
+const SECCION_MODULO: Record<string, string> = {
+    dashboard: 'dashboard', pedidos: 'pedidos', clientes: 'clientes',
+    catalogo: 'productos', categorias: 'productos', inventario: 'productos', reportes: 'productos',
+    pos: 'pos', mensajes: 'mensajes', descuentos: 'descuentos', configuracion: 'config',
+}
 
-    const [dropdownAbierto, setDropdownAbierto] = useState(false)
-    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
-    const [montado, setMontado] = useState(false)
-    const buttonRef = useRef<HTMLButtonElement>(null)
-    const dropdownRef = useRef<HTMLDivElement>(null)
+export default function Sidebar() {
+    const router = useRouter()
+    const negocioId = (router.query.negocioId as string) ?? 'rama-tienda'
+    const seccion = (router.query.seccion as string) ?? 'dashboard'
+    const vista = (router.query.vista as string) ?? ''
 
-    useEffect(() => { setMontado(true) }, [])
+    const moduloActivo = SECCION_MODULO[seccion] ?? 'dashboard'
+    const [abierto, setAbierto] = useState(moduloActivo)
+    const [busqueda, setBusqueda] = useState('')
+    const [publicada, setPublicada] = useState(false)
 
-    // Listener global: si el click no fue dentro del dropdown ni del botón, cerrar el dropdown
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (
-                dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-                buttonRef.current && !buttonRef.current.contains(e.target as Node)
-            ) {
-                setDropdownAbierto(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+    useEffect(() => { setAbierto(moduloActivo) }, [moduloActivo])
 
-    function abrirDropdown() {
-        if (buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect()
-            setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
-        }
-        setDropdownAbierto(prev => !prev)
+    const ir = (sec: string, v?: string) => {
+        const query: Record<string, string> = { negocioId, moduloPadre: 'ventas', seccion: sec }
+        if (v) query.vista = v
+        router.push({ pathname: '/admin/[negocioId]/[moduloPadre]/[seccion]', query })
     }
 
-
-    // Compara el final del href con la sección activa de la URL.
-    function esActivo(href: string) {
-        return href.endsWith(seccionActiva) && seccionActiva !== ''
-    }
-
-    // Estilos del item activo según design system de Orbita:  fondo azul claro + texto azul + borde izquierdo azul
-    function itemStyle(activo: boolean) {
+    const resultados = useMemo(() => {
+        const q = busqueda.trim().toLowerCase()
+        if (!q) return null
         return {
-            color: activo ? 'var(--color-primary-h)' : 'var(--color-body)',
-            background: activo ? 'var(--color-primary-bg)' : 'transparent',
-            borderLeft: `3px solid ${activo ? 'var(--color-primary)' : 'transparent'}`,
+            pedidos: MOCK_PEDIDOS.filter(p => p.cliente.toLowerCase().includes(q) || p.id.includes(q)).slice(0, 3),
+            clientes: MOCK_CLIENTES.filter(c => c.nombre.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)).slice(0, 2),
+            productos: PRODUCTOS_DB.filter(p => p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)).slice(0, 2),
         }
-    }
+    }, [busqueda])
+
+    const subActiva = (s: Sub) => seccion === s.seccion && (vista || '') === (s.vista || '')
 
     return (
-        <aside className="flex flex-col w-60 shrink-0 h-full" style={{
-            background: 'var(--color-bg)',
-            borderRight: '1px solid var(--color-border)'
-        }}>
+        <aside className="flex flex-col w-60 shrink-0 h-full" style={{ background: 'var(--color-bg)', borderRight: '1px solid var(--color-border)' }}>
 
-            {/* Logo fijo en la parte superior */}
-            <div className="flex items-center gap-2.5 h-16 px-5 shrink-0" style={{
-                borderBottom: '1px solid var(--color-border)'
-            }}>
-                <img src="/logo.svg" alt="Orbita" width={28} height={28} />
-                <span className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>Orbita</span>
+            {/* Logo */}
+            <div className="flex items-center gap-2.5 h-14 px-4 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <OrbitLogo />
+                <span className="text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>Orbita</span>
             </div>
 
-            {/* /* Selector de negocio activo con dropdown */}
-            <div className="mx-3 mt-3 mb-2 shrink-0">
-                <button
-                    ref={buttonRef}
-                    onClick={abrirDropdown}
-                    className="flex items-center gap-2.5 w-full p-2 rounded-lg cursor-pointer"
-                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
-                >
-                    <div className="grid place-items-center w-6 h-6 rounded-md text-xs font-semibold shrink-0" style={{
-                        background: 'var(--color-text)',
-                        color: 'var(--color-bg)'
-                    }}>
-                        RT
+            {/* Publicar tienda */}
+            <button
+                onClick={() => setPublicada(true)}
+                className="flex items-center justify-center gap-2 mx-3 mt-3 h-9 rounded-lg text-[13px] font-semibold cursor-pointer"
+                style={{ border: 'none', color: '#fff', background: publicada ? 'linear-gradient(135deg,#059669,#10B981)' : 'linear-gradient(135deg,#10B981,#059669)' }}
+            >
+                <Globe size={14} strokeWidth={1.6} /> {publicada ? '✓ Tienda online' : 'Publicar tienda'}
+            </button>
+
+            {/* Buscador */}
+            <div className="relative mx-3 mt-2 mb-1">
+                <Search size={13} strokeWidth={1.6} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-muted)' }} />
+                <input
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Escape') setBusqueda('') }}
+                    placeholder="Buscar pedidos, clientes..."
+                    className="w-full h-8 pl-7 pr-2.5 text-xs rounded-md outline-none"
+                    style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                />
+                {resultados && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 p-1.5 rounded-lg overflow-y-auto" style={{ top: '100%', maxHeight: 340, background: 'var(--color-bg)', border: '1px solid var(--color-border)', boxShadow: '0 12px 32px rgba(15,23,42,0.16)' }}>
+                        {resultados.pedidos.length > 0 && <><div style={resLabel}>PEDIDOS</div>{resultados.pedidos.map(p => <button key={p.id} onClick={() => { ir('pedidos', 'detalle'); setBusqueda('') }} style={resItem}>#{p.id} · {p.cliente} · {fmtMoney(p.monto)}</button>)}</>}
+                        {resultados.clientes.length > 0 && <><div style={resLabel}>CLIENTES</div>{resultados.clientes.map(c => <button key={c.id} onClick={() => { ir('clientes', 'detalle'); setBusqueda('') }} style={resItem}>{c.nombre} · {c.pedidos} pedidos</button>)}</>}
+                        {resultados.productos.length > 0 && <><div style={resLabel}>PRODUCTOS</div>{resultados.productos.map(p => <button key={p.id} onClick={() => { ir('catalogo'); setBusqueda('') }} style={resItem}>{p.nombre} · Stock {p.stock}</button>)}</>}
+                        {resultados.pedidos.length + resultados.clientes.length + resultados.productos.length === 0 && <div className="p-3 text-xs text-center" style={{ color: 'var(--color-muted)' }}>Sin resultados</div>}
                     </div>
-                    <div className="flex-1 text-left">
-                        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Rama Tienda</div>
-                        <div className="text-xs" style={{ color: 'var(--color-subtle)' }}>Plan Negocio</div>
-                    </div>
-                    <ChevronDown size={14} strokeWidth={1.5} style={{
-                        color: 'var(--color-subtle)',
-                        transform: dropdownAbierto ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 150ms ease'
-                    }} />
-                </button>
+                )}
             </div>
 
-            {/* Dropdown via portal */}
-            {montado && dropdownAbierto && createPortal(
-                <div ref={dropdownRef} style={{
-                    position: 'fixed',
-                    top: dropdownPos.top,
-                    left: dropdownPos.left,
-                    width: dropdownPos.width,
-                    zIndex: 9999,
-                    background: 'var(--color-bg)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 8,
-                    boxShadow: '0 4px 12px rgba(15,23,42,0.10)',
-                    overflow: 'hidden'
-                }}>
-                    {['Rama Turnos'].map(negocio => (
-                        <button
-                            key={negocio}
-                            onClick={() => setDropdownAbierto(false)}
-                            className="w-full px-3 py-2.5 text-left text-sm cursor-pointer"
-                            style={{ background: 'transparent', border: 'none', color: 'var(--color-body)' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-alt)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                            {negocio}
-                        </button>
-                    ))}
-                </div>,
-                document.body
-            )}
+            {/* Navegación por módulos */}
+            <nav className="flex-1 overflow-y-auto px-2 pb-3 flex flex-col gap-0.5">
+                {MODULOS.map(m => {
+                    const activo = moduloActivo === m.id
+                    const open = abierto === m.id
+                    return (
+                        <div key={m.id}>
+                            <button
+                                onClick={() => { ir(m.seccion); setAbierto(m.id) }}
+                                className="flex items-center gap-2.5 w-full h-9 px-2.5 rounded-md cursor-pointer text-[13px]"
+                                style={{ border: 'none', background: activo ? 'var(--color-primary-bg)' : 'transparent', color: activo ? 'var(--color-primary)' : 'var(--color-body)', fontWeight: activo ? 600 : 500 }}
+                                onMouseEnter={e => { if (!activo) e.currentTarget.style.background = 'var(--color-surface-alt)' }}
+                                onMouseLeave={e => { if (!activo) e.currentTarget.style.background = 'transparent' }}
+                            >
+                                <m.Icon size={16} strokeWidth={1.6} />
+                                <span className="flex-1 text-left">{m.label}</span>
+                                {m.alert && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-error)' }} />}
+                                {m.badge && <span className="grid place-items-center text-[10px] font-bold" style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9999, fontFamily: '"Geist Mono", monospace', background: activo ? 'var(--color-primary)' : 'var(--color-surface-alt)', color: activo ? '#fff' : 'var(--color-muted)' }}>{m.badge}</span>}
+                            </button>
 
-            {/* Navegacion */}
-            <nav className="flex-1 overflow-y-auto p-2">
-
-                <div className="text-xs font-semibold px-3 pt-2 pb-1 uppercase tracking-wider" style={{ color: 'var(--color-subtle)' }}>
-                    Gestión
-                </div>
-
-                {/* Inicio */}
-                <Link
-                    href={`/admin/${negocioId}/ventas/dashboard`}
-                    className="flex items-center gap-2.5 px-3 py-2 mb-0.5 rounded-md text-sm font-medium no-underline"
-                    style={itemStyle(seccionActiva === 'dashboard')}
-                >
-                    <Home size={18} strokeWidth={1.5} />
-                    Inicio
-                </Link>
-
-                {navItems.map(({ label, Icon, href }) => (
-                    <Link
-                        key={label}
-                        href={href}
-                        className="flex items-center gap-2.5 px-3 py-2 mb-0.5 rounded-md text-sm no-underline"
-                        style={itemStyle(esActivo(href))}
-                        onMouseEnter={e => {
-                            if (!esActivo(href)) e.currentTarget.style.background = 'var(--color-surface-alt)'
-                        }}
-                        onMouseLeave={e => {
-                            if (!esActivo(href)) e.currentTarget.style.background = 'transparent'
-                        }}
-                    >
-                        <Icon size={18} strokeWidth={1.5} />
-                        {label}
-                    </Link>
-                ))}
-
-                <div className="text-xs font-semibold px-3 pt-4 pb-1 uppercase tracking-wider" style={{ color: 'var(--color-subtle)' }}>
-                    Cuenta
-                </div>
-
-                {cuentaItems.map(({ label, Icon, href }) => (
-                    <Link
-                        key={label}
-                        href={href}
-                        className="flex items-center gap-2.5 px-3 py-2 mb-0.5 rounded-md text-sm no-underline"
-                        style={itemStyle(esActivo(href))}
-                        onMouseEnter={e => {
-                            if (!esActivo(href)) e.currentTarget.style.background = 'var(--color-surface-alt)'
-                        }}
-                        onMouseLeave={e => {
-                            if (!esActivo(href)) e.currentTarget.style.background = 'transparent'
-                        }}
-                    >
-                        <Icon size={18} strokeWidth={1.5} />
-                        {label}
-                    </Link>
-                ))}
+                            {open && m.subs && (
+                                <div className="flex flex-col gap-px mt-0.5" style={{ paddingLeft: 20 }}>
+                                    {m.subs.map(s => {
+                                        const sa = subActiva(s)
+                                        return (
+                                            <button
+                                                key={s.label}
+                                                onClick={() => ir(s.seccion, s.vista)}
+                                                className="h-[30px] px-2 rounded-md text-left cursor-pointer text-xs"
+                                                style={{ border: 'none', fontWeight: sa ? 600 : 500, color: sa ? 'var(--color-primary)' : 'var(--color-muted)', background: sa ? 'var(--color-primary-bg)' : 'transparent' }}
+                                                onMouseEnter={e => { if (!sa) e.currentTarget.style.color = 'var(--color-body)' }}
+                                                onMouseLeave={e => { if (!sa) e.currentTarget.style.color = 'var(--color-muted)' }}
+                                            >
+                                                {s.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
             </nav>
-
         </aside>
     )
 }
+
+// Ícono orbital del prototipo (gradiente azul + punto + anillo).
+function OrbitLogo() {
+    return (
+        <div style={{ width: 26, height: 26, borderRadius: 7, background: 'linear-gradient(135deg,#2563EB,#3B82F6)', display: 'grid', placeItems: 'center', position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />
+            <div style={{ position: 'absolute', inset: 3, border: '1px solid rgba(255,255,255,0.5)', borderRadius: '50%' }} />
+        </div>
+    )
+}
+
+const resLabel: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 8px 4px' }
+const resItem: React.CSSProperties = { width: '100%', textAlign: 'left', padding: '8px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, color: 'var(--color-body)' }

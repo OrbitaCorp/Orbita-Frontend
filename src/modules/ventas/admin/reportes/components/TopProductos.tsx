@@ -6,9 +6,8 @@
 // Cuando el backend esté listo, recibe los datos via prop — no cambia nada acá.
 
 import { fmtMoney } from '@/lib/utils'
-import type { DashboardData } from '../types/dashboard.types'
 
-type Producto = DashboardData['topProductos'][number]
+interface Producto { sku: string; nombre: string; unidades: number; monto: number; hue: number }
 
 interface TopProductosProps {
     productos: Producto[]

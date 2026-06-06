@@ -59,36 +59,6 @@ export default function Header() {
             {/* Acciones */}
             <div className="flex items-center gap-3">
 
-                {/* Publicar tienda */}
-                <button
-                    className="flex items-center gap-2 h-9 px-3 rounded-lg text-sm font-semibold cursor-pointer"
-                    style={{
-                        background: 'var(--color-surface)',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-body)',
-                        transition: 'all 150ms ease',
-                        whiteSpace: 'nowrap',
-                        position: 'relative',
-                    }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = 'var(--color-border-strong)'
-                        e.currentTarget.style.color = 'var(--color-text)'
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = 'var(--color-border)'
-                        e.currentTarget.style.color = 'var(--color-body)'
-                    }}
-                >
-                    {/* Indicador no publicado */}
-                    <span style={{
-                        width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                        background: '#EF4444',
-                        boxShadow: '0 0 0 2px rgba(239,68,68,0.25)',
-                        display: 'inline-block',
-                    }} />
-                    Publicar tienda
-                </button>
-
                 {/* Buscador global — sin lógica aún, placeholder funcional */}
                 <div className="relative">
                     <Search
