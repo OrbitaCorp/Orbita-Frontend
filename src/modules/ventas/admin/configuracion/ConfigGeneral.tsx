@@ -83,7 +83,7 @@ export default function ConfigGeneral() {
 
     const sub = vista as VistaConfig | undefined
     let content
-    if (sub === 'apariencia')          content = <Apariencia ir={ir} />
+    if (sub === 'apariencia')          content = <Apariencia ir={ir} onToast={setToast} />
     else if (sub === 'equipo')         content = <Equipo ir={ir} onToast={setToast} />
     else if (sub === 'notificaciones') content = <Notificaciones ir={ir} />
     else                               content = <GeneralView ir={ir} onToast={setToast} />
