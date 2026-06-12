@@ -1,225 +1,471 @@
-import { useState } from 'react'
+// src/modules/ventas/cliente/inicio/Inicio.tsx — Vista 01 (rediseño v3 editorial)
+// Home del storefront: hero carousel autoplay, stats, carrusel de categorías,
+// más vendidos con ranking, destacados, nuevos ingresos, lanzamientos,
+// recomendados, panel de envíos y beneficios, y banner de WhatsApp.
+
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Shield, RefreshCw, MessageCircle, Star, CheckCircle, ArrowRight } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Plus, ShoppingCart, Star, Truck, ShoppingBag, MapPin, Check, RefreshCw, Shield, MessageCircle, Lock } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { AnnouncementBar } from '@/components/storefront/AnnouncementBar'
 import { ProductCard } from '@/components/storefront/ProductCard'
 import { ProdImage } from '@/components/storefront/Thumb'
-import { TIENDA, PRODUCTOS, CARRITO_INICIAL, CATEGORIAS } from '@/lib/storefront/mock'
+import { TIENDA, PRODUCTOS, CARRITO_INICIAL } from '@/lib/storefront/mock'
 import { fmt, openWpp } from '@/lib/storefront/utils'
 
-const OFERTAS = PRODUCTOS.filter(p => p.precioAnt).slice(0, 4)
-const NUEVOS  = PRODUCTOS.filter(p => p.badge === 'Nuevo').slice(0, 4)
+// ─── Datos mock locales de esta vista (idénticos a la plantilla v3) ──────────
 
-const RESENAS = [
-  { nombre:'Laura M.',   ini:'LM', hue:340, rating:5, texto:'La campera es increíble, el material es de primerísima calidad. La talle M me quedó perfecta y el color es idéntico a las fotos.',  producto:'Campera bomber beige', fecha:'12 may' },
-  { nombre:'Rodrigo F.', ini:'RF', hue:220, rating:5, texto:'Ya compré 3 veces y siempre quedo satisfecho. Los productos son exactamente lo que muestran, sin sorpresas desagradables.',           producto:'Remera oversize negra', fecha:'8 may'  },
-  { nombre:'Camila S.',  ini:'CS', hue:280, rating:4, texto:'Muy buena ropa, precio justo y la atención por WhatsApp fue súper rápida. El envío llegó bien embalado.',                             producto:'Jean tiro medio',       fecha:'3 may'  },
-  { nombre:'Martín G.',  ini:'MG', hue:140, rating:5, texto:'Compré el jogger y al mes volví por el buzo. La calidad de los materiales se nota. Se los recomiendo a todos.',                        producto:'Jogger gris melange',   fecha:'1 may'  },
-  { nombre:'Flor R.',    ini:'FR', hue:30,  rating:5, texto:'Hermosa la remera estampada. Me la puse y recibí 3 comentarios el primer día. Definitivamente voy a comprar más.',                     producto:'Remera estampada',      fecha:'28 abr' },
-  { nombre:'Diego P.',   ini:'DP', hue:200, rating:5, texto:'Excelente relación calidad-precio. La campera es cómoda, abriga bien y el cierre YKK es de los que duran.',                            producto:'Campera cortaviento',   fecha:'25 abr' },
+const HERO_SLIDES = [
+    {
+        id: 's1', eyebrow: 'Colección Otoño · Invierno 2026',
+        titulo: 'Camperas que\nabrigan con estilo',
+        sub: 'Bombers, técnicas y cortavientos. Hasta 25% off en abrigos seleccionados.',
+        cta: 'Ver camperas', cta2: 'Ofertas', hue: 35,
+        grad: 'linear-gradient(120deg, #0F172A 0%, #1E3A5F 42%, #1D4ED8 100%)', accent: '#60A5FA',
+        precio: 89000, precioAnt: 110000 as number | null, prod: 'Campera bomber beige arena',
+    },
+    {
+        id: 's2', eyebrow: 'Nuevos ingresos',
+        titulo: 'Recién llegados,\nlistos para vos',
+        sub: 'Las últimas piezas de la temporada. Diseño contemporáneo hecho en Argentina.',
+        cta: 'Ver novedades', cta2: 'Catálogo', hue: 280,
+        grad: 'linear-gradient(120deg, #1E1B4B 0%, #4C1D95 45%, #7C3AED 100%)', accent: '#C4B5FD',
+        precio: 27500, precioAnt: null as number | null, prod: 'Remera estampada gráfica',
+    },
+    {
+        id: 's3', eyebrow: 'Ofertas flash',
+        titulo: 'Precios especiales\npor tiempo limitado',
+        sub: 'Hasta 23% off en remeras, joggers y jeans. Stock limitado, no te quedes afuera.',
+        cta: 'Ver ofertas', cta2: 'Catálogo', hue: 200,
+        grad: 'linear-gradient(120deg, #052E2B 0%, #0A6638 45%, #10B981 100%)', accent: '#6EE7B7',
+        precio: 56000, precioAnt: 68000 as number | null, prod: 'Jean tiro medio celeste',
+    },
 ]
 
+const CATS_CARRUSEL = [
+    { id: 'remeras',    nombre: 'Remeras',    count: 12, hue: 220, emoji: '👕' },
+    { id: 'pantalones', nombre: 'Pantalones', count: 8,  hue: 140, emoji: '👖' },
+    { id: 'buzos',      nombre: 'Buzos',      count: 6,  hue: 280, emoji: '🧥' },
+    { id: 'camperas',   nombre: 'Camperas',   count: 5,  hue: 35,  emoji: '🧣' },
+    { id: 'jeans',      nombre: 'Jeans',      count: 9,  hue: 200, emoji: '👖' },
+    { id: 'calzado',    nombre: 'Calzado',    count: 14, hue: 30,  emoji: '👟' },
+    { id: 'accesorios', nombre: 'Accesorios', count: 11, hue: 320, emoji: '🧢' },
+    { id: 'deportivo',  nombre: 'Deportivo',  count: 7,  hue: 170, emoji: '🎽' },
+]
+
+const OFERTA_FLASH = [
+    { nombre: 'Remera oversize negra',   precio: 24900, precioAnt: 32000, hue: 220, badge: '−22%', stock: 4 },
+    { nombre: 'Jogger gris melange',     precio: 34500, precioAnt: 45000, hue: 210, badge: '−23%', stock: 2 },
+    { nombre: 'Buzo sin capucha crema',  precio: 32000, precioAnt: 40000, hue: 45,  badge: '−20%', stock: 7 },
+    { nombre: 'Jean tiro medio celeste', precio: 56000, precioAnt: 68000, hue: 200, badge: '−18%', stock: 3 },
+]
+
+const NUEVOS_INGRESOS = [
+    { nombre: 'Campera técnica impermeable', precio: 112000, hue: 200, rating: 4.8 },
+    { nombre: 'Remera estampada gráfica',    precio: 27500,  hue: 280, rating: 4.9 },
+    { nombre: 'Gorra trucker bordada',       precio: 15900,  hue: 30,  rating: 4.5 },
+    { nombre: 'Top deportivo lila',          precio: 19500,  hue: 270, rating: 4.7 },
+]
+
+const STATS: [string, string][] = [
+    ['+1.200', 'ventas realizadas'],
+    ['48 hs', 'envío a todo el país'],
+    ['30 días', 'para cambios gratis'],
+    ['3 cuotas', 'sin interés'],
+]
+
+// ─── Vista ────────────────────────────────────────────────────────────────────
+
 export default function Inicio() {
-  const router = useRouter()
-  const { slug } = router.query as { slug: string }
-  const base = `/tienda/${slug}`
+    const router = useRouter()
+    const { slug } = router.query as { slug: string }
+    const base = `/tienda/${slug}`
+    const go = (path: string) => router.push(`${base}${path}`)
 
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
-      <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} />
-      <AnnouncementBar />
+    return (
+        <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+            <style>{`
+                @keyframes sfFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes sfDotPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+                @keyframes sfHeroFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 33% { transform: translateY(-8px) rotate(0.3deg); } 66% { transform: translateY(-4px) rotate(-0.2deg); } }
+                @keyframes sfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+                .cat-scroll::-webkit-scrollbar { display: none; }
+            `}</style>
 
-      {/* ── HERO ── */}
-      <div style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '52% 48%', minHeight: 520 }}>
-          <div style={{ padding: '64px 48px 64px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success)' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-success)', letterSpacing: '0.04em' }}>Colección Otoño · Invierno 2026</span>
+            <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} />
+            <AnnouncementBar />
+
+            {/* ═════ HERO CAROUSEL ═════ */}
+            <HeroCarousel go={go} />
+
+            {/* ═════ STATS BAR ═════ */}
+            <div style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: '18px 0', animation: 'sfFadeIn 600ms 200ms cubic-bezier(0.2,0.8,0.2,1) both' }}>
+                <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    {STATS.map(([num, lbl], i, arr) => (
+                        <span key={lbl} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                            <span style={{ padding: '0 36px', display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.01em', fontFamily: '"Geist Mono", monospace' }}>{num}</span>
+                                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-muted)' }}>{lbl}</span>
+                            </span>
+                            {i < arr.length - 1 && <span style={{ width: 1, height: 16, background: 'var(--color-border)' }} />}
+                        </span>
+                    ))}
+                </div>
             </div>
-            <h1 style={{ fontSize: 58, fontWeight: 900, letterSpacing: '-0.045em', lineHeight: 0.92, color: 'var(--color-text)', margin: '0 0 20px' }}>
-              Vestí<br />
-              <span style={{ background: 'linear-gradient(135deg, #1D4ED8 0%, #7C3AED 50%, #EC4899 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>diferente.</span><br />
-              Vivilo.
-            </h1>
-            <p style={{ fontSize: 16, color: 'var(--color-muted)', lineHeight: 1.6, maxWidth: 400, margin: '0 0 28px' }}>
-              Indumentaria contemporánea diseñada en Argentina. Piezas que duran y que te hacen destacar.
-            </p>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 32 }}>
-              <button onClick={() => router.push(`${base}/catalogo`)} style={{ height: 52, padding: '0 28px', borderRadius: 10, background: 'var(--color-primary)', color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(59,130,246,0.30)' }}>
-                Ver colección <ArrowRight size={16} strokeWidth={2} />
-              </button>
-              <button onClick={() => router.push(`${base}/catalogo`)} style={{ height: 52, padding: '0 20px', borderRadius: 10, background: 'transparent', color: 'var(--color-primary)', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
-                Ver ofertas →
-              </button>
+
+            {/* ═════ CARRUSEL DE CATEGORÍAS ═════ */}
+            <CategoriaCarrusel go={go} />
+
+            {/* ═════ MÁS VENDIDOS (con ranking) ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '48px 32px 0' }}>
+                <SectionHead color="#F59E0B" eyebrow="Top ventas" titulo="Más vendidos" onVer={() => go('/catalogo')} verLabel="Ver todos →" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {PRODUCTOS.slice(0, 4).map((p, i) => (
+                        <div key={p.id} style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 3, width: 26, height: 26, borderRadius: '50%', background: 'rgba(15,23,42,0.82)', backdropFilter: 'blur(6px)', color: '#fff', fontSize: 12, fontWeight: 700, display: 'grid', placeItems: 'center', fontFamily: '"Geist Mono", monospace' }}>{i + 1}</span>
+                            <ProductCard producto={p} />
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* ═════ DESTACADOS (oferta flash) ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '48px 32px' }}>
+                <SectionHead color="var(--color-error)" eyebrow="Destacados" titulo="Productos destacados" onVer={() => go('/catalogo')} verLabel="Ver todas →" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {OFERTA_FLASH.map((p, i) => <OfertaCard key={p.nombre} p={p} go={go} delay={300 + i * 40} />)}
+                </div>
+            </section>
+
+            {/* ═════ NUEVOS INGRESOS ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+                <SectionHead color="var(--color-success)" eyebrow="Nuevos ingresos" titulo="Recién llegados" onVer={() => go('/catalogo')} verLabel="Ver todos →" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {NUEVOS_INGRESOS.map((p, i) => <NuevoCard key={p.nombre} p={p} go={go} delay={i * 40} />)}
+                </div>
+            </section>
+
+            {/* ═════ NUEVOS LANZAMIENTOS ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+                <SectionHead color="#7C3AED" eyebrow="Lanzamientos" titulo="Nuevos lanzamientos" onVer={() => go('/catalogo')} verLabel="Ver todos →" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {PRODUCTOS.slice(4, 8).map(p => <ProductCard key={p.id} producto={p} />)}
+                </div>
+            </section>
+
+            {/* ═════ MÁS PARA VOS ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 64px' }}>
+                <SectionHead color="var(--color-primary)" eyebrow="Recomendados" titulo="Más para vos" onVer={() => go('/catalogo')} verLabel="Ver todos →" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {PRODUCTOS.slice(8, 12).map(p => <ProductCard key={p.id} producto={p} />)}
+                </div>
+            </section>
+
+            {/* ═════ ENVÍOS Y BENEFICIOS ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 64px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 20 }}>
+                    {/* Panel envíos con tracking */}
+                    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 55%, #2563EB 140%)', padding: '40px 40px 0', display: 'flex', flexDirection: 'column', minHeight: 340 }}>
+                        <div style={{ position: 'absolute', top: -60, right: -40, width: 260, height: 260, borderRadius: '50%', background: 'rgba(96,165,250,0.25)', filter: 'blur(70px)' }} />
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 28, padding: '0 13px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.20)', backdropFilter: 'blur(8px)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                                <Truck size={13} /> Envíos
+                            </span>
+                            <h2 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.08, color: '#fff', marginTop: 18, maxWidth: 360 }}>Llega a todo el país en 24–48 hs</h2>
+                            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.55, marginTop: 12, maxWidth: 380 }}>Despachamos por correo y moto con seguimiento en tiempo real.</p>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 18, height: 38, padding: '0 16px', borderRadius: 10, background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(52,211,153,0.35)', color: '#6EE7B7', fontSize: 13, fontWeight: 600 }}>
+                                <Check size={15} /> Envío gratis desde {fmt(80000)}
+                            </div>
+                        </div>
+                        {/* Mock de tracking */}
+                        <div style={{ position: 'relative', zIndex: 1, marginTop: 28, background: 'rgba(255,255,255,0.10)', backdropFilter: 'blur(16px)', borderTop: '1px solid rgba(255,255,255,0.15)', borderLeft: '1px solid rgba(255,255,255,0.15)', borderRight: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px 16px 0 0', padding: '16px 20px', display: 'flex', alignItems: 'center' }}>
+                            {([
+                                { Ico: ShoppingBag, lbl: 'Confirmado', done: true },
+                                { Ico: ShoppingCart, lbl: 'Preparando', done: true },
+                                { Ico: Truck, lbl: 'En camino', done: false },
+                                { Ico: MapPin, lbl: 'Entregado', done: false },
+                            ]).map((s, i, arr) => (
+                                <span key={s.lbl} style={{ display: 'contents' }}>
+                                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+                                        <span style={{ width: 34, height: 34, borderRadius: '50%', background: s.done ? '#34D399' : 'rgba(255,255,255,0.14)', color: s.done ? '#052E2B' : 'rgba(255,255,255,0.55)', display: 'grid', placeItems: 'center', border: !s.done && i === 2 ? '2px solid #60A5FA' : 'none' }}>
+                                            <s.Ico size={16} />
+                                        </span>
+                                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{s.lbl}</span>
+                                    </span>
+                                    {i < arr.length - 1 && <span style={{ flex: 1, height: 2, background: s.done ? '#34D399' : 'rgba(255,255,255,0.18)', margin: '0 4px 17px' }} />}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Beneficios */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {([
+                            { Ico: RefreshCw, c: '#7C3AED', t: 'Cambios sin vueltas', d: '30 días para cambiar talle o modelo, coordinado por WhatsApp.' },
+                            { Ico: Shield, c: '#10B981', t: 'Compra protegida', d: 'Tarjeta, transferencia o Mercado Pago en hasta 3 cuotas sin interés.' },
+                            { Ico: MessageCircle, c: '#F59E0B', t: 'Atención en <1 hora', d: 'Te respondemos por WhatsApp de lunes a sábado, sin bots.' },
+                        ]).map((b, i) => (
+                            <div key={b.t} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 18, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 18, padding: '22px 24px', animation: `sfFadeIn 500ms ${i * 60}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
+                                <div style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0, background: `linear-gradient(135deg, ${b.c}, ${b.c}cc)`, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: `0 8px 20px ${b.c}40` }}>
+                                    <b.Ico size={24} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>{b.t}</div>
+                                    <div style={{ fontSize: 13, color: 'var(--color-muted)', lineHeight: 1.5 }}>{b.d}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Tira de métodos de pago */}
+                <div style={{ marginTop: 16, padding: '18px 28px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pagás con</span>
+                        {['Visa', 'Mastercard', 'Amex', 'Mercado Pago', 'Transferencia'].map(m => (
+                            <span key={m} style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-body)', padding: '6px 11px', borderRadius: 8, background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontFamily: '"Geist Mono", monospace' }}>{m}</span>
+                        ))}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-body)' }}>
+                        <Lock size={15} color="var(--color-success)" />
+                        <span>Pago cifrado y protegido</span>
+                    </div>
+                </div>
+            </section>
+
+            {/* ═════ BANNER WHATSAPP ═════ */}
+            <section style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 64px' }}>
+                <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, background: 'linear-gradient(125deg, #0A4731 0%, #128C7E 40%, #25D366 100%)' }}>
+                    <div style={{ position: 'absolute', top: -80, right: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', filter: 'blur(80px)' }} />
+                    <div style={{ position: 'absolute', bottom: -60, left: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', filter: 'blur(80px)' }} />
+                    <div style={{ position: 'relative', zIndex: 1, padding: '44px 52px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 40, flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1 1 480px', minWidth: 280 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', height: 26, padding: '0 12px', borderRadius: 999, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' }}>ATENCIÓN PERSONALIZADA</span>
+                            <h2 style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, margin: '12px 0 0', maxWidth: 480 }}>Pedí por WhatsApp y te respondemos en menos de 1 hora 💬</h2>
+                            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.55, margin: '10px 0 0', maxWidth: 440 }}>Consultá disponibilidad, talles, colores y coordinamos el envío de forma personalizada.</p>
+                            <div style={{ display: 'flex', gap: 28, marginTop: 20 }}>
+                                {([['< 1hs', 'tiempo de respuesta'], ['+1.200', 'pedidos coordinados']] as [string, string][]).map(([n, l]) => (
+                                    <div key={l}>
+                                        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', fontFamily: '"Geist Mono", monospace' }}>{n}</div>
+                                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{l}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <button onClick={() => openWpp(TIENDA.wpp, 'Hola! Quería hacer una consulta.')} style={{ height: 56, padding: '0 32px', borderRadius: 12, background: '#fff', color: '#0A4731', fontSize: 16, fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.20)' }}>
+                            💬 Escribirnos por WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <StorefrontFooter tienda={TIENDA} slug={slug} />
+        </div>
+    )
+}
+
+// ─── Encabezado de sección con dot pulsante ───────────────────────────────────
+
+function SectionHead({ color, eyebrow, titulo, onVer, verLabel }: { color: string; eyebrow: string; titulo: string; onVer: () => void; verLabel: string }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, animation: 'sfDotPulse 2s infinite' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{eyebrow}</span>
+                </div>
+                <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '6px 0 0' }}>{titulo}</h2>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingTop: 28, borderTop: '1px solid var(--color-border)' }}>
-              {([
-                [<Shield size={16} color="var(--color-muted)" strokeWidth={1.5} key="s" />, 'Compra protegida'],
-                [<RefreshCw size={16} color="var(--color-muted)" strokeWidth={1.5} key="r" />, 'Cambios en 30 días'],
-                [<MessageCircle size={16} color="var(--color-muted)" strokeWidth={1.5} key="m" />, 'Atención por WPP'],
-              ] as const).map(([ico, lbl], i, arr) => (
-                <span key={String(lbl)} style={{ display: 'inline-flex', alignItems: 'center', gap: 20 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    {ico}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-body)' }}>{lbl}</span>
-                  </span>
-                  {i < arr.length - 1 && <span style={{ width: 1, height: 16, background: 'var(--color-border)' }} />}
+            <button onClick={onVer} style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>{verLabel}</button>
+        </div>
+    )
+}
+
+// ─── Hero carousel (autoplay 4s, flechas, dots) ───────────────────────────────
+
+function HeroCarousel({ go }: { go: (p: string) => void }) {
+    const [idx, setIdx] = useState(0)
+    const [paused, setPaused] = useState(false)
+    const n = HERO_SLIDES.length
+
+    useEffect(() => {
+        if (paused) return
+        const id = setInterval(() => setIdx(i => (i + 1) % n), 4000)
+        return () => clearInterval(id)
+    }, [paused, n])
+
+    const goSlide = (i: number) => setIdx((i + n) % n)
+
+    return (
+        <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} style={{ position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', width: `${n * 100}%`, transform: `translateX(-${idx * (100 / n)}%)`, transition: 'transform 700ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                {HERO_SLIDES.map(s => (
+                    <div key={s.id} style={{ width: `${100 / n}%`, flexShrink: 0 }}>
+                        <div style={{ position: 'relative', minHeight: 500, background: s.grad, overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', inset: 0, opacity: 0.5, backgroundImage: 'radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1px)', backgroundSize: '22px 22px', maskImage: 'linear-gradient(to right, transparent, black 55%)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 55%)' }} />
+                            <div style={{ position: 'absolute', top: -90, right: '32%', width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.10)', filter: 'blur(80px)' }} />
+                            <div style={{ position: 'absolute', bottom: -100, left: -60, width: 260, height: 260, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', filter: 'blur(80px)' }} />
+
+                            <div style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', minHeight: 500, padding: '0 64px', display: 'grid', gridTemplateColumns: '1fr 440px', gap: 48, alignItems: 'center' }}>
+                                {/* Texto */}
+                                <div>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 28, padding: '0 14px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
+                                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.accent, animation: 'sfDotPulse 2s infinite' }} />
+                                        {s.eyebrow}
+                                    </div>
+                                    <h1 style={{ fontSize: 52, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.0, color: '#fff', whiteSpace: 'pre-line', margin: 0 }}>{s.titulo}</h1>
+                                    <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.78)', lineHeight: 1.6, marginTop: 18, maxWidth: 420 }}>{s.sub}</p>
+                                    <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
+                                        <button onClick={() => go('/catalogo')} style={{ height: 50, padding: '0 28px', borderRadius: 10, background: '#fff', color: '#0F172A', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.20)' }}>
+                                            {s.cta} <ArrowRight size={16} />
+                                        </button>
+                                        <button onClick={() => go('/catalogo')} style={{ height: 50, padding: '0 22px', borderRadius: 10, background: 'rgba(255,255,255,0.10)', border: '1.5px solid rgba(255,255,255,0.28)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
+                                            {s.cta2}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Card producto */}
+                                <div style={{ position: 'relative' }}>
+                                    <div onClick={() => go('/producto/p4')} style={{ borderRadius: 18, overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 24px 64px rgba(0,0,0,0.30)', animation: 'sfHeroFloat 6s ease-in-out infinite' }}>
+                                        <ProdImage hue={s.hue} height={300} radius={0} />
+                                        <div style={{ padding: 18, background: 'rgba(255,255,255,0.10)', backdropFilter: 'blur(20px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.prod}</div>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+                                                    <span style={{ fontSize: 17, fontWeight: 800, color: s.accent, fontFamily: '"Geist Mono", monospace' }}>{fmt(s.precio)}</span>
+                                                    {s.precioAnt && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', textDecoration: 'line-through', fontFamily: '"Geist Mono", monospace' }}>{fmt(s.precioAnt)}</span>}
+                                                </div>
+                                            </div>
+                                            <button onClick={e => { e.stopPropagation(); go('/carrito') }} style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', color: '#0F172A', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                                                <Plus size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {s.precioAnt && (
+                                        <div style={{ position: 'absolute', top: -12, left: -12, height: 28, padding: '0 12px', borderRadius: 999, background: 'linear-gradient(135deg, #F59E0B, #EF4444)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(239,68,68,0.35)', animation: 'sfFloat 3s ease-in-out infinite' }}>⭐ OFERTA</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Flechas */}
+            <button onClick={() => goSlide(idx - 1)} aria-label="Anterior" style={arrowBtn('left')}><ChevronLeft size={20} /></button>
+            <button onClick={() => goSlide(idx + 1)} aria-label="Siguiente" style={arrowBtn('right')}><ChevronRight size={20} /></button>
+
+            {/* Dots */}
+            <div style={{ position: 'absolute', bottom: 22, left: '50%', transform: 'translateX(-50%)', zIndex: 3, display: 'flex', gap: 8 }}>
+                {HERO_SLIDES.map((_, i) => (
+                    <button key={i} onClick={() => goSlide(i)} aria-label={`Slide ${i + 1}`} style={{ height: 8, width: i === idx ? 26 : 8, borderRadius: 999, border: 'none', cursor: 'pointer', background: i === idx ? '#fff' : 'rgba(255,255,255,0.45)', transition: 'width 300ms ease, background 300ms ease', padding: 0 }} />
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function arrowBtn(side: 'left' | 'right'): React.CSSProperties {
+    return {
+        position: 'absolute', [side]: 20, top: '50%', transform: 'translateY(-50%)', zIndex: 3,
+        width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)',
+        border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)',
+        color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer',
+    }
+}
+
+// ─── Carrusel de categorías (scroll horizontal con snap) ──────────────────────
+
+function CategoriaCarrusel({ go }: { go: (p: string) => void }) {
+    const scroller = useRef<HTMLDivElement>(null)
+    const scrollBy = (dir: number) => scroller.current?.scrollBy({ left: dir * 280, behavior: 'smooth' })
+
+    return (
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '8px 32px 36px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '36px 0 16px', gap: 12 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--color-text)', margin: 0 }}>Comprá por categoría</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button onClick={() => go('/catalogo')} style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Ver todas →</button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => scrollBy(-1)} aria-label="Anterior" style={scrollArrow}><ChevronLeft size={15} /></button>
+                        <button onClick={() => scrollBy(1)} aria-label="Siguiente" style={scrollArrow}><ChevronRight size={15} /></button>
+                    </div>
+                </div>
+            </div>
+            <div ref={scroller} className="cat-scroll" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}>
+                {CATS_CARRUSEL.map((c, i) => (
+                    <button key={c.id} onClick={() => go(`/catalogo/${c.id}`)} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', alignItems: 'center', gap: 11, height: 56, padding: '0 18px 0 8px', cursor: 'pointer', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg)', animation: `sfFadeIn 450ms ${i * 35}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
+                        <span style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: `radial-gradient(circle at 35% 30%, oklch(0.86 0.07 ${c.hue}), oklch(0.74 0.08 ${c.hue}))`, display: 'grid', placeItems: 'center', fontSize: 19 }}>{c.emoji}</span>
+                        <span style={{ textAlign: 'left' }}>
+                            <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{c.nombre}</span>
+                            <span style={{ display: 'block', fontSize: 11, color: 'var(--color-subtle)', marginTop: 1, fontFamily: '"Geist Mono", monospace' }}>{c.count} productos</span>
+                        </span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+const scrollArrow: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--color-border)',
+    background: 'var(--color-bg)', color: 'var(--color-muted)', display: 'grid', placeItems: 'center', cursor: 'pointer',
+}
+
+// ─── Card de oferta flash (badge % + stock) ───────────────────────────────────
+
+function OfertaCard({ p, go, delay = 0 }: { p: typeof OFERTA_FLASH[number]; go: (path: string) => void; delay?: number }) {
+    const [hov, setHov] = useState(false)
+    const lowStock = p.stock <= 3
+    return (
+        <div onClick={() => go('/producto/p1')} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: 'var(--color-bg)', border: `1px solid ${hov ? 'var(--color-border-strong)' : 'var(--color-border)'}`, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease', transform: hov ? 'translateY(-3px)' : 'translateY(0)', boxShadow: hov ? '0 12px 32px rgba(15,23,42,0.10)' : '0 1px 3px rgba(15,23,42,0.06)', animation: `sfFadeIn 500ms ${delay}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
+            <div style={{ position: 'relative', height: 200, overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', inset: 0, background: `repeating-linear-gradient(135deg, oklch(0.84 0.06 ${p.hue}) 0px 28px, oklch(0.79 0.06 ${p.hue}) 28px 56px)`, transition: 'transform 400ms ease', transform: hov ? 'scale(1.04)' : 'scale(1)' }} />
+                <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, height: 26, padding: '0 10px', borderRadius: 999, background: 'var(--color-error)', color: '#fff', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', fontFamily: '"Geist Mono", monospace' }}>{p.badge}</span>
+                <span style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 2, height: 24, padding: '0 10px', borderRadius: 999, background: lowStock ? 'rgba(251,191,36,0.92)' : 'rgba(16,185,129,0.92)', color: lowStock ? '#0F172A' : '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {lowStock ? `⚡ ${p.stock} disponibles` : '✓ Stock disponible'}
                 </span>
-              ))}
             </div>
-          </div>
-
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '40px 32px 40px 0' }}>
-            <div onClick={() => router.push(`${base}/producto/p4`)} style={{ width: 'calc(100% + 48px)', marginLeft: -48, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 20, overflow: 'hidden', boxShadow: '-24px 0 64px rgba(15,23,42,0.10)', cursor: 'pointer', position: 'relative' }}>
-              <ProdImage hue={35} height={360} radius={0}>
-                <div style={{ position: 'absolute', top: 20, left: 20, background: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, padding: '10px 14px' }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', fontFamily: '"Geist Mono", monospace' }}>{fmt(89000)}</div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', textDecoration: 'line-through', fontFamily: '"Geist Mono", monospace' }}>{fmt(110000)}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: '#EF4444', padding: '2px 6px', borderRadius: 999, fontFamily: '"Geist Mono", monospace' }}>-19%</span>
-                  </div>
+            <div style={{ padding: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 36 }}>{p.nombre}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8 }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{fmt(p.precio)}</span>
+                    <span style={{ fontSize: 13, color: 'var(--color-subtle)', textDecoration: 'line-through', fontFamily: '"Geist Mono", monospace' }}>{fmt(p.precioAnt)}</span>
                 </div>
-                <div style={{ position: 'absolute', bottom: 20, left: 20, background: 'rgba(251,191,36,0.92)', color: '#0F172A', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700 }}>⚡ Quedan 3 unidades</div>
-                <div style={{ position: 'absolute', top: -14, right: 32, height: 28, padding: '0 12px', borderRadius: 999, background: 'linear-gradient(135deg, #F59E0B, #EF4444)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5, zIndex: 2 }}>★ MÁS VENDIDA</div>
-              </ProdImage>
-              <div style={{ padding: 20, borderTop: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>Campera bomber beige arena</div>
-              </div>
+                <button onClick={e => { e.stopPropagation(); go('/carrito') }} style={{ width: '100%', marginTop: 12, height: 36, borderRadius: 8, background: 'var(--color-primary)', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <ShoppingCart size={14} /> Agregar
+                </button>
             </div>
-          </div>
         </div>
-      </div>
+    )
+}
 
-      {/* ── STATS ── */}
-      <div style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: '32px 0' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'flex', justifyContent: 'center' }}>
-          {(['+1.200', '4.8 ★', '340', '< 1hs'] as const).map((num, i, arr) => (
-            <span key={num} style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <span style={{ padding: '0 48px', textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace', letterSpacing: '-0.02em' }}>{num}</div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-muted)', marginTop: 4 }}>{['ventas realizadas','rating promedio','reseñas verificadas','respuesta por WPP'][i]}</div>
-              </span>
-              {i < arr.length - 1 && <span style={{ width: 1, height: 40, background: 'var(--color-border)' }} />}
-            </span>
-          ))}
+// ─── Card de nuevo ingreso (badge Nuevo + rating) ─────────────────────────────
+
+function NuevoCard({ p, go, delay = 0 }: { p: typeof NUEVOS_INGRESOS[number]; go: (path: string) => void; delay?: number }) {
+    const [hov, setHov] = useState(false)
+    return (
+        <div onClick={() => go('/producto/p9')} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: 'var(--color-bg)', border: `1px solid ${hov ? 'var(--color-border-strong)' : 'var(--color-border)'}`, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease', transform: hov ? 'translateY(-3px)' : 'translateY(0)', boxShadow: hov ? '0 12px 32px rgba(15,23,42,0.10)' : '0 1px 3px rgba(15,23,42,0.06)', animation: `sfFadeIn 500ms ${delay}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
+            <div style={{ position: 'relative', height: 200, overflow: 'hidden', background: `repeating-linear-gradient(135deg, oklch(0.84 0.06 ${p.hue}) 0px 28px, oklch(0.79 0.06 ${p.hue}) 28px 56px)` }}>
+                <span style={{ position: 'absolute', top: 12, left: 12, height: 24, padding: '0 10px', borderRadius: 999, background: 'var(--color-success)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', display: 'inline-flex', alignItems: 'center', textTransform: 'uppercase' }}>Nuevo</span>
+            </div>
+            <div style={{ padding: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 36 }}>{p.nombre}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{fmt(p.precio)}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <Star size={12} fill="#F59E0B" color="#F59E0B" />
+                        <span style={{ fontWeight: 600, color: 'var(--color-body)', fontFamily: '"Geist Mono", monospace' }}>{p.rating}</span>
+                    </span>
+                </div>
+                <button onClick={e => { e.stopPropagation(); go('/producto/p9') }} style={{ width: '100%', marginTop: 12, height: 36, borderRadius: 8, background: 'transparent', color: 'var(--color-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--color-primary)', cursor: 'pointer' }}>
+                    Ver producto
+                </button>
+            </div>
         </div>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
-        {/* ── OFERTAS ── */}
-        <section style={{ padding: '48px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-error)' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-error)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ofertas</span>
-              </div>
-              <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.02em', margin: '6px 0 0' }}>Precios especiales</h2>
-            </div>
-            <a href={`${base}/catalogo`} style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-primary)', textDecoration: 'none' }}>Ver todas →</a>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            {OFERTAS.map(p => <ProductCard key={p.id} producto={p} />)}
-          </div>
-        </section>
-
-        {/* ── NUEVOS ── */}
-        <section style={{ paddingBottom: 48 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Nuevos ingresos</span>
-              </div>
-              <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.02em', margin: '6px 0 0' }}>Recién llegados</h2>
-            </div>
-            <a href={`${base}/catalogo`} style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-primary)', textDecoration: 'none' }}>Ver todos →</a>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            {NUEVOS.map(p => <ProductCard key={p.id} producto={p} />)}
-          </div>
-        </section>
-
-        {/* ── CATEGORÍAS ── */}
-        <section style={{ paddingBottom: 48 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', marginBottom: 6 }}>¿Qué estás buscando?</h2>
-          <p style={{ fontSize: 14, color: 'var(--color-muted)', marginBottom: 20 }}>Explorá nuestra colección completa por categoría</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-            {CATEGORIAS.map(c => (
-              <a key={c.id} href={`${base}/catalogo/${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 20, borderRadius: 14, background: 'var(--color-bg)', border: '1px solid var(--color-border)', textDecoration: 'none', transition: 'all 150ms ease' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,23,42,0.08)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0, background: `oklch(0.94 0.04 ${c.hue})`, display: 'grid', placeItems: 'center', fontSize: 22 }}>🛍️</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>{c.nombre}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>{c.count} productos</div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* ── RESEÑAS ── */}
-        <section style={{ paddingBottom: 64 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F59E0B' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Reseñas</span>
-              </div>
-              <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', margin: '6px 0 0' }}>Lo que dicen nuestros clientes</h2>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ fontSize: 40, fontWeight: 800, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace', letterSpacing: '-0.03em' }}>4.8</span>
-              <div>
-                <div style={{ display: 'flex', gap: 2 }}>{[1,2,3,4,5].map(i => <Star key={i} size={16} fill="#F59E0B" color="#F59E0B" />)}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 2 }}>340 reseñas verificadas</div>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {RESENAS.map(r => (
-              <div key={r.nombre} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, transition: 'border-color 150ms, box-shadow 150ms' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-border-strong)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(15,23,42,0.06)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `oklch(0.85 0.06 ${r.hue})`, color: `oklch(0.32 0.10 ${r.hue})`, display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{r.ini}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>{r.nombre}</div>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px', borderRadius: 999, background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-muted)', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 4 }}>{r.producto}</span>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', gap: 2 }}>{[1,2,3,4,5].map(i => <Star key={i} size={12} fill={i <= r.rating ? '#F59E0B' : 'none'} color={i <= r.rating ? '#F59E0B' : 'var(--color-border)'} />)}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-subtle)', fontFamily: '"Geist Mono", monospace', marginTop: 2 }}>{r.fecha}</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: 14, color: 'var(--color-body)', lineHeight: 1.65, fontStyle: 'italic', margin: 0 }}>"{r.texto}"</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 12, fontSize: 11, color: 'var(--color-success)', fontWeight: 500 }}>
-                  <CheckCircle size={12} strokeWidth={2} /> Compra verificada
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── WHATSAPP BANNER ── */}
-        <section style={{ paddingBottom: 64 }}>
-          <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, background: 'linear-gradient(125deg, #0A4731 0%, #128C7E 40%, #25D366 100%)', padding: '44px 52px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 40, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 480px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', height: 26, padding: '0 12px', borderRadius: 999, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' }}>ATENCIÓN PERSONALIZADA</span>
-              <h2 style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', margin: '12px 0 10px', maxWidth: 480 }}>Pedí por WhatsApp y te respondemos en menos de 1 hora</h2>
-              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.55, maxWidth: 440, margin: 0 }}>Consultá disponibilidad, talles, colores y coordinamos el envío de forma personalizada.</p>
-            </div>
-            <button onClick={() => openWpp(TIENDA.wpp, 'Hola! Quería hacer una consulta.')} style={{ height: 56, padding: '0 32px', borderRadius: 12, background: '#fff', color: '#0A4731', fontSize: 16, fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.20)' }}>
-              💬 Escribirnos por WhatsApp
-            </button>
-          </div>
-        </section>
-      </div>
-
-      <StorefrontFooter tienda={TIENDA} slug={slug} />
-    </div>
-  )
+    )
 }

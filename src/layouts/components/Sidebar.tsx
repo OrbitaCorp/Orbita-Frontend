@@ -129,14 +129,26 @@ export default function Sidebar() {
                 <span className="text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>Orbita</span>
             </div>
 
-            {/* Publicar tienda */}
+            {/* Publicar tienda — publica y abre el home del storefront */}
             <button
-                onClick={() => setPublicada(true)}
+                onClick={() => { setPublicada(true); window.open(`/tienda/${negocioId}`, '_blank', 'noopener') }}
                 className="flex items-center justify-center gap-2 mx-3 mt-3 h-9 rounded-lg text-[13px] font-semibold cursor-pointer"
                 style={{ border: 'none', color: '#fff', background: publicada ? 'linear-gradient(135deg,#059669,#10B981)' : 'linear-gradient(135deg,#10B981,#059669)' }}
             >
                 <Globe size={14} strokeWidth={1.6} /> {publicada ? '✓ Tienda online' : 'Publicar tienda'}
             </button>
+            {/* URL pública de la tienda */}
+            <a
+                href={`/tienda/${negocioId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mx-3 mt-1.5 text-center text-[10px] no-underline"
+                style={{ color: 'var(--color-subtle)', fontFamily: '"Geist Mono", monospace' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-primary)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-subtle)')}
+            >
+                /tienda/{negocioId} ↗
+            </a>
 
             {/* Buscador */}
             <div className="relative mx-3 mt-2 mb-1">
