@@ -74,7 +74,7 @@ export default function Bandeja() {
 
     const ir = (v: VistaMensaje) => {
         const { vista: _v, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'bandeja') q.vista = v
         router.push({ query: q })
     }

@@ -108,7 +108,7 @@ export default function ReporteVentas() {
 
     const ir = (v: VistaReporte) => {
         const { vista: _v, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'ventas') q.vista = v
         router.push({ query: q })
     }

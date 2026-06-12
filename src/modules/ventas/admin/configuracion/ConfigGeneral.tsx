@@ -76,7 +76,7 @@ export default function ConfigGeneral() {
 
     const ir = (v: VistaConfig) => {
         const { vista: _v, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'general') q.vista = v
         router.push({ query: q })
     }

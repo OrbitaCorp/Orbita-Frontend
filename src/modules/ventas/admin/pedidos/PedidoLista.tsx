@@ -156,7 +156,7 @@ export default function PedidoLista() {
 
     const ir = (v: VistaPedido, pid?: string) => {
         const { vista: _v, id: _i, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'lista') q.vista = v
         if (pid) q.id = pid
         router.push({ query: q })

@@ -135,9 +135,16 @@ export default function Categorias() {
                 <CatModal
                     modal={modal}
                     onClose={() => setModal(null)}
-                    onSave={(node, parentId, editId) => {
-                        if (editId) { setArbol(a => treeMap(a, editId, c => ({ ...c, ...node }))); notify('Categoría actualizada') }
-                        else { setArbol(a => treeAdd(a, parentId, node)); if (parentId) setExp(x => x.includes(parentId) ? x : [...x, parentId]); notify('Categoría creada') }
+                    onSave={(campos, parentId, editId) => {
+                        if (editId) {
+                            setArbol(a => treeMap(a, editId, c => ({ ...c, ...campos })))
+                            notify('Categoría actualizada')
+                        } else {
+                            const nuevo: CatNode = { ...campos, id: 'c' + Date.now(), productos: 0, subcategorias: [] }
+                            setArbol(a => treeAdd(a, parentId, nuevo))
+                            if (parentId) setExp(x => x.includes(parentId) ? x : [...x, parentId])
+                            notify('Categoría creada')
+                        }
                         setModal(null)
                     }}
                 />
@@ -171,7 +178,10 @@ function Toggle34({ on, onClick }: { on: boolean; onClick: () => void }) {
     )
 }
 
-function CatModal({ modal, onClose, onSave }: { modal: ModalState; onClose: () => void; onSave: (node: Partial<CatNode> & Pick<CatNode, 'nombre' | 'slug' | 'icono' | 'color' | 'activa'>, parentId: string | null, editId: string | null) => void }) {
+// Campos que se editan en el modal — el nodo completo se arma en el padre.
+type CatCampos = Pick<CatNode, 'nombre' | 'slug' | 'icono' | 'color' | 'activa'>
+
+function CatModal({ modal, onClose, onSave }: { modal: ModalState; onClose: () => void; onSave: (campos: CatCampos, parentId: string | null, editId: string | null) => void }) {
     const editing = modal.edit
     const parentId = modal.parentId ?? null
     const [nombre, setNombre] = useState(editing?.nombre ?? '')
@@ -182,9 +192,7 @@ function CatModal({ modal, onClose, onSave }: { modal: ModalState; onClose: () =
 
     const submit = () => {
         if (!nombre.trim()) return
-        const base = { nombre, slug, icono, color, activa }
-        const node = editing ? base : { ...base, id: 'c' + Date.now(), productos: 0, subcategorias: [] as CatNode[] }
-        onSave(node, parentId, editing ? editing.id : null)
+        onSave({ nombre, slug, icono, color, activa }, parentId, editing ? editing.id : null)
     }
 
     return (

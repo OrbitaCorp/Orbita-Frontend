@@ -88,7 +88,7 @@ export default function StockGeneral() {
 
     const ir = (v: VistaInventario) => {
         const { vista: _v, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'stock') q.vista = v
         router.push({ query: q })
     }

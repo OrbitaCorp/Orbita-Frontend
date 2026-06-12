@@ -249,7 +249,7 @@ export default function POSCobro() {
 
     const ir = (v: VistaPOS) => {
         const { vista: _v, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'cobro') q.vista = v
         router.push({ query: q })
     }

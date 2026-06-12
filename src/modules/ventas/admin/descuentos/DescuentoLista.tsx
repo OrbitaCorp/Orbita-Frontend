@@ -89,7 +89,7 @@ export default function DescuentoLista() {
 
     const ir = (v: VistaDescuento) => {
         const { vista: _v, ...rest } = router.query
-        const q: Record<string, string | string[]> = { ...rest }
+        const q: Record<string, string | string[] | undefined> = { ...rest }
         if (v !== 'cupones') q.vista = v
         router.push({ query: q })
     }
