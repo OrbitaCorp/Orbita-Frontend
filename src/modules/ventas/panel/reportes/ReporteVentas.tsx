@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/reportes/ReporteVentas.tsx — Vista 11 + hub del módulo
+﻿// src/modules/ventas/panel/reportes/ReporteVentas.tsx — Vista 11 + hub del módulo
 //
 // Punto de entrada del módulo `reportes` (registrado en el componentMap admin).
 // Funciona como HUB con tabs: ventas (V11), productos (V12), clientes (V13),

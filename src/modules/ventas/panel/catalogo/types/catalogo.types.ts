@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/catalogo/types/catalogo.types.ts
+﻿// src/modules/ventas/panel/catalogo/types/catalogo.types.ts
 // Tipos del módulo de catálogo (productos + categorías).
 
 export type EstadoProducto = 'publicado' | 'borrador' | 'sin_stock'

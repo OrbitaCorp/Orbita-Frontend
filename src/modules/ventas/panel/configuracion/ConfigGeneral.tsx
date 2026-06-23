@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/ConfigGeneral.tsx — Vista 15 + hub
+﻿// src/modules/ventas/panel/configuracion/ConfigGeneral.tsx — Vista 15 + hub
 //
 // Punto de entrada del módulo `configuracion` (registrado en el componentMap).
 // Hub con tabs: general (V15), apariencia (V16), equipo (V17), notificaciones (V18).

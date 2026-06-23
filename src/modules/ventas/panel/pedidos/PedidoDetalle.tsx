@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/PedidoDetalle.tsx — Vista 03
+﻿// src/modules/ventas/panel/pedidos/PedidoDetalle.tsx — Vista 03
 // Detalle de un pedido: productos, línea de tiempo de estado, notas y cliente.
 
 import { useState } from 'react'

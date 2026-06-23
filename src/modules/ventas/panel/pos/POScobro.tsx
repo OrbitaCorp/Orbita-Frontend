@@ -1,16 +1,11 @@
 import { useState, useRef } from 'react'
 import { LockKeyhole, Unlock } from 'lucide-react'
 import { useCajaStore } from './stores/useCajaStore'
-import { usePausadosStore } from './stores/usePausadosStore'
 import { useTicketStore } from './stores/useTicketStore'
-import { HeaderTurno } from './components/Caja/HeaderTurno'
 import { CatalogoPOS } from './components/CatalogoPOS/CatalogoPOS'
 import { TicketPOS } from './components/TicketPOS/TicketPOS'
 import { ModalCobro } from './components/Cobro/ModalCobro'
 import { ModalPostVenta } from './components/Cobro/ModalPostVenta'
-import { DrawerPausados } from './components/Modales/DrawerPausados'
-import { ModalEgresoIngreso } from './components/Modales/ModalEgresoIngreso'
-import { ModalDevolucion } from './components/Modales/ModalDevolucion'
 import { ModalVariante } from './components/Modales/ModalVariante'
 import type { ProductoPOS, MetodoPago, ResultadoVenta } from './types'
 
@@ -63,19 +58,14 @@ interface Props {
   onCerrarCaja: () => void
 }
 
-export function POSCobro({ onAbrirCaja, onCerrarCaja }: Props) {
-  const { estado, sesion, acumuladoTurno, incrementarAcumulado } = useCajaStore()
-  const { tickets: pausados } = usePausadosStore()
+export function POSCobro({ onAbrirCaja }: Props) {
+  const { estado, sesion, incrementarAcumulado } = useCajaStore()
   const { agregarItem, items, cliente, limpiarTicket } = useTicketStore()
 
-  // Estados de modales
   const [totalACobrar, setTotalACobrar] = useState(0)
   const [modalCobro, setModalCobro] = useState(false)
   const [modalPostVenta, setModalPostVenta] = useState(false)
   const [resultadoVenta, setResultadoVenta] = useState<ResultadoVenta | null>(null)
-  const [drawerPausados, setDrawerPausados] = useState(false)
-  const [modalMovimiento, setModalMovimiento] = useState(false)
-  const [modalDevolucion, setModalDevolucion] = useState(false)
   const [productoVariante, setProductoVariante] = useState<ProductoPOS | null>(null)
   const contadorRef = useRef(888)
 
@@ -112,16 +102,6 @@ export function POSCobro({ onAbrirCaja, onCerrarCaja }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <HeaderTurno
-        sesion={sesion}
-        acumulado={acumuladoTurno}
-        pausadosCount={pausados.length}
-        onMovimientos={() => setModalMovimiento(true)}
-        onDevolucion={() => setModalDevolucion(true)}
-        onPausados={() => setDrawerPausados(true)}
-        onCerrar={onCerrarCaja}
-      />
-
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <div style={{ flex: '0 0 60%', minWidth: 0, padding: '16px 20px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-border)', overflow: 'hidden' }}>
           <CatalogoPOS
@@ -134,14 +114,8 @@ export function POSCobro({ onAbrirCaja, onCerrarCaja }: Props) {
         </div>
       </div>
 
-      {/* Modales de cobro */}
       <ModalCobro isOpen={modalCobro} total={totalACobrar} onClose={() => setModalCobro(false)} onConfirmar={handleConfirmarCobro} />
       <ModalPostVenta isOpen={modalPostVenta} resultado={resultadoVenta} onNuevoTicket={() => { setModalPostVenta(false); setResultadoVenta(null) }} onClose={() => setModalPostVenta(false)} />
-
-      {/* Modales 2e-2f */}
-      <DrawerPausados isOpen={drawerPausados} onClose={() => setDrawerPausados(false)} />
-      <ModalEgresoIngreso isOpen={modalMovimiento} onClose={() => setModalMovimiento(false)} />
-      <ModalDevolucion isOpen={modalDevolucion} onClose={() => setModalDevolucion(false)} />
       <ModalVariante isOpen={!!productoVariante} producto={productoVariante} onClose={() => setProductoVariante(null)} />
     </div>
   )

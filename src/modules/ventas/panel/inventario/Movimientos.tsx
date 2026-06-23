@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/Movimientos.tsx — Vista 26
+﻿// src/modules/ventas/panel/inventario/Movimientos.tsx — Vista 26
 // Registro cronológico de entradas, salidas y ajustes de stock.
 
 import { Download } from 'lucide-react'

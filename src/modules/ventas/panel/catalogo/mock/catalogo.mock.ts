@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/catalogo/mock/catalogo.mock.ts
+﻿// src/modules/ventas/panel/catalogo/mock/catalogo.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Productos y categorías de ejemplo — Rama Indumentaria.
 

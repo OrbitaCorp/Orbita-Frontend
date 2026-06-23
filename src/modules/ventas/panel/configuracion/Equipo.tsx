@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/Equipo.tsx — Vista 17
+﻿// src/modules/ventas/panel/configuracion/Equipo.tsx — Vista 17
 // Equipo y permisos: tabla de miembros (rol, último acceso, acciones) y
 // gestión de roles con matriz de permisos. Modales: invitar, editar, rol, email.
 

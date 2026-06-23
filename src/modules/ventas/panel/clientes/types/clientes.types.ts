@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/clientes/types/clientes.types.ts
+﻿// src/modules/ventas/panel/clientes/types/clientes.types.ts
 // Tipos del módulo de clientes del panel admin.
 
 export type Segmento = 'vip' | 'recurrente' | 'nuevo' | 'inactivo'

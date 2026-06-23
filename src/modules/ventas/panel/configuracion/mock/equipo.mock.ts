@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/mock/equipo.mock.ts
+﻿// src/modules/ventas/panel/configuracion/mock/equipo.mock.ts
 // TODO: reemplazar por el backend cuando esté listo.
 // Catálogo de permisos, roles base y miembros del equipo — Rama Indumentaria.
 

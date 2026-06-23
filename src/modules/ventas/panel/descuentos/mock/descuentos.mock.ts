@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/descuentos/mock/descuentos.mock.ts
+﻿// src/modules/ventas/panel/descuentos/mock/descuentos.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Cupones y promociones automáticas de ejemplo — Rama Indumentaria.
 

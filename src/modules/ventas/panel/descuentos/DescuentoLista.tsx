@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/descuentos/DescuentoLista.tsx — Vista 31 + hub del módulo
+﻿// src/modules/ventas/panel/descuentos/DescuentoLista.tsx — Vista 31 + hub del módulo
 //
 // Punto de entrada del módulo `descuentos` (registrado en el componentMap admin).
 // Hub con tabs: cupones (V31), nuevo cupón (V32), promos (V33), rendimiento (V34).

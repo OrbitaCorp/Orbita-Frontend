@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/NotasCredito.tsx — Vista 07
+﻿// src/modules/ventas/panel/pedidos/NotasCredito.tsx — Vista 07
 // Saldos a favor y reembolsos emitidos a clientes + modal de alta.
 
 import { useState } from 'react'

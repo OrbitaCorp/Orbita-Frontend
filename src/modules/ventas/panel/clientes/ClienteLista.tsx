@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/clientes/ClienteLista.tsx — Vista 09 + hub del módulo
+﻿// src/modules/ventas/panel/clientes/ClienteLista.tsx — Vista 09 + hub del módulo
 //
 // Punto de entrada del módulo `clientes` (registrado en el componentMap admin).
 // Funciona como HUB: según `router.query.vista` muestra la lista (V09) o el

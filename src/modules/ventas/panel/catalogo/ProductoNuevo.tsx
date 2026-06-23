@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/catalogo/ProductoNuevo.tsx — Vista P2
+﻿// src/modules/ventas/panel/catalogo/ProductoNuevo.tsx — Vista P2
 // Wizard de alta de producto en 4 pasos: Info, Imágenes, Precio y stock, Variantes/Publicar.
 
 import { useMemo, useState } from 'react'

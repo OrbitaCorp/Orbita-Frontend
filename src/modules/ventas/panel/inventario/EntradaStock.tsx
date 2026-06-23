@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/EntradaStock.tsx — Vista 24
+﻿// src/modules/ventas/panel/inventario/EntradaStock.tsx — Vista 24
 
 import { Button } from '@/design-system/components/Button'
 import { InvTabs, type VistaInventario } from './components/InvTabs'

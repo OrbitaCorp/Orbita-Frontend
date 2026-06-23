@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/PedidoLista.tsx — Vista 02 + hub del módulo
+﻿// src/modules/ventas/panel/pedidos/PedidoLista.tsx — Vista 02 + hub del módulo
 //
 // Este componente es el punto de entrada del módulo `pedidos` (registrado en el
 // componentMap del router admin). Funciona como HUB: según `router.query.vista`

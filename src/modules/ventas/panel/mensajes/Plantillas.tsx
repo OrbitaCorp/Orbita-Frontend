@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/mensajes/Plantillas.tsx — Vista 30
+﻿// src/modules/ventas/panel/mensajes/Plantillas.tsx — Vista 30
 // Plantillas de mensajes reutilizables con variables resaltadas.
 
 import { Plus } from 'lucide-react'

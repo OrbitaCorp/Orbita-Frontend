@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/AjusteStock.tsx — Vista 25
+﻿// src/modules/ventas/panel/inventario/AjusteStock.tsx — Vista 25
 
 import { InvTabs, type VistaInventario } from './components/InvTabs'
 import { StockForm } from './components/StockForm'

@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/Apariencia.tsx — Vista 16
+﻿// src/modules/ventas/panel/configuracion/Apariencia.tsx — Vista 16
 // Apariencia pública de la tienda: identidad de marca, paleta, tipografía,
 // layout, visibilidad, textos y CSS custom — con vista previa en vivo.
 

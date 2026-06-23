@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/descuentos/RendimientoCupones.tsx — Vista 34
+﻿// src/modules/ventas/panel/descuentos/RendimientoCupones.tsx — Vista 34
 
 import { Tag, Check, TrendingUp, Banknote } from 'lucide-react'
 import { Card } from '@/design-system/components/Card'

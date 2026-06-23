@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/types/pedidos.types.ts
+﻿// src/modules/ventas/panel/pedidos/types/pedidos.types.ts
 // Tipos del módulo de pedidos del panel admin.
 
 import type { BadgeStatus } from '@/design-system/components/Badge'

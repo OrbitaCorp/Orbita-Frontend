@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/Notificaciones.tsx — Vista 18
+﻿// src/modules/ventas/panel/configuracion/Notificaciones.tsx — Vista 18
 
 import { Card } from '@/design-system/components/Card'
 import { ConfigTabs, type VistaConfig } from './components/ConfigTabs'

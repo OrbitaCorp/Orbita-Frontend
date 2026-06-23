@@ -14,16 +14,16 @@ import type { ComponentType } from 'react'
 // componentMap: tabla de lookup moduloPadre → seccion → componente.
 const componentMap: Record<string, Record<string, ComponentType>> = {
     ventas: {
-        dashboard: dynamic(() => import('@/modules/ventas/admin/reportes/Dashboard'), { ssr: false }),pedidos:        dynamic(() => import('@/modules/ventas/admin/pedidos/PedidoLista'), { ssr: false }),
-        catalogo:       dynamic(() => import('@/modules/ventas/admin/catalogo/ProductoLista'), { ssr: false }),
-        categorias:     dynamic(() => import('@/modules/ventas/admin/catalogo/Categorias'), { ssr: false }),
-        clientes:       dynamic(() => import('@/modules/ventas/admin/clientes/ClienteLista'), { ssr: false }),
-        reportes:       dynamic(() => import('@/modules/ventas/admin/reportes/ReporteVentas'), { ssr: false }),
-        configuracion:  dynamic(() => import('@/modules/ventas/admin/configuracion/ConfigGeneral'), { ssr: false }),
-        pos:            dynamic(() => import('@/modules/ventas/admin/pos/POSCobro'), { ssr: false }),
-        inventario:     dynamic(() => import('@/modules/ventas/admin/inventario/StockGeneral'), { ssr: false }),
-        descuentos:     dynamic(() => import('@/modules/ventas/admin/descuentos/DescuentoLista'), { ssr: false }),
-        mensajes:       dynamic(() => import('@/modules/ventas/admin/mensajes/Bandeja'), { ssr: false }),
+        dashboard: dynamic(() => import('@/modules/ventas/panel/reportes/Dashboard'), { ssr: false }),pedidos:        dynamic(() => import('@/modules/ventas/panel/pedidos/PedidoLista'), { ssr: false }),
+        catalogo:       dynamic(() => import('@/modules/ventas/panel/catalogo/ProductoLista'), { ssr: false }),
+        categorias:     dynamic(() => import('@/modules/ventas/panel/catalogo/Categorias'), { ssr: false }),
+        clientes:       dynamic(() => import('@/modules/ventas/panel/clientes/ClienteLista'), { ssr: false }),
+        reportes:       dynamic(() => import('@/modules/ventas/panel/reportes/ReporteVentas'), { ssr: false }),
+        configuracion:  dynamic(() => import('@/modules/ventas/panel/configuracion/ConfigGeneral'), { ssr: false }),
+        pos:            dynamic(() => import('@/modules/ventas/panel/pos/POSShell').then(m => ({ default: m.POSShell })), { ssr: false }),
+        inventario:     dynamic(() => import('@/modules/ventas/panel/inventario/StockGeneral'), { ssr: false }),
+        descuentos:     dynamic(() => import('@/modules/ventas/panel/descuentos/DescuentoLista'), { ssr: false }),
+        mensajes:       dynamic(() => import('@/modules/ventas/panel/mensajes/Bandeja'), { ssr: false }),
     },
 }
 

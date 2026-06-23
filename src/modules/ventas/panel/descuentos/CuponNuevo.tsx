@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/descuentos/CuponNuevo.tsx — Vista 32
+﻿// src/modules/ventas/panel/descuentos/CuponNuevo.tsx — Vista 32
 
 import { useState } from 'react'
 import { Card } from '@/design-system/components/Card'

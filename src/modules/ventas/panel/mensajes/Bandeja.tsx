@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/mensajes/Bandeja.tsx — Vista 28 + hub del módulo
+﻿// src/modules/ventas/panel/mensajes/Bandeja.tsx — Vista 28 + hub del módulo
 //
 // Punto de entrada del módulo `mensajes` (registrado en el componentMap admin).
 // Hub con tabs: bandeja (V28), chat full (V29), plantillas (V30).

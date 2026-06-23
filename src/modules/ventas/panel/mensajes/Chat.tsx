@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/mensajes/Chat.tsx — Vista 29
+﻿// src/modules/ventas/panel/mensajes/Chat.tsx — Vista 29
 // Chat a pantalla completa con un cliente.
 
 import { ChevronRight } from 'lucide-react'

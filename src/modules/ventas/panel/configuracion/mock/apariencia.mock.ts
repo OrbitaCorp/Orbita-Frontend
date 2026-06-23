@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/mock/apariencia.mock.ts
+﻿// src/modules/ventas/panel/configuracion/mock/apariencia.mock.ts
 // Estado de apariencia pública de la tienda + helpers de fuentes.
 // TODO: persistir contra el backend cuando esté listo.
 

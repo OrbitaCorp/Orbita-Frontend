@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/mensajes/mock/mensajes.mock.ts
+﻿// src/modules/ventas/panel/mensajes/mock/mensajes.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Conversaciones, chat y plantillas de ejemplo — Rama Indumentaria.
 

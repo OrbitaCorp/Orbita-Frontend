@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/PedidoNuevo.tsx — Vista 04
+﻿// src/modules/ventas/panel/pedidos/PedidoNuevo.tsx — Vista 04
 // Alta manual de un pedido en 3 pasos: cliente, productos, pago.
 
 import { useMemo, useState } from 'react'

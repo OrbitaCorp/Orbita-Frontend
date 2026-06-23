@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/descuentos/PromoAutomaticas.tsx — Vista 33
+﻿// src/modules/ventas/panel/descuentos/PromoAutomaticas.tsx — Vista 33
 
 import { useState } from 'react'
 import { Plus, Tag } from 'lucide-react'

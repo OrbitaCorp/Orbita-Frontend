@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/types/inventario.types.ts
+﻿// src/modules/ventas/panel/inventario/types/inventario.types.ts
 // Tipos del módulo de inventario del panel admin.
 
 export interface ProductoStock {

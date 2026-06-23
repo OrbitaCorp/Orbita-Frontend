@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/PedidoHistorial.tsx — Vista 05
+﻿// src/modules/ventas/panel/pedidos/PedidoHistorial.tsx — Vista 05
 // Historial completo de pedidos con KPIs del mes y exportación.
 
 import { useState } from 'react'

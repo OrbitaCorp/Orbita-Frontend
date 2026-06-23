@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/StockGeneral.tsx — Vista 23 + hub del módulo
+﻿// src/modules/ventas/panel/inventario/StockGeneral.tsx — Vista 23 + hub del módulo
 //
 // Punto de entrada del módulo `inventario` (registrado en el componentMap admin).
 // Hub con tabs: stock (V23), entrada (V24), ajuste (V25), movimientos (V26),

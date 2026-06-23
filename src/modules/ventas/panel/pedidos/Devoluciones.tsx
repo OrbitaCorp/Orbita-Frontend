@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/Devoluciones.tsx — Vista 06
+﻿// src/modules/ventas/panel/pedidos/Devoluciones.tsx — Vista 06
 // Gestión de devoluciones + drawer de alta en 3 pasos (pedido, productos, reembolso).
 
 import { useState } from 'react'

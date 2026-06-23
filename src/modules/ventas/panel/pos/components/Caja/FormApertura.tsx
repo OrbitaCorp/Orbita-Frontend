@@ -65,24 +65,24 @@ export function FormApertura({ cajero, onConfirm, onCancel, cargando = false }: 
     <div style={{ flex: 1, overflowY: 'auto', display: 'grid', placeItems: 'center', padding: 24, background: 'var(--color-surface)' }}>
       <div style={{ width: '100%', maxWidth: 460 }}>
 
-        {/* Encabezado */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(59,130,246,0.1)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
-            <Unlock size={26} />
-          </div>
-          <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 700, fontFamily: 'Sora, Inter, sans-serif', color: 'var(--color-text)', letterSpacing: '-0.01em' }}>
-            Abrir caja
-          </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--color-muted)' }}>
-            Registrá el efectivo con el que abrís el turno.
-          </p>
-          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--color-muted)', textTransform: 'capitalize' }}>
-            {formatFecha()}
-          </p>
-        </div>
+        {/* Card con heading integrado */}
+        <div style={{ background: 'var(--color-bg)', borderRadius: 14, border: '1px solid var(--color-border)', padding: 32, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
 
-        {/* Card */}
-        <div style={{ background: 'var(--color-bg)', borderRadius: 14, border: '1px solid var(--color-border)', padding: 24, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          {/* Encabezado dentro del card */}
+          <div style={{ textAlign: 'center', paddingBottom: 6 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(59,130,246,0.1)', color: 'var(--color-primary)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+              <Unlock size={26} />
+            </div>
+            <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 700, fontFamily: 'Sora, Inter, sans-serif', color: 'var(--color-text)', letterSpacing: '-0.01em' }}>
+              Abrir caja
+            </h1>
+            <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--color-muted)' }}>
+              Registrá el efectivo con el que abrís el turno.
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--color-muted)', textTransform: 'capitalize' }}>
+              {formatFecha()}
+            </p>
+          </div>
 
           {/* Cajero */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>

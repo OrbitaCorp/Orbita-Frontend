@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/clientes/mock/clientes.mock.ts
+﻿// src/modules/ventas/panel/clientes/mock/clientes.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Datos de ejemplo de clientes — Rama Indumentaria.
 

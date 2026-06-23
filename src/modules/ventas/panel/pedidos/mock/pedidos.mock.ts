@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/mock/pedidos.mock.ts
+﻿// src/modules/ventas/panel/pedidos/mock/pedidos.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Datos de ejemplo del módulo de pedidos — Rama Indumentaria.
 

@@ -7,9 +7,9 @@ import { useRouter } from 'next/router'
 import { LayoutDashboard, ShoppingBag, Users, Package, CreditCard, MessageSquare, Tag, Settings, Search, Globe } from 'lucide-react'
 import type { ComponentType } from 'react'
 
-import { MOCK_PEDIDOS } from '@/modules/ventas/admin/pedidos/mock/pedidos.mock'
-import { MOCK_CLIENTES } from '@/modules/ventas/admin/clientes/mock/clientes.mock'
-import { PRODUCTOS_DB } from '@/modules/ventas/admin/catalogo/mock/catalogo.mock'
+import { MOCK_PEDIDOS } from '@/modules/ventas/panel/pedidos/mock/pedidos.mock'
+import { MOCK_CLIENTES } from '@/modules/ventas/panel/clientes/mock/clientes.mock'
+import { PRODUCTOS_DB } from '@/modules/ventas/panel/catalogo/mock/catalogo.mock'
 import { fmtMoney } from '@/lib/utils'
 
 type IconType = ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>
@@ -50,9 +50,8 @@ const MODULOS: Modulo[] = [
         id: 'pos', label: 'POS', Icon: CreditCard, seccion: 'pos',
         subs: [
             { label: 'Cobro rápido', seccion: 'pos' },
-            { label: 'Abrir caja', seccion: 'pos', vista: 'apertura' },
-            { label: 'Cerrar caja', seccion: 'pos', vista: 'cierre' },
             { label: 'Historial cajas', seccion: 'pos', vista: 'historial' },
+            { label: 'Cerrar caja', seccion: 'pos', vista: 'cierre' },
         ],
     },
     {

@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/reportes/ReporteInventario.tsx — Vista 14
+﻿// src/modules/ventas/panel/reportes/ReporteInventario.tsx — Vista 14
 // Inventario valorizado: KPIs, distribución por categoría y tabla de stock.
 
 import { useState } from 'react'

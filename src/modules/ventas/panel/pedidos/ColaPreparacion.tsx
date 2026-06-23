@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/pedidos/ColaPreparacion.tsx — Vista 08
+﻿// src/modules/ventas/panel/pedidos/ColaPreparacion.tsx — Vista 08
 // Tablero kanban del flujo de preparación: a preparar → listo → despachado.
 
 import { useState } from 'react'

@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/catalogo/Categorias.tsx — Vista P3
+﻿// src/modules/ventas/panel/catalogo/Categorias.tsx — Vista P3
 // Árbol jerárquico de categorías con editor lateral y modal de alta/edición.
 // Es una sección propia del componentMap admin (`categorias`).
 

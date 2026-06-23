@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/clientes/ClienteDetalle.tsx — Vista 10
+﻿// src/modules/ventas/panel/clientes/ClienteDetalle.tsx — Vista 10
 // Perfil de un cliente: KPIs, pestañas (pedidos/notas/info/actividad), acciones.
 
 import { useState } from 'react'

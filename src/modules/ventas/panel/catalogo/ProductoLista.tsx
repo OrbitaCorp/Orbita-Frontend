@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/catalogo/ProductoLista.tsx — Vista P1 + hub del módulo
+﻿// src/modules/ventas/panel/catalogo/ProductoLista.tsx — Vista P1 + hub del módulo
 //
 // Punto de entrada del módulo `catalogo` (registrado en el componentMap admin).
 // Hub: lista de productos (P1) o wizard de alta (P2) según `router.query.vista`.

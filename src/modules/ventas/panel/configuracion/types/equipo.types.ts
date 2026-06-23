@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/configuracion/types/equipo.types.ts
+﻿// src/modules/ventas/panel/configuracion/types/equipo.types.ts
 // Tipos del sistema de equipo, roles y permisos.
 
 export type GrupoPermiso =

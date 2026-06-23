@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/reportes/ReporteProductos.tsx — Vista 12
+﻿// src/modules/ventas/panel/reportes/ReporteProductos.tsx — Vista 12
 
 import { useState } from 'react'
 import { Download, ChevronDown, Package, Tag, ShoppingBag, Maximize2 } from 'lucide-react'

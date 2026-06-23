@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/reportes/ReporteClientes.tsx — Vista 13
+﻿// src/modules/ventas/panel/reportes/ReporteClientes.tsx — Vista 13
 
 import { Download, Users, TrendingUp, Banknote } from 'lucide-react'
 import { Card } from '@/design-system/components/Card'

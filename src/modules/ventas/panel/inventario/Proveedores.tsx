@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/Proveedores.tsx — Vista 27
+﻿// src/modules/ventas/panel/inventario/Proveedores.tsx — Vista 27
 
 import { Plus, Archive } from 'lucide-react'
 import { Card } from '@/design-system/components/Card'

@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/reportes/Dashboard.tsx — Vista 01
+﻿// src/modules/ventas/panel/reportes/Dashboard.tsx — Vista 01
 // Pantalla principal del panel: pulso del negocio en tiempo real.
 //
 // Secciones: saludo + período, KPIs, alertas dismissibles, ventas de la semana

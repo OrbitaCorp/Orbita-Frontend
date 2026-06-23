@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/reportes/mock/reportes.mock.ts
+﻿// src/modules/ventas/panel/reportes/mock/reportes.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Series y rankings de ejemplo para los reportes — Rama Indumentaria.
 

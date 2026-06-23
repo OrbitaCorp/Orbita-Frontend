@@ -1,4 +1,4 @@
-// src/modules/ventas/admin/inventario/mock/inventario.mock.ts
+﻿// src/modules/ventas/panel/inventario/mock/inventario.mock.ts
 // TODO: eliminar cuando el backend esté listo.
 // Stock, proveedores y movimientos de ejemplo — Rama Indumentaria.
 
