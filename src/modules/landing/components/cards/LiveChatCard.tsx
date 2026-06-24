@@ -98,10 +98,10 @@ export function LiveChatCard() {
   const isTypingHere = typing?.tabIdx === activeTab;
 
   return (
-    <div className={`w-[270px] rounded-2xl overflow-hidden shadow-2xl ${isDark ? 'border border-white/10' : 'border border-slate-200'}`}>
+    <div className={`w-[340px] rounded-2xl overflow-hidden shadow-2xl ${isDark ? 'border border-white/10' : 'border border-slate-200'}`}>
       <div className={`flex ${isDark ? 'bg-[#0d1117]' : 'bg-slate-100'}`}>
         {SOURCES.map((s, i) => (
-          <button key={s.id} onClick={() => setActiveTab(i)} className="flex-1 relative flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-bold transition-colors"
+          <button key={s.id} onClick={() => setActiveTab(i)} className="flex-1 relative flex items-center justify-center gap-1.5 py-3 text-[11px] font-bold transition-colors"
             style={{ color: activeTab === i ? s.color : (isDark ? '#64748b' : '#475569') }}
           >
             {s.icon} {s.label}
@@ -111,39 +111,39 @@ export function LiveChatCard() {
         ))}
       </div>
 
-      <div className="px-3 py-2.5 flex items-center gap-2.5 transition-colors duration-500" style={{ background: src.headerBg }}>
+      <div className="px-4 py-3 flex items-center gap-3 transition-colors duration-500" style={{ background: src.headerBg }}>
         <div className="relative flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-xs font-bold text-gray-700">C</div>
-          <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-400 border border-white" />
+          <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-sm font-bold text-gray-700">C</div>
+          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border border-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-white text-xs font-bold">Clientes</div>
-          <div className="text-white/60 text-[10px]">En línea ahora</div>
+          <div className="text-white text-sm font-bold">Clientes</div>
+          <div className="text-white/60 text-[11px]">En línea ahora</div>
         </div>
       </div>
 
-      <div ref={bodyRef} className="p-3 h-44 overflow-hidden flex flex-col gap-1.5 transition-colors duration-500" style={{ background: isDark ? src.chatBgDark : src.chatBg }}>
+      <div ref={bodyRef} className="p-4 h-60 overflow-hidden flex flex-col gap-2 transition-colors duration-500" style={{ background: isDark ? src.chatBgDark : src.chatBg }}>
         {msgs.map(m => (
-          <div key={m.id} className={`msg-enter max-w-[88%] px-2.5 py-1.5 rounded-2xl text-[11px] leading-relaxed shadow-sm
+          <div key={m.id} className={`msg-enter max-w-[88%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed shadow-sm
             ${m.side === 'out' ? `self-end ${src.outBubble} ${src.outText} rounded-br-sm` : `self-start ${src.inBubble} ${src.inText} rounded-bl-sm`}`}
           >
             {m.text}
-            <div className={`text-[8px] text-right mt-0.5 ${m.side === 'out' && src.id === 'ig' ? 'text-white/60' : 'text-gray-500 dark:text-gray-400'}`}>{m.time}</div>
+            <div className={`text-[9px] text-right mt-0.5 ${m.side === 'out' && src.id === 'ig' ? 'text-white/60' : 'text-gray-500 dark:text-gray-400'}`}>{m.time}</div>
           </div>
         ))}
         {isTypingHere && (
-          <div className={`self-start flex gap-1 items-center px-3 py-2 rounded-2xl ${src.inBubble} rounded-bl-sm w-14 shadow-sm`}>
+          <div className={`self-start flex gap-1 items-center px-3 py-2.5 rounded-2xl ${src.inBubble} rounded-bl-sm w-16 shadow-sm`}>
             {[0,1,2].map(i => <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-gray-400" style={{ animationDelay: `${i * 0.2}s` }} />)}
           </div>
         )}
       </div>
 
-      <div className="px-2 py-2 flex items-center gap-2 transition-colors duration-500" style={{ background: isDark ? src.inputBgDark : src.inputBg }}>
-        <div className={`flex-1 h-8 rounded-full border flex items-center px-3 ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
-          <span className="text-[10px] text-slate-400">Responder con IA…</span>
+      <div className="px-3 py-2.5 flex items-center gap-2 transition-colors duration-500" style={{ background: isDark ? src.inputBgDark : src.inputBg }}>
+        <div className={`flex-1 h-9 rounded-full border flex items-center px-3.5 ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
+          <span className="text-[11px] text-slate-400">Responder con IA…</span>
         </div>
-        <button className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: src.color }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+        <button className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: src.color }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
         </button>
       </div>
     </div>
