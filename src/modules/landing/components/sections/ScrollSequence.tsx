@@ -47,6 +47,7 @@ interface Step {
   Card: React.ComponentType;
   cardWrap: boolean;
   cardFirst: boolean;
+  cardScale?: string;
 }
 
 const STEPS: Step[] = [
@@ -63,6 +64,7 @@ const STEPS: Step[] = [
     Card: LiveChatCard,
     cardWrap: true,
     cardFirst: false,
+    cardScale: 'scale-[0.92] sm:scale-110 lg:scale-[1.4]',
   },
   {
     id: 'step-solution',
@@ -380,7 +382,7 @@ export function ScrollSequence() {
                     data-aos="fade-up"
                     data-aos-delay="200"
                   >
-                    <div className={`origin-center scale-[0.7] sm:scale-90 lg:scale-100 ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
+                    <div className={`origin-center ${step.cardScale ?? 'scale-[0.7] sm:scale-90 lg:scale-100'} ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
                       {step.cardWrap
                         ? <div className="relative flex justify-center"><step.Card /></div>
                         : <step.Card />
