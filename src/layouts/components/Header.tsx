@@ -1,7 +1,7 @@
 // Barra superior del panel de administración, con breadcrumb dinámico, buscador, acciones y menú de usuario.
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Bell, Moon, Sun, Search, Settings, LogOut, User, ChevronDown } from 'lucide-react'
+import { Bell, Moon, Sun, Search, LogOut, User, ChevronDown } from 'lucide-react'
 import { useDarkMode } from '@/hooks/useDarkMode'
 
 // Mapa de sección (clave de URL) → label legible para el breadcrumb.
@@ -59,7 +59,7 @@ export default function Header() {
             {/* Acciones */}
             <div className="flex items-center gap-3">
 
-                   {/* Buscador global — sin lógica aún, placeholder funcional */ }
+                {/* Buscador global — sin lógica aún, placeholder funcional */}
                 <div className="relative">
                     <Search
                         size={16}

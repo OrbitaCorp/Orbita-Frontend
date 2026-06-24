@@ -1,1 +1,6 @@
-export default function SetupPage() { return null; }
+import { TiendaSetup } from '@/modules/onboarding/tienda/Setup'
+
+export default function SetupPage() {
+  return <TiendaSetup />
+}
+

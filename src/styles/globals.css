@@ -55,16 +55,16 @@
 
   --color-primary:      #60A5FA;
   --color-primary-h:    #93C5FD;
-  --color-primary-bg:   #1E3A5F;
+  --color-primary-bg:   rgba(96,165,250,0.10);
 
   --color-success:      #34D399;
-  --color-success-bg:   #064E3B;
+  --color-success-bg:   rgba(52,211,153,0.12);
   --color-warning:      #FBBF24;
-  --color-warning-bg:   #451A03;
+  --color-warning-bg:   rgba(251,191,36,0.12);
   --color-error:        #F87171;
-  --color-error-bg:     #450A0A;
+  --color-error-bg:     rgba(248,113,113,0.10);
   --color-info:         #60A5FA;
-  --color-info-bg:      #1E3A5F;
+  --color-info-bg:      rgba(96,165,250,0.10);
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────────── */
@@ -164,6 +164,15 @@ html.light body { background: #eef4ff; color: #0f172a; }
 }
 @keyframes hubSpin    { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
 @keyframes hubCounter { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes scaleIn {
+  from { transform: scale(0);  opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+@keyframes satelliteOrbit {
+  from { transform: rotate(0deg)   translateX(52px) rotate(0deg);    }
+  to   { transform: rotate(360deg) translateX(52px) rotate(-360deg); }
+}
 @keyframes legalIn {
   from { opacity: 0; transform: scale(0.97) translateY(8px); }
   to   { opacity: 1; transform: scale(1)    translateY(0);   }
