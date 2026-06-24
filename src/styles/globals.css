@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* ─── Modo oscuro por clase (.dark) en vez de media query ────────────────
+   Tailwind v4 por defecto liga `dark:` a `prefers-color-scheme`. Esta app
+   togglea el tema con la clase `.dark` en <html>, así que sin esto los
+   `dark:text-*` se activaban según el SO del usuario y rompían el contraste
+   en el tema claro. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ─── Tema Tailwind v4 (utilidades custom) ──────────────────────────────── */
 
 @theme {

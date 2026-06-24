@@ -18,7 +18,7 @@ const N = RUBROS.length;
 const CARD_W = 165;
 const CARD_H = 225;
 const SPEED = 0.0003;
-const H_CONTAINER = 470;
+const H_CONTAINER = 540;
 
 export function RubrosCarousel() {
   const { isDark }   = useTheme();
@@ -43,7 +43,9 @@ export function RubrosCarousel() {
         const screenT = (xPx + CARD_W / 2) / W;
         const cT      = Math.max(-0.2, Math.min(1.2, screenT));
         const arc     = Math.max(0, 4 * cT * (1 - cT));
-        const yPx     = ((4 + (1 - arc) * 56) / 100) * H_CONTAINER;
+        // Centro arriba (~24px), bordes hacia el medio del contenedor. El rango
+        // se acota para que la card (225px alto) nunca se corte con overflow:hidden.
+        const yPx     = 24 + (1 - arc) * (H_CONTAINER - CARD_H - 70);
         const rot     = (cT - 0.5) * 28;
         const scale   = 0.55 + arc * 0.50;
         const bright  = 0.44 + arc * 0.56;

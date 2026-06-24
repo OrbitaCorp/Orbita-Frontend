@@ -67,7 +67,7 @@ export function Navbar() {
             return (
               <a key={l.label} href={l.href} onClick={e => handleClick(e, l.href)}
                 className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 group
-                  ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'}`}
+                  ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400'}`}
               >
                 {l.label}
                 <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] rounded-full bg-blue-500 transition-all duration-300
@@ -84,7 +84,7 @@ export function Navbar() {
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          <a href="/login" className="hidden md:flex text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white transition-colors px-3 py-2">
+          <a href="/login" className="hidden md:flex text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-colors px-3 py-2">
             Iniciar sesión
           </a>
 
