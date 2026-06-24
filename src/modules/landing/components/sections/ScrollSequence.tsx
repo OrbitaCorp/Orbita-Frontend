@@ -5,7 +5,6 @@ import { CalendarCard }    from '@/modules/landing/components/cards/CalendarCard
 import { StoreCard }       from '@/modules/landing/components/cards/StoreCard';
 import { DashboardCard }   from '@/modules/landing/components/cards/DashboardCard';
 import { SectionDivider }  from '@/modules/landing/components/ui/SectionDivider';
-import { useTheme }        from '@/modules/landing/context/ThemeContext';
 
 type BadgeVariant = 'red' | 'green' | 'blue';
 
@@ -120,7 +119,6 @@ const STEPS: Step[] = [
 ];
 
 export function ScrollSequence() {
-  const { isDark } = useTheme();
   const containerRef  = useRef<HTMLDivElement>(null);
   const canvasRef     = useRef<HTMLCanvasElement>(null);
   const stateRef      = useRef({ progress: 0, gatherProgress: 0, heroScroll: 0, trailAlpha: 1.0, opacity: 0.55 });
@@ -382,23 +380,11 @@ export function ScrollSequence() {
                     data-aos="fade-up"
                     data-aos-delay="200"
                   >
-                    <div
-                      className="rounded-3xl overflow-hidden"
-                      style={isDark
-                        ? {}
-                        : {
-                            background: 'linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%)',
-                            padding: '22px',
-                            boxShadow: '0 4px 24px -4px rgba(59,130,246,0.12)',
-                          }
+                    <div className={`origin-center ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
+                      {step.cardWrap
+                        ? <div className="relative flex justify-center"><step.Card /></div>
+                        : <step.Card />
                       }
-                    >
-                      <div className={`origin-center ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
-                        {step.cardWrap
-                          ? <div className="relative flex justify-center"><step.Card /></div>
-                          : <step.Card />
-                        }
-                      </div>
                     </div>
                   </div>
                 </div>
