@@ -34,14 +34,14 @@ export function Testimonials() {
   }, [hovered]);
 
   return (
-    <section className="relative bg-transparent py-24 z-10 overflow-hidden">
+    <section className="relative bg-transparent py-14 z-10 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-[0.08] dark:opacity-[0.05]" aria-hidden>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full border border-blue-400" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-blue-400" />
       </div>
 
       <div className="max-w-7xl mx-auto w-full">
-        <div className="text-center mb-16 px-6">
+        <div className="text-center mb-10 px-6">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/25 text-blue-600 dark:text-blue-400 mb-5">
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             Testimonios

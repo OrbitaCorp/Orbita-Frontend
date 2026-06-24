@@ -39,9 +39,20 @@ export function Hero() {
     const tick = () => {
       scroll.current += (scroll.target - scroll.current) * 0.09;
       const y = scroll.current;
+      const w = window.innerWidth;
       if (starsRef.current) starsRef.current.style.transform = `translateY(${y * 0.06}px)`;
       if (glowRef.current)  glowRef.current.style.transform  = `translate(-50%, calc(-50% - ${y * 0.10}px))`;
-      if (orbitRef.current) orbitRef.current.style.transform = `translate(-50%, calc(-50% - ${y * 0.20}px))`;
+      if (orbitRef.current) {
+        if (w >= 1024) {
+          orbitRef.current.style.left      = '72%';
+          orbitRef.current.style.transform = `translate(-50%, calc(-50% - ${y * 0.20}px))`;
+          orbitRef.current.style.opacity   = '1';
+        } else {
+          orbitRef.current.style.left      = '50%';
+          orbitRef.current.style.transform = `translate(-50%, calc(-50% - ${y * 0.06}px)) scale(0.50)`;
+          orbitRef.current.style.opacity   = '0.22';
+        }
+      }
       raf = requestAnimationFrame(tick);
     };
     tick();
@@ -62,10 +73,10 @@ export function Hero() {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none z-[3] block lg:hidden"
-        style={{ background: 'linear-gradient(to bottom, transparent, #020617)' }} />
+        style={{ background: `linear-gradient(to bottom, transparent, ${isDark ? '#020617' : '#eef4ff'})` }} />
 
-      <div ref={orbitRef} className="absolute z-[2] pointer-events-none hidden lg:block"
-        style={{ top: '50%', left: '72%', transform: 'translate(-50%, -50%)', transformStyle: 'preserve-3d', perspective: '3000px' }}
+      <div ref={orbitRef} className="absolute z-[2] pointer-events-none hidden md:block"
+        style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', transformStyle: 'preserve-3d', perspective: '3000px' }}
       >
         <OrbitSystem />
       </div>

@@ -5,12 +5,13 @@ import { CalendarCard }    from '@/modules/landing/components/cards/CalendarCard
 import { StoreCard }       from '@/modules/landing/components/cards/StoreCard';
 import { DashboardCard }   from '@/modules/landing/components/cards/DashboardCard';
 import { SectionDivider }  from '@/modules/landing/components/ui/SectionDivider';
+import { useTheme }        from '@/modules/landing/context/ThemeContext';
 
 type BadgeVariant = 'red' | 'green' | 'blue';
 
 function Badge({ children, icon, variant = 'blue' }: { children: ReactNode; icon?: ReactNode; variant?: BadgeVariant }) {
   const cls: Record<BadgeVariant, string> = {
-    red:   'bg-red-500/10 border-red-500/25 text-red-500',
+    red:   'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/25 text-red-700 dark:text-red-400',
     green: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500',
     blue:  'bg-blue-500/10 border-blue-500/25 text-blue-600 dark:text-blue-400',
   };
@@ -53,7 +54,7 @@ const STEPS: Step[] = [
   {
     id: 'step-problem',
     badge: <Badge variant="red">Antes de Órbita</Badge>,
-    title: <>Tu negocio está <br/><span className="text-red-500">fragmentado.</span></>,
+    title: <>Tu negocio está <br/><span className="text-red-700 dark:text-red-400">fragmentado.</span></>,
     desc: 'Pedidos por WhatsApp, catálogo en Instagram, stock en Excel... información desconectada que te quita tiempo y dinero.',
     items: [
       { icon: <Cross />, text: 'Información duplicada en todas partes' },
@@ -119,6 +120,7 @@ const STEPS: Step[] = [
 ];
 
 export function ScrollSequence() {
+  const { isDark } = useTheme();
   const containerRef  = useRef<HTMLDivElement>(null);
   const canvasRef     = useRef<HTMLCanvasElement>(null);
   const stateRef      = useRef({ progress: 0, gatherProgress: 0, heroScroll: 0, trailAlpha: 1.0, opacity: 0.55 });
@@ -346,11 +348,11 @@ export function ScrollSequence() {
       <div ref={containerRef} id="modulos" className="relative z-10">
         {STEPS.map((step, i) => (
           <div key={step.id}>
-            {i > 0 && <SectionDivider variant="default" />}
+            {i > 0 && <SectionDivider variant="subtle" />}
 
-            <section id={step.id} className="py-28 lg:py-36">
-              <div className="w-full max-w-[1340px] mx-auto px-6 md:px-12 lg:px-16">
-                <div className={`flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20
+            <section id={step.id} className="py-12 lg:py-16">
+              <div className="w-full max-w-[1340px] mx-auto px-6 md:px-10 lg:px-16">
+                <div className={`flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16
                   ${step.cardFirst ? 'lg:flex-row-reverse' : ''}`}
                 >
                   <div
@@ -380,11 +382,23 @@ export function ScrollSequence() {
                     data-aos="fade-up"
                     data-aos-delay="200"
                   >
-                    <div className={`scale-[0.90] sm:scale-[0.95] lg:scale-100 origin-center ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
-                      {step.cardWrap
-                        ? <div className="relative flex justify-center"><step.Card /></div>
-                        : <step.Card />
+                    <div
+                      className="rounded-3xl overflow-hidden"
+                      style={isDark
+                        ? {}
+                        : {
+                            background: 'linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%)',
+                            padding: '22px',
+                            boxShadow: '0 4px 24px -4px rgba(59,130,246,0.12)',
+                          }
                       }
+                    >
+                      <div className={`origin-center ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
+                        {step.cardWrap
+                          ? <div className="relative flex justify-center"><step.Card /></div>
+                          : <step.Card />
+                        }
+                      </div>
                     </div>
                   </div>
                 </div>

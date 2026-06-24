@@ -18,7 +18,7 @@ export function SectionDivider({ variant = 'default' }: Props) {
     return () => obs.disconnect();
   }, []);
 
-  const py = variant === 'wide' ? 'py-20 lg:py-28' : variant === 'subtle' ? 'py-8 lg:py-12' : 'py-12 lg:py-20';
+  const py = variant === 'wide' ? 'py-12 lg:py-16' : variant === 'subtle' ? 'py-6 lg:py-10' : 'py-10 lg:py-14';
 
   return (
     <div ref={ref} className={`w-full flex items-center justify-center ${py} relative z-20 pointer-events-none select-none overflow-hidden`} aria-hidden>
