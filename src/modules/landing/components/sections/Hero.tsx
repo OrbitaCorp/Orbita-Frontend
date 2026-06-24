@@ -77,12 +77,12 @@ export function Hero() {
             <h1 className="font-black leading-[0.93] tracking-[-0.04em] mb-6 lg:mb-8"
               style={{ fontSize: 'clamp(44px, 10vw, 96px)', opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(30px)', transition: 'opacity 1.2s ease, transform 1.2s ease', transitionDelay: '0.3s' }}
             >
-              <span className="text-slate-900 dark:text-white block">Tu negocio,</span>
-              <span className="block" style={{ color: '#3b82f6', filter: 'drop-shadow(0 0 40px rgba(59,130,246,0.4))' }}>en órbita.</span>
+              <span className="dark:text-white block" style={{ color: '#0f172a' }}>Tu negocio,</span>
+              <span className="block" style={{ color: '#2563eb' }}>en órbita.</span>
             </h1>
 
-            <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-6 lg:mb-10 max-w-[480px]"
-              style={{ fontSize: 'clamp(16px, 4vw, 22px)', opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(30px)', transition: 'opacity 1.2s ease, transform 1.2s ease', transitionDelay: '0.5s' }}
+            <p className="dark:text-slate-400 leading-relaxed mb-6 lg:mb-10 max-w-[480px]"
+              style={{ fontSize: 'clamp(16px, 4vw, 22px)', color: '#334155', opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(30px)', transition: 'opacity 1.2s ease, transform 1.2s ease', transitionDelay: '0.5s' }}
             >
               Gestioná turnos, vendé online y entendé tu negocio con una sola plataforma integral. Sin comisiones, sin complicaciones.
             </p>
@@ -91,8 +91,12 @@ export function Hero() {
               style={{ opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(20px)', transition: 'opacity 1s ease, transform 1s ease', transitionDelay: '0.7s' }}
             >
               {PILLS.map(({ label, icon }) => (
-                <span key={label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-white transition-colors">
-                  <svg className="w-3 h-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+                <span key={label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:border-blue-500/40 dark:hover:text-white transition-colors"
+                  style={{ background: '#fff', border: '1px solid #cbd5e1', color: '#334155' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#3b82f6'; (e.currentTarget as HTMLElement).style.color = '#1d4ed8' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1'; (e.currentTarget as HTMLElement).style.color = '#334155' }}
+                >
+                  <svg className="w-3 h-3" style={{ color: '#3b82f6' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
                   {label}
                 </span>
               ))}
@@ -110,23 +114,23 @@ export function Hero() {
                   ))}
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-white">+2.847 negocios</div>
+                  <div className="dark:text-white text-sm font-bold" style={{ color: '#0f172a' }}>+2.847 negocios</div>
                   <div className="flex items-center gap-0.5">
                     {[1,2,3,4,5].map(s => (
                       <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill="#FBBF24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     ))}
-                    <span className="text-xs text-slate-400 ml-1">4.9</span>
+                    <span className="text-xs ml-1 dark:text-slate-400" style={{ color: '#475569' }}>4.9</span>
                   </div>
                 </div>
               </div>
 
-              <div style={{ width: 1, height: 28, background: 'rgba(100,116,139,0.2)' }} />
+              <div style={{ width: 1, height: 28, background: 'rgba(100,116,139,0.25)' }} />
 
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-1.5 text-sm font-semibold dark:text-slate-400" style={{ color: '#334155' }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 Sin comisiones
               </div>
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-1.5 text-sm font-semibold dark:text-slate-400" style={{ color: '#334155' }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 Gratis para empezar
               </div>

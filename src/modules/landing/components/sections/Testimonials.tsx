@@ -55,10 +55,10 @@ export function Testimonials() {
                 {[1,2,3,4,5].map(s => <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>)}
               </div>
               <span className="text-sm font-bold text-slate-800 dark:text-white">4.9 / 5</span>
-              <span className="text-sm text-slate-500">promedio</span>
+              <span className="text-sm dark:text-slate-400" style={{ color: '#475569' }}>promedio</span>
             </div>
             <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
-            <span className="text-sm text-slate-500 dark:text-slate-400">+2.847 reseñas verificadas</span>
+            <span className="text-sm dark:text-slate-400" style={{ color: '#475569' }}>+2.847 reseñas verificadas</span>
           </div>
         </div>
 
@@ -79,12 +79,12 @@ export function Testimonials() {
                   <span className={t.iconColor}>{t.highlightIcon}</span>
                   <span className={`text-xs font-black text-transparent bg-clip-text bg-gradient-to-r ${t.gradient}`}>{t.highlight}</span>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6 italic flex-1">{t.quote}</p>
+                <p className="text-sm dark:text-slate-400 leading-relaxed mb-6 italic flex-1" style={{ color: '#334155' }}>{t.quote}</p>
                 <div className="flex items-center gap-3 mt-auto">
                   <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}>{t.initials}</div>
                   <div>
                     <div className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{t.role}</div>
+                    <div className="text-xs mt-0.5 dark:text-slate-400" style={{ color: '#475569' }}>{t.role}</div>
                   </div>
                 </div>
               </div>

@@ -97,7 +97,7 @@ export function RubrosCarousel() {
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
             Adaptable a <span className="text-blue-500">cualquier negocio.</span>
           </h2>
-          <p className="mt-4 text-base text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          <p className="mt-4 text-base dark:text-slate-400 max-w-md mx-auto" style={{ color: '#334155' }}>
             Ya sea una peluquería, un restaurante, una tienda o un spa: Órbita se adapta a tu forma de trabajar.
           </p>
         </div>
@@ -109,7 +109,7 @@ export function RubrosCarousel() {
 
         <div className="flex flex-wrap justify-center gap-2 mt-2">
           {RUBROS.map(r => (
-            <span key={r.name} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
+            <span key={r.name} className="px-3 py-1.5 rounded-full text-xs font-semibold dark:bg-white/5 dark:border-white/10 dark:text-slate-300" style={{ background: '#fff', border: '1px solid #cbd5e1', color: '#334155' }}>
               {r.name}
             </span>
           ))}
