@@ -31,7 +31,7 @@ export function CatalogoPOS({ onAgregarProducto, onItemLibre }: Props) {
   }
 
   const { data: productos = [], isFetching } = useProductosPOS(filtros)
-  const { data: favoritos = [] } = useProductosPOS({ soloFavoritos: true })
+  const { data: favoritos = [] as ProductoPOS[] } = useProductosPOS({ soloFavoritos: true })
   const { data: categorias = [] } = useCategoriasPOS()
 
   const handleBusquedaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,7 +165,7 @@ export function CatalogoPOS({ onAgregarProducto, onItemLibre }: Props) {
               <Star size={11} fill="currentColor" /> Favoritos
             </p>
             <div style={GRID}>
-              {favoritos.map((p) => (
+              {favoritos.map((p: ProductoPOS) => (
                 <ProductoCardPOS key={p.id} producto={p} onClick={onAgregarProducto} />
               ))}
             </div>
