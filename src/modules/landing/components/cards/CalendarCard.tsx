@@ -79,7 +79,7 @@ export function CalendarCard() {
   }, []);
 
   return (
-    <div className="relative w-[400px] h-[360px] flex flex-col bg-white dark:bg-[#0a0f1e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl">
+    <div className="relative w-[400px] h-[420px] flex flex-col bg-white dark:bg-[#0a0f1e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl">
       <div className="flex items-center gap-2 p-4 border-b border-slate-100 dark:border-white/5">
         <div className="flex gap-1.5"><span className="w-3 h-3 rounded-full bg-red-400"/><span className="w-3 h-3 rounded-full bg-amber-400"/><span className="w-3 h-3 rounded-full bg-emerald-400"/></div>
         <div className="flex-1 flex justify-center">

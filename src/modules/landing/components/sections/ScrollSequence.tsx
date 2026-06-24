@@ -380,7 +380,7 @@ export function ScrollSequence() {
                     data-aos="fade-up"
                     data-aos-delay="200"
                   >
-                    <div className={`origin-center ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
+                    <div className={`origin-center scale-[0.7] sm:scale-90 lg:scale-100 ${!step.cardWrap ? 'w-full min-w-[320px] lg:min-w-[420px]' : ''}`}>
                       {step.cardWrap
                         ? <div className="relative flex justify-center"><step.Card /></div>
                         : <step.Card />
