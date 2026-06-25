@@ -47,19 +47,20 @@ export function RubrosCarousel() {
       cards.forEach((card, i) => {
         const t       = ((i / N) - offsetRef.current + 1000) % 1;
         const isMob   = window.innerWidth < 768;
-        const spread  = isMob ? Math.max(W * 2.5, 900) : W * 1.2;
+        // More spread on mobile → fewer cards crowding the center at once
+        const spread  = isMob ? Math.max(W * 3.2, 1100) : W * 1.2;
         const cardH   = isMob ? CARD_H * 0.78 : CARD_H;
         const xPx     = (W / 2) + (t - 0.5) * spread - CARD_W / 2;
         const screenT = (xPx + CARD_W / 2) / W;
         const cT      = Math.max(-0.2, Math.min(1.2, screenT));
         const arc     = Math.max(0, 4 * cT * (1 - cT));
-        // Centro arriba (~24px), bordes hacia el medio del contenedor. El rango
-        // se acota a la altura real del contenedor para que la card nunca se
-        // corte con overflow:hidden.
+        // Softer arc on mobile: wider peak zone, more gradual transitions
+        const arcS    = isMob ? Math.pow(arc, 0.65) : arc;
         const yPx     = 24 + (1 - arc) * Math.max(40, HC - cardH - 70);
-        const rot     = (cT - 0.5) * 28;
-        const scale   = (isMob ? 0.50 : 0.55) + arc * (isMob ? 0.42 : 0.50);
-        const bright  = 0.44 + arc * 0.56;
+        // Less rotation on mobile — reduces harsh tilt clash when cards overlap
+        const rot     = (cT - 0.5) * (isMob ? 13 : 28);
+        const scale   = (isMob ? 0.53 : 0.55) + arcS * (isMob ? 0.36 : 0.50);
+        const bright  = 0.50 + arcS * 0.50;
         const zIdx    = Math.round(5 + arc * 15);
         let opacity   = 1;
         const sPct = screenT * 100;
