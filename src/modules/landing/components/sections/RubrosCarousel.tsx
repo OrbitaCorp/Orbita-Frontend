@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useTheme } from '@/modules/landing/context/ThemeContext';
 
 const RUBROS = [
@@ -25,6 +25,14 @@ export function RubrosCarousel() {
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef       = useRef<number>(0);
   const offsetRef    = useRef(0);
+  const [contH, setContH] = useState(H_CONTAINER);
+
+  useEffect(() => {
+    const onResize = () => setContH(window.innerWidth < 768 ? 380 : H_CONTAINER);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     const animate = () => {
@@ -32,22 +40,25 @@ export function RubrosCarousel() {
       const container = containerRef.current;
       if (!container) { rafRef.current = requestAnimationFrame(animate); return; }
 
-      const W = container.offsetWidth;
+      const W  = container.offsetWidth;
+      const HC = container.offsetHeight;
       const cards = container.querySelectorAll<HTMLElement>('.rubro-card');
 
       cards.forEach((card, i) => {
         const t       = ((i / N) - offsetRef.current + 1000) % 1;
         const isMob   = window.innerWidth < 768;
         const spread  = isMob ? Math.max(W * 2.5, 900) : W * 1.2;
+        const cardH   = isMob ? CARD_H * 0.78 : CARD_H;
         const xPx     = (W / 2) + (t - 0.5) * spread - CARD_W / 2;
         const screenT = (xPx + CARD_W / 2) / W;
         const cT      = Math.max(-0.2, Math.min(1.2, screenT));
         const arc     = Math.max(0, 4 * cT * (1 - cT));
         // Centro arriba (~24px), bordes hacia el medio del contenedor. El rango
-        // se acota para que la card (225px alto) nunca se corte con overflow:hidden.
-        const yPx     = 24 + (1 - arc) * (H_CONTAINER - CARD_H - 70);
+        // se acota a la altura real del contenedor para que la card nunca se
+        // corte con overflow:hidden.
+        const yPx     = 24 + (1 - arc) * Math.max(40, HC - cardH - 70);
         const rot     = (cT - 0.5) * 28;
-        const scale   = 0.55 + arc * 0.50;
+        const scale   = (isMob ? 0.50 : 0.55) + arc * (isMob ? 0.42 : 0.50);
         const bright  = 0.44 + arc * 0.56;
         const zIdx    = Math.round(5 + arc * 15);
         let opacity   = 1;
@@ -70,30 +81,30 @@ export function RubrosCarousel() {
 
   return (
     <section className="relative w-full bg-transparent overflow-hidden z-10">
-      <div ref={containerRef} className="relative w-full" style={{ height: H_CONTAINER, overflow: 'hidden' }}>
-        <div className="absolute inset-y-0 left-0 w-52 z-20 pointer-events-none"
-          style={{ background: `linear-gradient(to right, ${isDark ? '#020617' : '#eef4ff'} 20%, transparent)` }} />
-        <div className="absolute inset-y-0 right-0 w-52 z-20 pointer-events-none"
-          style={{ background: `linear-gradient(to left, ${isDark ? '#020617' : '#eef4ff'} 20%, transparent)` }} />
+      <div ref={containerRef} className="relative w-full" style={{ height: contH, overflow: 'hidden' }}>
+        <div className="absolute inset-y-0 left-0 w-16 md:w-52 z-20 pointer-events-none"
+          style={{ background: `linear-gradient(to right, ${isDark ? '#020617' : '#eef4ff'} 10%, transparent)` }} />
+        <div className="absolute inset-y-0 right-0 w-16 md:w-52 z-20 pointer-events-none"
+          style={{ background: `linear-gradient(to left, ${isDark ? '#020617' : '#eef4ff'} 10%, transparent)` }} />
 
         {RUBROS.map(r => (
           <div key={r.name} className="rubro-card" style={{
             position: 'absolute', left: 0, top: 0, width: CARD_W, height: CARD_H,
             borderRadius: 18, overflow: 'hidden',
-            border: isDark ? '1.5px solid rgba(96,165,250,0.20)' : '1.5px solid rgba(59,130,246,0.28)',
-            boxShadow: isDark ? '0 28px 70px -10px rgba(0,0,0,0.75)' : '0 8px 32px -4px rgba(59,130,246,0.18)',
+            border: isDark ? '1.5px solid rgba(96,165,250,0.20)' : '1.5px solid rgba(148,163,184,0.30)',
+            boxShadow: isDark ? '0 28px 70px -10px rgba(0,0,0,0.75)' : '0 10px 28px -8px rgba(15,23,42,0.22)',
             willChange: 'transform, opacity',
           }}>
             <img src={r.img} alt={r.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            <div style={{ position: 'absolute', inset: 0, background: isDark ? 'linear-gradient(to top, rgba(2,6,23,0.93) 0%, rgba(2,6,23,0.15) 45%, transparent 68%)' : 'linear-gradient(to top, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.18) 45%, transparent 68%)' }} />
-            <span style={{ position: 'absolute', bottom: 14, left: 0, width: '100%', textAlign: 'center', fontSize: 12, fontWeight: 700, color: isDark ? 'white' : '#1e293b', letterSpacing: '0.04em', textShadow: isDark ? '0 1px 8px rgba(0,0,0,1)' : 'none' }}>
+            <div style={{ position: 'absolute', inset: 0, background: isDark ? 'linear-gradient(to top, rgba(2,6,23,0.93) 0%, rgba(2,6,23,0.15) 45%, transparent 68%)' : 'linear-gradient(to top, rgba(15,23,42,0.78) 0%, rgba(15,23,42,0.12) 32%, transparent 52%)' }} />
+            <span style={{ position: 'absolute', bottom: 14, left: 0, width: '100%', textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'white', letterSpacing: '0.04em', textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>
               {r.name}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="relative z-30 mt-16 lg:-mt-8 flex flex-col items-center gap-3 text-center px-6 pb-20">
+      <div className="relative z-30 mt-4 lg:-mt-8 flex flex-col items-center gap-3 text-center px-6 pb-10 lg:pb-20">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-blue-500 mb-3">Para cualquier rubro</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
