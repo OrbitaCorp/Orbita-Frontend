@@ -26,21 +26,21 @@ export function Upcoming() {
 
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/25 text-amber-700 dark:text-amber-400 mb-5">
+          <span data-aos="fade-up" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/25 text-amber-700 dark:text-amber-400 mb-5">
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Próximamente
           </span>
-          <h2 data-aos="fade-up" data-aos-delay="100" className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+          <h2 data-aos="fade-up" data-aos-delay="120" className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
             Lo que viene para <span className="text-blue-500">Órbita.</span>
           </h2>
-          <p className="mt-4 text-base dark:text-slate-400 max-w-md mx-auto" style={{ color: '#334155' }}>
+          <p data-aos="fade-up" data-aos-delay="220" className="mt-4 text-base dark:text-slate-400 max-w-md mx-auto" style={{ color: '#334155' }}>
             Estamos construyendo el futuro del management para pequeñas empresas. Acá está el roadmap.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {UPCOMING.map((item, i) => (
-            <div key={item.title} data-aos="fade-up" data-aos-delay={String(i * 120)}
+            <div key={item.title} data-aos="fade-up" data-aos-delay={String(320 + i * 120)}
               className="group relative bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-7 text-center hover:border-blue-300 dark:hover:border-blue-500/30 hover:-translate-y-1 transition-all duration-300"
             >
               <div className={`w-12 h-12 rounded-2xl ${item.color} border flex items-center justify-center mx-auto mb-5`}>{item.icon}</div>

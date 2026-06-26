@@ -42,14 +42,14 @@ export function Testimonials() {
 
       <div className="max-w-7xl mx-auto w-full">
         <div className="text-center mb-10 px-6">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/25 text-blue-600 dark:text-blue-400 mb-5">
+          <span data-aos="fade-up" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest border bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/25 text-blue-600 dark:text-blue-400 mb-5">
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             Testimonios
           </span>
-          <h2 data-aos="fade-up" data-aos-delay="100" className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-4">
+          <h2 data-aos="fade-up" data-aos-delay="120" className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-4">
             Lo que dicen nuestros <span className="text-blue-500">usuarios.</span>
           </h2>
-          <div className="flex items-center justify-center gap-6 mt-6">
+          <div data-aos="fade-up" data-aos-delay="220" className="flex items-center justify-center gap-6 mt-6">
             <div className="flex items-center gap-2">
               <div className="flex gap-0.5">
                 {[1,2,3,4,5].map(s => <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>)}
@@ -62,7 +62,7 @@ export function Testimonials() {
           </div>
         </div>
 
-        <div className="relative group" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+        <div data-aos="fade-up" data-aos-delay="320" className="relative group" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
           <button onClick={() => scroll('left')} aria-label="Anterior"
             className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:scale-110 transition-all opacity-0 group-hover:opacity-100"
           ><ChevronLeft size={24} /></button>
@@ -71,7 +71,7 @@ export function Testimonials() {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)' }}
           >
             {TESTIMONIALS.map((t, i) => (
-              <div key={t.name} data-aos="fade-up" data-aos-delay={String(i * 100)}
+              <div key={t.name}
                 className="w-[300px] md:w-[360px] flex-shrink-0 snap-center group bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 rounded-2xl p-7 hover:border-blue-400 dark:hover:border-blue-500/30 hover:-translate-y-1 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 flex flex-col"
               >
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: t.stars }).map((_, j) => <svg key={j} width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>)}</div>

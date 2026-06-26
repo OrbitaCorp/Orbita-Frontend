@@ -26,7 +26,7 @@ export default function HomePage() {
           <PresentationSections />
 
           {/* CTA final — fuera del sticky wrapper para que nunca quede recortado */}
-          <div className="max-w-5xl mx-auto px-6 pb-20 pt-4">
+          <div data-aos="fade-up" className="max-w-5xl mx-auto px-6 pb-20 pt-4">
             <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 sm:p-12 text-center">
               <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, white 0%, transparent 60%)' }} />
               <div className="relative z-10">
