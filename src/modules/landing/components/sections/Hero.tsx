@@ -72,9 +72,6 @@ export function Hero() {
         />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none z-[3] block lg:hidden"
-        style={{ background: `linear-gradient(to bottom, transparent, ${isDark ? '#020617' : '#eef4ff'})` }} />
-
       <div ref={orbitRef} className="absolute z-[2] pointer-events-none hidden md:block"
         style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', transformStyle: 'preserve-3d', perspective: '3000px' }}
       >

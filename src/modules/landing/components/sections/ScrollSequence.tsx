@@ -143,6 +143,9 @@ export function ScrollSequence() {
   const containerRef  = useRef<HTMLDivElement>(null);
   const canvasRef     = useRef<HTMLCanvasElement>(null);
   const mobOrbitRef   = useRef<HTMLDivElement>(null);
+  const ring1Ref      = useRef<HTMLDivElement>(null);
+  const ring2Ref      = useRef<HTMLDivElement>(null);
+  const ring3Ref      = useRef<HTMLDivElement>(null);
   const stateRef      = useRef({ progress: 0, gatherProgress: 0, heroScroll: 0, trailAlpha: 1.0, opacity: 0.55 });
   const animFrameRef  = useRef<number>(0);
   const mouseRef      = useRef({ x: -9999, y: -9999 });
@@ -165,14 +168,6 @@ export function ScrollSequence() {
         mobileScrollTimer = setTimeout(() => { mobileScrolling = false; }, 120);
       }
       state.heroScroll = Math.min(1, window.scrollY / window.innerHeight);
-
-      if (window.innerWidth < 768 && mobOrbitRef.current) {
-        const total = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-        const p     = Math.min(1, window.scrollY / total);
-        const tilt  = p * 58;
-        const rise  = -(p * 150);
-        mobOrbitRef.current.style.transform = `translateY(${rise}px) perspective(700px) rotateX(${tilt}deg)`;
-      }
 
       const fill  = document.querySelector<HTMLElement>('.progress-fill');
       const total = document.documentElement.scrollHeight - window.innerHeight;
@@ -329,6 +324,22 @@ export function ScrollSequence() {
 
       if (width < 768) {
         canvas.style.opacity = '0';
+
+        // Órbita ambient reactiva al scroll: cada anillo gira a distinta
+        // velocidad/dirección y el conjunto se inclina a medida que se baja.
+        const ts   = t * 0.001;
+        const sc   = window.scrollY;
+        const docH = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const p    = Math.min(1, sc / docH);
+
+        if (mobOrbitRef.current) {
+          const tilt = p * 60;
+          mobOrbitRef.current.style.transform = `perspective(720px) rotateX(${tilt.toFixed(2)}deg)`;
+        }
+        if (ring1Ref.current) ring1Ref.current.style.transform = `rotate(${(ts * 7   + sc * 0.12).toFixed(2)}deg)`;
+        if (ring2Ref.current) ring2Ref.current.style.transform = `rotate(${(-ts * 4  - sc * 0.20).toFixed(2)}deg)`;
+        if (ring3Ref.current) ring3Ref.current.style.transform = `rotate(${(ts * 2.5 + sc * 0.07).toFixed(2)}deg)`;
+
         animFrameRef.current = requestAnimationFrame(animate);
         return;
       }
@@ -392,10 +403,10 @@ export function ScrollSequence() {
             animation:'twinkle 2.8s ease-in-out infinite'
           }} />
 
-          {/* Ring 1 */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', width:180, height:180, marginLeft:-90, marginTop:-90,
+          {/* Ring 1 — rotación driven por scroll (rAF) */}
+          <div ref={ring1Ref} style={{ position:'absolute', top:'26%', left:'50%', width:180, height:180, marginLeft:-90, marginTop:-90,
             border: isDark ? '1px solid rgba(129,140,248,0.28)' : '1px solid rgba(59,130,246,0.20)',
-            borderRadius:'50%', animation:'orbitSpin 28s linear infinite' }}>
+            borderRadius:'50%', willChange:'transform' }}>
             <div style={{ position:'absolute', top:-5, left:'50%', transform:'translateX(-50%)', width:9, height:9, borderRadius:'50%',
               background: isDark ? '#a5b4fc' : '#3b82f6',
               boxShadow: isDark ? '0 0 14px 4px rgba(165,180,252,0.65)' : '0 0 10px 3px rgba(59,130,246,0.38)'
@@ -403,9 +414,9 @@ export function ScrollSequence() {
           </div>
 
           {/* Ring 2 */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', width:320, height:190, marginLeft:-160, marginTop:-95,
+          <div ref={ring2Ref} style={{ position:'absolute', top:'26%', left:'50%', width:320, height:190, marginLeft:-160, marginTop:-95,
             border: isDark ? '1px solid rgba(59,130,246,0.18)' : '1px solid rgba(59,130,246,0.13)',
-            borderRadius:'50%', animation:'orbitSpin 44s linear infinite reverse' }}>
+            borderRadius:'50%', willChange:'transform' }}>
             <div style={{ position:'absolute', top:-4, left:'50%', transform:'translateX(-50%)', width:7, height:7, borderRadius:'50%',
               background: isDark ? '#60a5fa' : '#2563eb',
               boxShadow: isDark ? '0 0 10px 3px rgba(96,165,250,0.60)' : '0 0 8px 3px rgba(37,99,235,0.32)'
@@ -413,9 +424,9 @@ export function ScrollSequence() {
           </div>
 
           {/* Ring 3 */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', width:470, height:260, marginLeft:-235, marginTop:-130,
+          <div ref={ring3Ref} style={{ position:'absolute', top:'26%', left:'50%', width:470, height:260, marginLeft:-235, marginTop:-130,
             border: isDark ? '1px solid rgba(56,189,248,0.10)' : '1px solid rgba(59,130,246,0.08)',
-            borderRadius:'50%', animation:'orbitSpin 70s linear infinite' }}>
+            borderRadius:'50%', willChange:'transform' }}>
             <div style={{ position:'absolute', top:-3.5, left:'50%', transform:'translateX(-50%)', width:6, height:6, borderRadius:'50%',
               background: isDark ? '#38bdf8' : '#60a5fa',
               boxShadow: isDark ? '0 0 8px 2px rgba(56,189,248,0.50)' : '0 0 6px 2px rgba(96,165,250,0.32)'
@@ -430,13 +441,6 @@ export function ScrollSequence() {
             animation:`twinkle ${st.t}s ${st.d}s ease-in-out infinite`
           }} />
         ))}
-
-        {/* Bottom fade */}
-        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'40%',
-          background: isDark
-            ? 'linear-gradient(to bottom, transparent, rgba(2,6,23,0.92))'
-            : 'linear-gradient(to bottom, transparent, rgba(238,244,255,0.95))'
-        }} />
       </div>
 
       <div ref={containerRef} id="modulos" className="relative z-10">
