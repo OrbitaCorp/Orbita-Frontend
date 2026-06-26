@@ -230,7 +230,7 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
           <div style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 8px', flexShrink: 0 }} />
 
           {logged ? (
-            <button onClick={() => router.push(`${base}/pedido`)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 6px', height: 36, background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            <button onClick={() => router.push(`${base}/perfil`)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 6px', height: 36, background: 'transparent', border: 'none', cursor: 'pointer' }}>
               <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #F472B6, #FB923C)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center', flexShrink: 0 }}>MF</span>
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text)' }}>María</span>
             </button>

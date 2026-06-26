@@ -1,4 +1,4 @@
-import type { Producto, Categoria, ItemCarrito, Direccion, Pedido, TiendaConfig } from './types'
+import type { Producto, Categoria, ItemCarrito, Direccion, Pedido, TiendaConfig, Usuario, PedidoResumen } from './types'
 
 export const TIENDA: TiendaConfig = {
   nombre:  'Rama Indumentaria',
@@ -41,6 +41,22 @@ export const CARRITO_INICIAL: ItemCarrito[] = [
 export const DIRECCIONES: Direccion[] = [
   { id:'d1', alias:'Casa',    calle:'Av. Corrientes 1234', piso:'Piso 5 · Depto B', ciudad:'CABA', cp:'C1043AAZ', default:true  },
   { id:'d2', alias:'Trabajo', calle:'Paraguay 857',        piso:'Piso 2',           ciudad:'CABA', cp:'C1057AAH', default:false },
+]
+
+export const USUARIO_MOCK: Usuario = {
+  nombre:   'María',
+  apellido: 'Fernández',
+  email:    'maria@mail.com',
+  telefono: '+54 9 11 2345-6789',
+  avatar:   'MF',
+  miembro:  'Mayo 2025',
+}
+
+export const HISTORIAL_MOCK: PedidoResumen[] = [
+  { id: 'ORB-2847', fecha: '17 may 2026', total: 92280,  items: 4, estado: 'En preparación', estadoTipo: 'warning' },
+  { id: 'ORB-2610', fecha: '03 abr 2026', total: 47800,  items: 2, estado: 'Entregado',       estadoTipo: 'success' },
+  { id: 'ORB-2391', fecha: '12 feb 2026', total: 24900,  items: 1, estado: 'Entregado',       estadoTipo: 'success' },
+  { id: 'ORB-2104', fecha: '28 ene 2026', total: 134700, items: 3, estado: 'Cancelado',       estadoTipo: 'error'   },
 ]
 
 export const PEDIDO_MOCK: Pedido = {

@@ -54,6 +54,24 @@ export type Pedido = {
   comprador?:  { nombre: string; email: string; telefono: string; direccion: string }
 }
 
+export type Usuario = {
+  nombre:   string
+  apellido: string
+  email:    string
+  telefono: string
+  avatar:   string
+  miembro:  string
+}
+
+export type PedidoResumen = {
+  id:         string
+  fecha:      string
+  total:      number
+  items:      number
+  estado:     string
+  estadoTipo: 'success' | 'warning' | 'error' | 'neutral'
+}
+
 export type TiendaConfig = {
   nombre:  string
   sub:     string

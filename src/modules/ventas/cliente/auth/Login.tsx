@@ -31,7 +31,7 @@ export default function Login() {
         <div style={{ height: 1, background: 'var(--color-border)', marginBottom: 24 }} />
 
         <form
-          onSubmit={e => { e.preventDefault(); router.push(`${base}/pedido/${encodeURIComponent('ORB-2847')}`) }}
+          onSubmit={e => { e.preventDefault(); router.push(`${base}/perfil`) }}
           style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
         >
           <Field label="Email">
