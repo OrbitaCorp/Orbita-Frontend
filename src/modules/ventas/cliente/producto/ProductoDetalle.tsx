@@ -46,14 +46,18 @@ export default function ProductoDetalle() {
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
       <style>{`
         @media (max-width: 768px) {
-          .sf-pd-wrap    { padding: 16px 16px 48px !important; }
-          .sf-pd-main    { grid-template-columns: 1fr !important; gap: 32px !important; }
-          .sf-pd-reviews { grid-template-columns: 1fr !important; }
-          .sf-pd-related { grid-template-columns: repeat(2, 1fr) !important; }
-          .sf-pd-thumbs  { flex-direction: row !important; overflow-x: auto; gap: 6px !important; }
+          .sf-pd-wrap     { padding: 16px 16px 48px !important; overflow-x: hidden; }
+          .sf-pd-main     { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .sf-pd-gallery  { flex-direction: column-reverse !important; gap: 10px !important; }
+          .sf-pd-thumbs   { flex-direction: row !important; overflow-x: auto; gap: 6px !important; flex-shrink: 1 !important; }
+          .sf-pd-thumbs button { width: 56px !important; min-width: 56px; }
+          .sf-pd-img-main > div { height: 300px !important; }
+          .sf-pd-reviews  { grid-template-columns: 1fr !important; }
+          .sf-pd-related  { grid-template-columns: repeat(2, 1fr) !important; }
         }
         @media (max-width: 480px) {
-          .sf-pd-related { grid-template-columns: 1fr !important; }
+          .sf-pd-related  { grid-template-columns: 1fr !important; }
+          .sf-pd-img-main > div { height: 260px !important; }
         }
       `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} />
@@ -72,7 +76,7 @@ export default function ProductoDetalle() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
             {/* Thumbs laterales + imagen principal */}
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div className="sf-pd-gallery" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
 
               {/* Columna vertical de thumbnails */}
               <div className="sf-pd-thumbs" style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
@@ -94,7 +98,7 @@ export default function ProductoDetalle() {
               </div>
 
               {/* Imagen principal */}
-              <div style={{ flex: 1, position: 'relative' }}>
+              <div className="sf-pd-img-main" style={{ flex: 1, position: 'relative' }}>
                 <ProdImage hue={HUES[imgIdx]} height={560} radius={14}>
                   {producto.badge && (
                     <div style={{ position: 'absolute', top: 16, left: 16 }}>
