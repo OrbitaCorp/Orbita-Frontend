@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { ShoppingBag, Heart, Search, User, Menu, X } from 'lucide-react'
+import { ShoppingBag, Search, User, Menu, X } from 'lucide-react'
 import type { TiendaConfig, ItemCarrito } from '@/lib/storefront/types'
 
 type Props = {
@@ -210,10 +210,6 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
               {searchOpen ? <X size={18} strokeWidth={1.5} /> : <Search size={18} strokeWidth={1.5} />}
             </button>
           </div>
-
-          <button className="sf-hdr-btn" aria-label="Favoritos">
-            <Heart size={18} strokeWidth={1.5} />
-          </button>
 
           <button className="sf-hdr-btn" onClick={() => router.push(`${base}/carrito`)} aria-label="Carrito">
             <ShoppingBag size={18} strokeWidth={1.5} />

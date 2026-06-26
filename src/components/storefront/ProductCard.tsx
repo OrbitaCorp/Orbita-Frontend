@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Heart, ShoppingCart } from 'lucide-react'
+import { ArrowRight, ShoppingCart } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { ProdImage } from './Thumb'
 import { fmt, descuento } from '@/lib/storefront/utils'
@@ -105,21 +105,21 @@ export function ProductCard({ producto, height = 240, rank, stockCount, onAdd }:
           </span>
         )}
 
-        {/* Favorito */}
-        <button
-          aria-label="Favorito"
-          onClick={e => e.stopPropagation()}
+        {/* Ver detalle — flecha top-right */}
+        <div
+          aria-hidden
           style={{
             position: 'absolute', top: 10, right: 10, zIndex: 3,
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.92)',
-            color: '#0F172A', border: 'none', cursor: 'pointer',
-            display: 'grid', placeItems: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+            width: 30, height: 30, borderRadius: '50%',
+            background: hov ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.82)',
+            color: '#0F172A', display: 'grid', placeItems: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+            transform: hov ? 'translateX(2px)' : 'translateX(0)',
+            transition: 'transform 200ms ease, background 200ms ease',
           }}
         >
-          <Heart size={14} strokeWidth={1.6} />
-        </button>
+          <ArrowRight size={13} strokeWidth={2} />
+        </div>
       </ProdImage>
 
       {/* ── Info ── */}
