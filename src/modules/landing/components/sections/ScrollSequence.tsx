@@ -364,7 +364,7 @@ export function ScrollSequence() {
                     <h2 className="text-4xl lg:text-5xl font-black leading-[1.05] tracking-tight mb-5 text-slate-900 dark:text-white">
                       {step.title}
                     </h2>
-                    <p className="text-base dark:text-slate-400 leading-relaxed mb-6" style={{ color: '#334155' }}>
+                    <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
                       {step.desc}
                     </p>
                     <ul className="space-y-3">

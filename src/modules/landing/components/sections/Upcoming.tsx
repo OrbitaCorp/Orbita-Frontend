@@ -33,7 +33,7 @@ export function Upcoming() {
           <h2 data-aos="fade-up" data-aos-delay="120" className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
             Lo que viene para <span className="text-blue-500">Órbita.</span>
           </h2>
-          <p data-aos="fade-up" data-aos-delay="220" className="mt-4 text-base dark:text-slate-400 max-w-md mx-auto" style={{ color: '#334155' }}>
+          <p data-aos="fade-up" data-aos-delay="220" className="mt-4 text-base text-slate-600 dark:text-slate-400 max-w-md mx-auto">
             Estamos construyendo el futuro del management para pequeñas empresas. Acá está el roadmap.
           </p>
         </div>
@@ -45,7 +45,7 @@ export function Upcoming() {
             >
               <div className={`w-12 h-12 rounded-2xl ${item.color} border flex items-center justify-center mx-auto mb-5`}>{item.icon}</div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">{item.title}</h3>
-              <p className="text-sm dark:text-slate-400 leading-relaxed mb-5" style={{ color: '#334155' }}>{item.desc}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-5">{item.desc}</p>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-100 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 text-amber-700 dark:text-amber-400">{item.eta}</span>
             </div>
           ))}
