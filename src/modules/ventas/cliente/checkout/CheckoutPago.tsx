@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { CreditCard, QrCode, Landmark, Lock, ChevronLeft } from 'lucide-react'
+import { QrCode, Landmark, Lock, ChevronLeft, CreditCard, Store, CheckCircle2, Clock } from 'lucide-react'
 import { CheckoutStepper } from '@/components/storefront/CheckoutStepper'
 import { Thumb } from '@/components/storefront/Thumb'
 import { TIENDA, CARRITO_INICIAL } from '@/lib/storefront/mock'
 import { fmt } from '@/lib/storefront/utils'
 
-type Metodo = 'tarjeta' | 'mp' | 'transferencia'
+type Metodo = 'mp' | 'transferencia' | 'retiro'
 
-const METODOS = [
-  { id: 'tarjeta' as Metodo,       Icon: CreditCard, titulo: 'Tarjeta de crédito o débito',   desc: 'Visa · Mastercard · Amex · hasta 6 cuotas' },
-  { id: 'mp' as Metodo,            Icon: QrCode,     titulo: 'Mercado Pago / QR',              desc: 'Pagá con QR o link de pago' },
-  { id: 'transferencia' as Metodo, Icon: Landmark,   titulo: 'Transferencia bancaria',         desc: 'CBU/Alias · Coordinás el comprobante por WhatsApp' },
+const METODOS: { id: Metodo; Icon: React.ElementType; titulo: string; desc: string }[] = [
+  { id: 'mp',            Icon: QrCode,   titulo: 'Mercado Pago / QR',      desc: 'Escaneá el QR o pagá con tarjeta vía Mercado Pago' },
+  { id: 'transferencia', Icon: Landmark, titulo: 'Transferencia bancaria',  desc: 'CBU/Alias · Coordinás el comprobante por WhatsApp' },
+  { id: 'retiro',        Icon: Store,    titulo: 'Retiro por local',        desc: 'Pagás en efectivo o con tarjeta al retirar' },
 ]
 
 export default function CheckoutPago() {
@@ -19,7 +19,7 @@ export default function CheckoutPago() {
   const { slug } = router.query as { slug: string }
   const base = `/tienda/${slug}`
 
-  const [metodo, setMetodo] = useState<Metodo>('tarjeta')
+  const [metodo, setMetodo] = useState<Metodo>('mp')
 
   const subtotal  = CARRITO_INICIAL.reduce((s, i) => s + i.precio * i.qty, 0)
   const descuento = CARRITO_INICIAL.reduce((s, i) => s + (i.precioAnt ? (i.precioAnt - i.precio) * i.qty : 0), 0)
@@ -81,40 +81,50 @@ export default function CheckoutPago() {
                         </div>
                       </div>
 
-                      {active && m.id === 'tarjeta' && (
-                        <div style={{ marginTop: 16, padding: 16, background: 'var(--color-surface)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', display: 'block', marginBottom: 6 }}>Número de tarjeta</label>
-                              <input defaultValue="•••• •••• •••• 4521" style={{ width: '100%', height: 44, padding: '0 14px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text)', fontSize: 14, outline: 'none', fontFamily: '"Geist Mono", monospace', boxSizing: 'border-box' }} />
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                              <div>
-                                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', display: 'block', marginBottom: 6 }}>Vencimiento</label>
-                                <input defaultValue="12/28" style={{ width: '100%', height: 44, padding: '0 14px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text)', fontSize: 14, outline: 'none', fontFamily: '"Geist Mono", monospace', boxSizing: 'border-box' }} />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', display: 'block', marginBottom: 6 }}>CVV</label>
-                                <input defaultValue="•••" style={{ width: '100%', height: 44, padding: '0 14px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text)', fontSize: 14, outline: 'none', fontFamily: '"Geist Mono", monospace', boxSizing: 'border-box' }} />
-                              </div>
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)', display: 'block', marginBottom: 6 }}>Titular</label>
-                              <input defaultValue="MARIA FERNANDEZ" style={{ width: '100%', height: 44, padding: '0 14px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
+                      {/* ── Panel Mercado Pago ── */}
                       {active && m.id === 'mp' && (
-                        <div style={{ marginTop: 16, padding: 20, background: 'var(--color-surface)', borderRadius: 10, textAlign: 'center', border: '1px solid var(--color-border)' }}>
-                          <div style={{ display: 'inline-block', padding: 14, background: '#fff', borderRadius: 12 }}>
-                            <div style={{ width: 180, height: 180, background: 'repeating-conic-gradient(#0F172A 0% 25%, #fff 0% 50%) 50% / 12px 12px', border: '6px solid #fff' }} />
+                        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                          {/* QR */}
+                          <div style={{ padding: 20, background: 'var(--color-surface)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                            <div style={{ display: 'inline-block', padding: 14, background: '#fff', borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.08)' }}>
+                              <div style={{ width: 160, height: 160, background: 'repeating-conic-gradient(#0F172A 0% 25%, #fff 0% 50%) 50% / 11px 11px', border: '5px solid #fff' }} />
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-body)' }}>Abrí Mercado Pago y escaneá el QR</div>
                           </div>
-                          <div style={{ fontSize: 13, color: 'var(--color-body)', marginTop: 12, fontWeight: 500 }}>Abrí Mercado Pago y escaneá el QR</div>
+
+                          {/* Separador */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                            <span style={{ fontSize: 12, color: 'var(--color-subtle)', fontWeight: 500 }}>o</span>
+                            <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                          </div>
+
+                          {/* Botón MP */}
+                          <button style={{
+                            width: '100%', height: 52, borderRadius: 10, border: 'none', cursor: 'pointer',
+                            background: '#009EE3',
+                            color: '#fff', fontSize: 14, fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                            boxShadow: '0 4px 16px rgba(0,158,227,0.30)',
+                            transition: 'opacity 150ms',
+                          }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '0.90')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                          >
+                            {/* MP logotipo simplificado */}
+                            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                              <circle cx="11" cy="11" r="11" fill="rgba(255,255,255,0.20)" />
+                              <path d="M5 11.5C5 8.46 7.46 6 10.5 6c1.65 0 3.12.73 4.13 1.88L17 6.5C15.54 4.97 13.63 4 11.5 4 7.36 4 4 7.36 4 11.5S7.36 19 11.5 19c2.13 0 4.04-.97 5.5-2.5l-2.37-1.38A4.47 4.47 0 0 1 11.5 17 4.5 4.5 0 0 1 7 12.5" fill="#fff" />
+                              <circle cx="15.5" cy="11.5" r="2" fill="#fff" />
+                            </svg>
+                            <CreditCard size={16} strokeWidth={2} />
+                            Pagá con tarjeta vía Mercado Pago
+                          </button>
                         </div>
                       )}
 
+                      {/* ── Panel Transferencia ── */}
                       {active && m.id === 'transferencia' && (
                         <div style={{ marginTop: 16, padding: 16, borderRadius: 10, background: 'var(--color-success-bg)', border: '1px solid rgba(16,185,129,0.30)' }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Datos para transferir</div>
@@ -124,6 +134,52 @@ export default function CheckoutPago() {
                               <span style={{ color: 'var(--color-text)', fontWeight: 600, fontFamily: '"Geist Mono", monospace', fontSize: 13 }}>{v}</span>
                             </div>
                           ))}
+                          <div style={{ fontSize: 12, color: 'var(--color-success)', marginTop: 10, fontWeight: 500 }}>
+                            Coordinamos la confirmación del pago por WhatsApp.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Panel Retiro por local ── */}
+                      {active && m.id === 'retiro' && (
+                        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                          {/* Info de reserva */}
+                          <div style={{ padding: 14, borderRadius: 10, background: 'var(--color-warning-bg)', border: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                            <CheckCircle2 size={16} strokeWidth={2} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>Tu stock queda reservado</div>
+                              <div style={{ fontSize: 12, color: 'var(--color-body)', marginTop: 2 }}>Al confirmar, reservamos los productos. Abonás al retirar.</div>
+                            </div>
+                          </div>
+
+                          {/* Datos del local */}
+                          <div style={{ padding: 16, borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-subtle)', marginBottom: 12 }}>Punto de retiro</div>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                              <Store size={16} strokeWidth={1.5} color="var(--color-muted)" style={{ flexShrink: 0, marginTop: 1 }} />
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>{TIENDA.nombre}</div>
+                                <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 1 }}>Av. Corrientes 1234, CABA</div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <Clock size={15} strokeWidth={1.5} color="var(--color-muted)" style={{ flexShrink: 0 }} />
+                              <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Lun–Sáb · 10:00 a 19:00</span>
+                            </div>
+                          </div>
+
+                          {/* Formas de pago en local */}
+                          <div style={{ padding: 14, borderRadius: 10, background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-subtle)', marginBottom: 10 }}>Aceptamos al retirar</div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {['Efectivo', 'Débito', 'Crédito'].map(p => (
+                                <span key={p} style={{ height: 28, padding: '0 12px', borderRadius: 999, background: 'var(--color-bg)', border: '1px solid var(--color-border)', fontSize: 12, fontWeight: 500, color: 'var(--color-body)', display: 'inline-flex', alignItems: 'center' }}>
+                                  {p}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -142,7 +198,9 @@ export default function CheckoutPago() {
                 boxShadow: '0 12px 32px rgba(59,130,246,0.30)',
               }}
             >
-              <Lock size={16} strokeWidth={1.5} /> Confirmar compra · <span style={{ fontFamily: '"Geist Mono", monospace' }}>{fmt(total)}</span>
+              <Lock size={16} strokeWidth={1.5} />
+              {metodo === 'retiro' ? 'Reservar y retirar en local' : 'Confirmar compra'} ·{' '}
+              <span style={{ fontFamily: '"Geist Mono", monospace' }}>{fmt(total)}</span>
             </button>
 
             <button onClick={() => router.push(`${base}/checkout/datos`)} style={{
