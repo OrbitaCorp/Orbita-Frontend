@@ -364,39 +364,67 @@ export function ScrollSequence() {
       <canvas ref={canvasRef} id="main-canvas" />
       <div className="progress-bar"><div className="progress-fill" /></div>
 
-      {/* Mobile ambient — CSS-only, no JS loop */}
-      {isDark && (
-        <div className="fixed inset-0 z-0 pointer-events-none block md:hidden overflow-hidden">
-          {/* Radial glow */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:500, height:500, background:'radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(99,102,241,0.07) 45%, transparent 70%)' }} />
+      {/* Mobile ambient — CSS-only, ambos temas */}
+      <div className="fixed inset-0 z-0 pointer-events-none block md:hidden overflow-hidden">
+        {/* Radial glow */}
+        <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:500, height:500,
+          background: isDark
+            ? 'radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(99,102,241,0.07) 45%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(59,130,246,0.13) 0%, rgba(99,102,241,0.04) 45%, transparent 70%)'
+        }} />
 
-          {/* Nucleus */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:10, height:10, borderRadius:'50%', background:'radial-gradient(circle, #bfdbfe 0%, #3b82f6 70%)', boxShadow:'0 0 22px 6px rgba(96,165,250,0.65)', animation:'twinkle 2.8s ease-in-out infinite' }} />
+        {/* Nucleus */}
+        <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:10, height:10, borderRadius:'50%',
+          background: isDark ? 'radial-gradient(circle, #bfdbfe 0%, #3b82f6 70%)' : 'radial-gradient(circle, #60a5fa 0%, #2563eb 70%)',
+          boxShadow: isDark ? '0 0 22px 6px rgba(96,165,250,0.65)' : '0 0 16px 5px rgba(37,99,235,0.30)',
+          animation:'twinkle 2.8s ease-in-out infinite'
+        }} />
 
-          {/* Ring 1 — inner, indigo, 28s CW */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', width:180, height:180, marginLeft:-90, marginTop:-90, border:'1px solid rgba(129,140,248,0.28)', borderRadius:'50%', animation:'orbitSpin 28s linear infinite' }}>
-            <div style={{ position:'absolute', top:-5, left:'50%', transform:'translateX(-50%)', width:9, height:9, borderRadius:'50%', background:'#a5b4fc', boxShadow:'0 0 14px 4px rgba(165,180,252,0.65)' }} />
-          </div>
-
-          {/* Ring 2 — mid, ellipse blue, 44s CCW */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', width:320, height:190, marginLeft:-160, marginTop:-95, border:'1px solid rgba(59,130,246,0.18)', borderRadius:'50%', animation:'orbitSpin 44s linear infinite reverse' }}>
-            <div style={{ position:'absolute', top:-4, left:'50%', transform:'translateX(-50%)', width:7, height:7, borderRadius:'50%', background:'#60a5fa', boxShadow:'0 0 10px 3px rgba(96,165,250,0.60)' }} />
-          </div>
-
-          {/* Ring 3 — outer, sky, 70s CW */}
-          <div style={{ position:'absolute', top:'26%', left:'50%', width:470, height:260, marginLeft:-235, marginTop:-130, border:'1px solid rgba(56,189,248,0.10)', borderRadius:'50%', animation:'orbitSpin 70s linear infinite' }}>
-            <div style={{ position:'absolute', top:-3.5, left:'50%', transform:'translateX(-50%)', width:6, height:6, borderRadius:'50%', background:'#38bdf8', boxShadow:'0 0 8px 2px rgba(56,189,248,0.50)' }} />
-          </div>
-
-          {/* Stars */}
-          {MOB_STARS.map((st, i) => (
-            <div key={i} style={{ position:'absolute', left:`${st.x}%`, top:`${st.y}%`, width:st.s, height:st.s, borderRadius:'50%', background:'white', animation:`twinkle ${st.t}s ${st.d}s ease-in-out infinite` }} />
-          ))}
-
-          {/* Bottom fade-out */}
-          <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'40%', background:'linear-gradient(to bottom, transparent, rgba(2,6,23,0.92))' }} />
+        {/* Ring 1 */}
+        <div style={{ position:'absolute', top:'26%', left:'50%', width:180, height:180, marginLeft:-90, marginTop:-90,
+          border: isDark ? '1px solid rgba(129,140,248,0.28)' : '1px solid rgba(59,130,246,0.20)',
+          borderRadius:'50%', animation:'orbitSpin 28s linear infinite' }}>
+          <div style={{ position:'absolute', top:-5, left:'50%', transform:'translateX(-50%)', width:9, height:9, borderRadius:'50%',
+            background: isDark ? '#a5b4fc' : '#3b82f6',
+            boxShadow: isDark ? '0 0 14px 4px rgba(165,180,252,0.65)' : '0 0 10px 3px rgba(59,130,246,0.38)'
+          }} />
         </div>
-      )}
+
+        {/* Ring 2 */}
+        <div style={{ position:'absolute', top:'26%', left:'50%', width:320, height:190, marginLeft:-160, marginTop:-95,
+          border: isDark ? '1px solid rgba(59,130,246,0.18)' : '1px solid rgba(59,130,246,0.13)',
+          borderRadius:'50%', animation:'orbitSpin 44s linear infinite reverse' }}>
+          <div style={{ position:'absolute', top:-4, left:'50%', transform:'translateX(-50%)', width:7, height:7, borderRadius:'50%',
+            background: isDark ? '#60a5fa' : '#2563eb',
+            boxShadow: isDark ? '0 0 10px 3px rgba(96,165,250,0.60)' : '0 0 8px 3px rgba(37,99,235,0.32)'
+          }} />
+        </div>
+
+        {/* Ring 3 */}
+        <div style={{ position:'absolute', top:'26%', left:'50%', width:470, height:260, marginLeft:-235, marginTop:-130,
+          border: isDark ? '1px solid rgba(56,189,248,0.10)' : '1px solid rgba(59,130,246,0.08)',
+          borderRadius:'50%', animation:'orbitSpin 70s linear infinite' }}>
+          <div style={{ position:'absolute', top:-3.5, left:'50%', transform:'translateX(-50%)', width:6, height:6, borderRadius:'50%',
+            background: isDark ? '#38bdf8' : '#60a5fa',
+            boxShadow: isDark ? '0 0 8px 2px rgba(56,189,248,0.50)' : '0 0 6px 2px rgba(96,165,250,0.32)'
+          }} />
+        </div>
+
+        {/* Stars / partículas */}
+        {MOB_STARS.map((st, i) => (
+          <div key={i} style={{ position:'absolute', left:`${st.x}%`, top:`${st.y}%`, width:st.s, height:st.s, borderRadius:'50%',
+            background: isDark ? 'white' : 'rgba(37,99,235,0.28)',
+            animation:`twinkle ${st.t}s ${st.d}s ease-in-out infinite`
+          }} />
+        ))}
+
+        {/* Bottom fade */}
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'40%',
+          background: isDark
+            ? 'linear-gradient(to bottom, transparent, rgba(2,6,23,0.92))'
+            : 'linear-gradient(to bottom, transparent, rgba(238,244,255,0.95))'
+        }} />
+      </div>
 
       <div ref={containerRef} id="modulos" className="relative z-10">
         {STEPS.map((step, i) => (
