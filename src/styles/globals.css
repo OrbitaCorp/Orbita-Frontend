@@ -245,6 +245,16 @@ html.light body { background: #eef4ff; color: #0f172a; }
   padding-bottom: clamp(1rem, 3vh, 2.5rem);
 }
 
+/* Stop suave SOLO en la sección Rubros (desktop): pin corto que da tiempo a
+   que las partículas del fondo se reagrupen en el núcleo antes de continuar. */
+@media (min-width: 1024px) {
+  .slide-gather { height: 150vh; }
+  .slide-gather > .sticky-slide {
+    position: sticky; top: 0; min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+}
+
 .hero-height { height: 100vh; }
 @supports (height: 100svh) { .hero-height { height: 100svh; } }
 

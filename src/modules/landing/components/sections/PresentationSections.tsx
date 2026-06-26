@@ -42,7 +42,7 @@ export function PresentationSections() {
   return (
     <>
       {SLIDES.map(({ C, id }, i) => (
-        <div key={id} id={id} ref={i === 0 ? firstRef : null} className="slide-container" style={{ zIndex: 11 + i }}>
+        <div key={id} id={id} ref={i === 0 ? firstRef : null} className={`slide-container ${i === 0 ? 'slide-gather' : ''}`} style={{ zIndex: 11 + i }}>
           <div className="sticky-slide"><C /></div>
         </div>
       ))}
