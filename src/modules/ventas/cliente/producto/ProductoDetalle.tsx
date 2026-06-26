@@ -56,39 +56,58 @@ export default function ProductoDetalle() {
         {/* ══ GRILLA PRINCIPAL ══ */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 460px', gap: 56, marginBottom: 72 }}>
 
-          {/* ── Galería: thumbs laterales + imagen principal ── */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          {/* ── Galería + Características ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-            {/* Columna vertical de thumbnails */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-              {HUES.map((hue, i) => (
-                <button
-                  key={i}
-                  onClick={() => setImgIdx(i)}
-                  style={{
-                    width: 76, padding: 0, borderRadius: 10, overflow: 'hidden',
-                    border: `2px solid ${i === imgIdx ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    cursor: 'pointer', background: 'transparent',
-                    transition: 'border-color 150ms',
-                    flexShrink: 0,
-                  }}
-                >
-                  <ProdImage hue={hue} height={76} radius={0} />
-                </button>
-              ))}
+            {/* Thumbs laterales + imagen principal */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+
+              {/* Columna vertical de thumbnails */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                {HUES.map((hue, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setImgIdx(i)}
+                    style={{
+                      width: 76, padding: 0, borderRadius: 10, overflow: 'hidden',
+                      border: `2px solid ${i === imgIdx ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                      cursor: 'pointer', background: 'transparent',
+                      transition: 'border-color 150ms',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ProdImage hue={hue} height={76} radius={0} />
+                  </button>
+                ))}
+              </div>
+
+              {/* Imagen principal */}
+              <div style={{ flex: 1, position: 'relative' }}>
+                <ProdImage hue={HUES[imgIdx]} height={560} radius={14}>
+                  {producto.badge && (
+                    <div style={{ position: 'absolute', top: 16, left: 16 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 999, background: producto.badge === 'Oferta' ? 'var(--color-error-bg)' : 'var(--color-primary-bg)', color: producto.badge === 'Oferta' ? 'var(--color-error)' : 'var(--color-primary)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        {producto.badge}{desc > 0 ? ` · -${desc}%` : ''}
+                      </span>
+                    </div>
+                  )}
+                </ProdImage>
+              </div>
             </div>
 
-            {/* Imagen principal */}
-            <div style={{ flex: 1, position: 'relative' }}>
-              <ProdImage hue={HUES[imgIdx]} height={560} radius={14}>
-                {producto.badge && (
-                  <div style={{ position: 'absolute', top: 16, left: 16 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 999, background: producto.badge === 'Oferta' ? 'var(--color-error-bg)' : 'var(--color-primary-bg)', color: producto.badge === 'Oferta' ? 'var(--color-error)' : 'var(--color-primary)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                      {producto.badge}{desc > 0 ? ` · -${desc}%` : ''}
-                    </span>
+            {/* Características — debajo de la imagen */}
+            <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ padding: '13px 16px', borderBottom: '1px solid var(--color-border)', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', background: 'var(--color-surface)' }}>
+                Características
+              </div>
+              <div style={{ padding: '4px 0' }}>
+                {CARACT.map((c, i) => (
+                  <div key={c.label} style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: 12, padding: '10px 16px', borderBottom: i < CARACT.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{c.label}</span>
+                    <span style={{ fontSize: 13, color: 'var(--color-body)' }}>{c.value}</span>
                   </div>
-                )}
-              </ProdImage>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -194,20 +213,6 @@ export default function ProductoDetalle() {
               ))}
             </div>
 
-            {/* Características — expandidas inline, sin acordeón */}
-            <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ padding: '13px 16px', borderBottom: '1px solid var(--color-border)', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', background: 'var(--color-surface)' }}>
-                Características
-              </div>
-              <div style={{ padding: '4px 0' }}>
-                {CARACT.map((c, i) => (
-                  <div key={c.label} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 12, padding: '10px 16px', borderBottom: i < CARACT.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{c.label}</span>
-                    <span style={{ fontSize: 13, color: 'var(--color-body)' }}>{c.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
