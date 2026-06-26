@@ -54,7 +54,7 @@ export function Testimonials() {
               <div className="flex gap-0.5">
                 {[1,2,3,4,5].map(s => <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>)}
               </div>
-              <span className="text-sm font-bold text-slate-800 dark:text-white">4.9 / 5</span>
+              <span className="text-sm font-bold text-slate-800 dark:text-white whitespace-nowrap">4.9 / 5</span>
               <span className="text-sm text-slate-500 dark:text-slate-400">promedio</span>
             </div>
             <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
