@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { MapPin, Mail, Phone, Plus, X, ArrowRight, ChevronLeft } from 'lucide-react'
+import { MapPin, Mail, Phone, Plus, X, ArrowRight, ChevronLeft, Lock } from 'lucide-react'
 import { CheckoutStepper } from '@/components/storefront/CheckoutStepper'
 import { Thumb } from '@/components/storefront/Thumb'
 import { TIENDA, CARRITO_INICIAL, DIRECCIONES } from '@/lib/storefront/mock'
@@ -33,7 +33,7 @@ export default function CheckoutDatos() {
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>{TIENDA.nombre}</span>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--color-muted)' }}>
-          🔒 Pago seguro
+          <Lock size={14} strokeWidth={1.5} /> Pago seguro
         </div>
       </header>
 
@@ -46,12 +46,12 @@ export default function CheckoutDatos() {
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24 }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: '0 0 16px' }}>¿Quién recibe el pedido?</h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-                <F label="Nombre"><I placeholder="María" /></F>
-                <F label="Apellido"><I placeholder="Fernández" /></F>
+                <F label="Nombre" required><I placeholder="María" /></F>
+                <F label="Apellido" required><I placeholder="Fernández" /></F>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <F label="Email"><I type="email" placeholder="hola@mail.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} /></F>
-                <F label="Teléfono"><I type="tel" placeholder="+54 9 11..." icon={<Phone size={15} strokeWidth={1.5} color="var(--color-subtle)" />} /></F>
+                <F label="Email" required><I type="email" placeholder="hola@mail.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} /></F>
+                <F label="Teléfono" required><I type="tel" placeholder="+54 9 11..." icon={<Phone size={15} strokeWidth={1.5} color="var(--color-subtle)" />} /></F>
               </div>
             </div>
 
@@ -103,7 +103,7 @@ export default function CheckoutDatos() {
 
               {showNewDir && (
                 <div style={{ marginTop: 14 }}>
-                  <F label="Dirección" style={{ marginBottom: 14 }}>
+                  <F label="Dirección" required style={{ marginBottom: 14 }}>
                     <I placeholder="Av. Corrientes 1234" icon={<MapPin size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
                   </F>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -112,13 +112,13 @@ export default function CheckoutDatos() {
                     <F label="Entre calles"><I placeholder="Opcional" /></F>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 14 }}>
-                    <F label="Provincia">
+                    <F label="Provincia" required>
                       <select style={{ width: '100%', height: 44, padding: '0 14px', borderRadius: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 14, outline: 'none' }}>
                         <option>CABA</option><option>Buenos Aires</option><option>Córdoba</option>
                       </select>
                     </F>
-                    <F label="Ciudad"><I placeholder="CABA" /></F>
-                    <F label="CP"><I placeholder="C1043" /></F>
+                    <F label="Ciudad" required><I placeholder="CABA" /></F>
+                    <F label="CP" required><I placeholder="C1043" /></F>
                   </div>
                 </div>
               )}
@@ -183,10 +183,12 @@ export default function CheckoutDatos() {
   )
 }
 
-function F({ label, children, style }: { label: string; children: React.ReactNode; style?: React.CSSProperties }) {
+function F({ label, required, children, style }: { label: string; required?: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...style }}>
-      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>{label}</label>
+      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>
+        {label}{required && <span style={{ color: '#EF4444', marginLeft: 3 }}>*</span>}
+      </label>
       {children}
     </div>
   )
