@@ -67,7 +67,15 @@ export default function Catalogo() {
             </FilterGroup>
             <FilterGroup title="Precio">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {['Desde', 'Hasta'].map(ph => <input key={ph} placeholder={ph} style={{ height: 32, padding: '0 10px', borderRadius: 6, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 12, fontFamily: '"Geist Mono", monospace', outline: 'none' }} />)}
+                {['Desde', 'Hasta'].map(ph => (
+                  <input
+                    key={ph}
+                    placeholder={ph}
+                    type="number"
+                    min={0}
+                    style={{ width: '100%', boxSizing: 'border-box', height: 32, padding: '0 10px', borderRadius: 6, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 12, fontFamily: '"Geist Mono", monospace', outline: 'none', minWidth: 0 }}
+                  />
+                ))}
               </div>
             </FilterGroup>
             <FilterGroup title="Talle">
