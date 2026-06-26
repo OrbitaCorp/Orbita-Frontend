@@ -38,8 +38,7 @@ export function Navbar() {
     setMenuOpen(false);
     const el = document.getElementById(href.slice(1));
     if (!el) return;
-    const isSticky = ['#rubros', '#testimonios', '#proximamente'].includes(href);
-    const top = el.getBoundingClientRect().top + window.scrollY - (isSticky ? 0 : 80);
+    const top = el.getBoundingClientRect().top + window.scrollY - 80;
     window.scrollTo({ top, behavior: 'smooth' });
   };
 

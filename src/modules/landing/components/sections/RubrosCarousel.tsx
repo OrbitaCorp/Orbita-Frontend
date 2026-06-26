@@ -81,7 +81,7 @@ export function RubrosCarousel() {
   }, []);
 
   return (
-    <section className="relative w-full bg-transparent overflow-hidden z-10">
+    <section className="relative w-full bg-transparent overflow-hidden z-10 pt-10 lg:pt-16">
       <div ref={containerRef} className="relative w-full" style={{ height: contH, overflow: 'hidden' }}>
         <div className="absolute inset-y-0 left-0 w-16 md:w-52 z-20 pointer-events-none"
           style={{ background: `linear-gradient(to right, ${isDark ? '#020617' : '#eef4ff'} 10%, transparent)` }} />
