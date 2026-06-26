@@ -44,12 +44,14 @@ export type TimelineStep = {
 }
 
 export type Pedido = {
-  id:       string
-  fecha:    string
-  total:    number
-  items:    number
-  tracking: string
-  timeline: TimelineStep[]
+  id:          string
+  fecha:       string
+  total:       number
+  items:       number
+  tracking:    string
+  timeline:    TimelineStep[]
+  metodoPago?: string
+  comprador?:  { nombre: string; email: string; telefono: string; direccion: string }
 }
 
 export type TiendaConfig = {

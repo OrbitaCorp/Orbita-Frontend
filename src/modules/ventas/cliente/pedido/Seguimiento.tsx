@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router'
-import { Check, RefreshCw, RotateCcw, X, ChevronRight, Copy, Mail, MessageCircle } from 'lucide-react'
+import { Check, RotateCcw, X, ChevronRight, Mail, MessageCircle, FileText, Printer } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { Breadcrumb } from '@/components/storefront/Breadcrumb'
@@ -13,9 +13,18 @@ export default function SeguimientoPedido() {
   const base = `/tienda/${slug}`
 
   const timeline    = PEDIDO_MOCK.timeline
-  const currentStep = 3
+  const currentStep = timeline.findIndex(s => !s.done)
+  const activeIdx   = currentStep === -1 ? timeline.length - 1 : currentStep - 1
+  const statusLabel = timeline[activeIdx]?.label ?? 'Pendiente'
 
-  const statusLabel = currentStep <= 2 ? 'En preparación' : currentStep === 3 ? 'En camino' : 'Entregado'
+  const statusColor = (label: string) => {
+    if (label === 'Entregado')      return { bg: '#DCFCE7', color: '#16A34A' }
+    if (label === 'Enviado')        return { bg: '#DBEAFE', color: '#2563EB' }
+    if (label === 'En preparación') return { bg: '#FEF9C3', color: '#CA8A04' }
+    if (label === 'Confirmado')     return { bg: '#F0FDF4', color: '#15803D' }
+    return { bg: 'var(--color-surface)', color: 'var(--color-muted)' }
+  }
+  const badge = statusColor(statusLabel)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
@@ -31,6 +40,7 @@ export default function SeguimientoPedido() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+            {/* Encabezado pedido */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>#{PEDIDO_MOCK.id}</div>
@@ -38,42 +48,22 @@ export default function SeguimientoPedido() {
               </div>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                height: 24, padding: '0 10px', borderRadius: 999,
-                background: 'var(--color-primary-bg)', color: 'var(--color-primary)',
-                fontSize: 11, fontWeight: 700,
+                height: 28, padding: '0 14px', borderRadius: 999,
+                background: badge.bg, color: badge.color,
+                fontSize: 12, fontWeight: 700,
               }}>
                 {statusLabel}
               </span>
             </div>
 
+            {/* Estado del pedido */}
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Seguimiento del envío</h3>
-                <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>Transportista: <strong style={{ color: 'var(--color-text)' }}>Andreani</strong></div>
-              </div>
-
-              <div style={{
-                background: 'var(--color-surface)', borderRadius: 10, padding: '14px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24,
-              }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: 4 }}>Código de tracking</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{PEDIDO_MOCK.tracking}</div>
-                </div>
-                <button style={{
-                  height: 36, padding: '0 12px', borderRadius: 8,
-                  background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-body)',
-                  fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                }}>
-                  <Copy size={13} strokeWidth={1.5} /> Copiar
-                </button>
-              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: '0 0 24px' }}>Estado del pedido</h3>
 
               <div style={{ position: 'relative' }}>
                 {timeline.map((step, i) => {
-                  const isDone   = i < currentStep
-                  const isActive = i === currentStep && currentStep < timeline.length
+                  const isDone   = i < currentStep || currentStep === -1
+                  const isActive = i === currentStep && currentStep < timeline.length && currentStep !== -1
                   return (
                     <div key={i} style={{ display: 'flex', gap: 16, position: 'relative', paddingBottom: i < timeline.length - 1 ? 28 : 0 }}>
                       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -81,7 +71,7 @@ export default function SeguimientoPedido() {
                           width: 28, height: 28, borderRadius: '50%',
                           background: isDone ? 'var(--color-success)' : isActive ? 'var(--color-primary)' : 'var(--color-surface)',
                           border: `2px solid ${isDone ? 'var(--color-success)' : isActive ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                          color: '#fff', display: 'grid', placeItems: 'center', zIndex: 2,
+                          color: '#fff', display: 'grid', placeItems: 'center', zIndex: 2, flexShrink: 0,
                         }}>
                           {isDone ? <Check size={14} strokeWidth={2.5} /> : isActive ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} /> : null}
                         </div>
@@ -93,7 +83,7 @@ export default function SeguimientoPedido() {
                           }} />
                         )}
                       </div>
-                      <div style={{ flex: 1, paddingTop: 2 }}>
+                      <div style={{ flex: 1, paddingTop: 4, paddingBottom: i < timeline.length - 1 ? 0 : 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: (isDone || isActive) ? 'var(--color-text)' : 'var(--color-muted)' }}>
                           {step.label}
                         </div>
@@ -101,8 +91,8 @@ export default function SeguimientoPedido() {
                           {step.fecha}
                         </div>
                         {isActive && (
-                          <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 6 }}>
-                            Tu paquete está en ruta. Llega aproximadamente mañana.
+                          <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 6, fontWeight: 500 }}>
+                            El vendedor actualizará el estado en breve.
                           </div>
                         )}
                       </div>
@@ -112,6 +102,7 @@ export default function SeguimientoPedido() {
               </div>
             </div>
 
+            {/* Detalle del pedido */}
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: '0 0 16px' }}>Detalle del pedido</h3>
               {CARRITO_INICIAL.map((it, i) => (
@@ -128,10 +119,10 @@ export default function SeguimientoPedido() {
               ))}
             </div>
 
+            {/* Acciones del pedido */}
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: '0 0 14px' }}>Acciones del pedido</h3>
               {[
-                { Icon: RefreshCw, label: 'Iniciar cambio',     href: `${base}/pedido/${id}/cambio`,     color: 'var(--color-body)' },
                 { Icon: RotateCcw, label: 'Iniciar devolución', href: `${base}/pedido/${id}/devolucion`, color: 'var(--color-body)' },
                 { Icon: X,         label: 'Cancelar pedido',    href: `${base}/pedido/${id}/cancelar`,   color: 'var(--color-error)' },
               ].map((a, i) => (
@@ -140,11 +131,11 @@ export default function SeguimientoPedido() {
                   onClick={() => router.push(a.href)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 4px', textAlign: 'left', width: '100%',
+                    padding: '12px 8px', textAlign: 'left', width: '100%',
                     fontSize: 14, fontWeight: 500, color: a.color,
                     borderTop: i > 0 ? '1px solid var(--color-border)' : 'none',
                     background: 'none', border: 'none', cursor: 'pointer',
-                    transition: 'background 150ms',
+                    borderRadius: 8, transition: 'background 150ms',
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -157,7 +148,9 @@ export default function SeguimientoPedido() {
             </div>
           </div>
 
+          {/* Sidebar derecho */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
             <SideCard title="Contacto con la tienda">
               <button
                 onClick={() => openWpp(TIENDA.wpp, `Hola! Tengo una consulta sobre mi pedido #${PEDIDO_MOCK.id}`)}
@@ -195,6 +188,35 @@ export default function SeguimientoPedido() {
                 }}
               >
                 <MessageCircle size={13} strokeWidth={1.5} /> Coordinar por WhatsApp →
+              </button>
+            </SideCard>
+
+            {/* Comprobante */}
+            <SideCard title="Comprobante de pago">
+              <div style={{ fontSize: 13, color: 'var(--color-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+                Tu comprobante oficial de compra para este pedido.
+              </div>
+              <button
+                onClick={() => router.push(`${base}/pedido/${id}/comprobante`)}
+                style={{
+                  width: '100%', height: 44, borderRadius: 10,
+                  background: 'var(--color-primary)', color: '#fff',
+                  fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8,
+                }}
+              >
+                <FileText size={15} strokeWidth={1.5} /> Ver comprobante
+              </button>
+              <button
+                onClick={() => { router.push(`${base}/pedido/${id}/comprobante`).then(() => window.print()) }}
+                style={{
+                  width: '100%', height: 44, borderRadius: 10,
+                  background: 'transparent', color: 'var(--color-text)',
+                  border: '1px solid var(--color-border)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <Printer size={15} strokeWidth={1.5} /> Imprimir
               </button>
             </SideCard>
           </div>

@@ -44,16 +44,23 @@ export const DIRECCIONES: Direccion[] = [
 ]
 
 export const PEDIDO_MOCK: Pedido = {
-  id:       'ORB-2847',
-  fecha:    '17 may 2026 · 14:32',
-  total:    92280,
-  items:    4,
-  tracking: 'AR3489573',
+  id:         'ORB-2847',
+  fecha:      '17 may 2026 · 14:32',
+  total:      92280,
+  items:      4,
+  tracking:   'AR3489573',
+  metodoPago: 'Mercado Pago',
+  comprador:  {
+    nombre:    'María Fernández',
+    email:     'maria@mail.com',
+    telefono:  '+54 9 11 2345-6789',
+    direccion: 'Av. Corrientes 1234, Piso 5 B · CABA C1043AAZ',
+  },
   timeline: [
-    { label:'Pedido recibido', done:true,  fecha:'17 may · 14:32' },
-    { label:'Pago aprobado',   done:true,  fecha:'17 may · 14:33' },
+    { label:'Pendiente',       done:true,  fecha:'17 may · 14:32' },
+    { label:'Confirmado',      done:true,  fecha:'17 may · 14:33' },
     { label:'En preparación',  done:true,  fecha:'17 may · 15:10' },
-    { label:'En camino',       done:false, fecha:'Est. 18 may'    },
+    { label:'Enviado',         done:false, fecha:'Est. 18 may'    },
     { label:'Entregado',       done:false, fecha:'Est. 19 may'    },
   ],
 }
