@@ -83,7 +83,11 @@ export default function Inicio() {
                 @keyframes sfDotPulse { 0%,100%{ opacity:1; transform:scale(1)  } 50%{ opacity:.4; transform:scale(.7) } }
                 @keyframes sfFloat    { 0%,100%{ transform:translateY(0)   } 33%{ transform:translateY(-7px)  } 66%{ transform:translateY(-3px) } }
                 @keyframes sfBadge    { 0%,100%{ transform:translateY(0)   } 50%{ transform:translateY(-8px) } }
+                @keyframes sfMarquee  { from { transform:translateX(0) } to { transform:translateX(-50%) } }
                 .sf-cat-scroll::-webkit-scrollbar { display:none }
+                .sf-marquee-track { display:flex; gap:8px; width:max-content; animation:sfMarquee 28s linear infinite; }
+                .sf-marquee-track:hover { animation-play-state:paused; }
+                .sf-marquee-wrap { overflow:hidden; mask-image:linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%); -webkit-mask-image:linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%); }
 
                 /* Contenedor base */
                 .sf-w  { max-width:1280px; margin:0 auto; padding:0 32px }
@@ -143,8 +147,8 @@ export default function Inicio() {
             <section className="sf-w" style={{ paddingTop: 36, paddingBottom: 36 }}>
                 <SectionHead color="#F59E0B" eyebrow="Top ventas" titulo="Más vendidos" onVer={() => go('/catalogo')} />
                 <div className="sf-g4">
-                    {PRODUCTOS.slice(0, 4).map((p, i) => (
-                        <ProductCard key={p.id} producto={p} rank={i + 1} />
+                    {PRODUCTOS.slice(0, 4).map(p => (
+                        <ProductCard key={p.id} producto={p} />
                     ))}
                 </div>
             </section>
@@ -400,45 +404,57 @@ function arrowStyle(side: 'left' | 'right'): React.CSSProperties {
     }
 }
 
-// ─── Carrusel de categorías ────────────────────────────────────────────────────
+// ─── Carrusel de categorías (marquee automático si > 4 items) ─────────────────
 
-function CategoriaCarrusel({ go }: { go: (p: string) => void }) {
-    const scroller = useRef<HTMLDivElement>(null)
-    const scrollBy = (dir: number) => scroller.current?.scrollBy({ left: dir * 260, behavior: 'smooth' })
+const CAT_MIN_MARQUEE = 4
 
+function CatPill({ c, go }: { c: typeof CATS_CARRUSEL[number]; go: (p: string) => void }) {
     return (
-        <div className="sf-w" style={{ paddingTop: 24, paddingBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Comprá por categoría</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button onClick={() => go('/catalogo')} style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Ver todas →</button>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => scrollBy(-1)} aria-label="Anterior" style={catArrow}><ChevronLeft size={13} /></button>
-                        <button onClick={() => scrollBy(1)}  aria-label="Siguiente" style={catArrow}><ChevronRight size={13} /></button>
-                    </div>
-                </div>
-            </div>
-            <div ref={scroller} className="sf-cat-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}>
-                {CATS_CARRUSEL.map((c, i) => (
-                    <button key={c.id} onClick={() => go(`/catalogo/${c.id}`)}
-                        style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', alignItems: 'center', gap: 9, height: 50, padding: '0 14px 0 7px', cursor: 'pointer', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg)', transition: 'border-color 150ms', animation: `sfFadeIn 420ms ${i * 30}ms cubic-bezier(0.2,0.8,0.2,1) both` }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-border-strong)')}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}>
-                        <span style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: `radial-gradient(circle at 35% 30%, oklch(0.86 0.07 ${c.hue}), oklch(0.74 0.08 ${c.hue}))`, display: 'grid', placeItems: 'center', fontSize: 16 }}>{c.emoji}</span>
-                        <span style={{ textAlign: 'left' }}>
-                            <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{c.nombre}</span>
-                            {/* --color-muted (#64748B) sobre blanco = 4.5:1, pasa WCAG AA */}
-                            <span style={{ display: 'block', fontSize: 11, color: 'var(--color-muted)', marginTop: 1, fontFamily: '"Geist Mono", monospace' }}>{c.count} productos</span>
-                        </span>
-                    </button>
-                ))}
-            </div>
-        </div>
+        <button
+            onClick={() => go(`/catalogo/${c.id}`)}
+            style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 9, height: 50, padding: '0 14px 0 7px', cursor: 'pointer', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg)', transition: 'border-color 150ms' }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-border-strong)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
+        >
+            <span style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: `radial-gradient(circle at 35% 30%, oklch(0.86 0.07 ${c.hue}), oklch(0.74 0.08 ${c.hue}))`, display: 'grid', placeItems: 'center', fontSize: 16 }}>{c.emoji}</span>
+            <span style={{ textAlign: 'left' }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{c.nombre}</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--color-muted)', marginTop: 1, fontFamily: '"Geist Mono", monospace' }}>{c.count} productos</span>
+            </span>
+        </button>
     )
 }
 
-const catArrow: React.CSSProperties = {
-    width: 26, height: 26, borderRadius: '50%', border: '1px solid var(--color-border)',
-    background: 'var(--color-bg)', color: 'var(--color-body)', display: 'grid', placeItems: 'center', cursor: 'pointer',
+function CategoriaCarrusel({ go }: { go: (p: string) => void }) {
+    const cats = CATS_CARRUSEL
+    const isMarquee = cats.length > CAT_MIN_MARQUEE
+
+    return (
+        <div style={{ paddingTop: 24, paddingBottom: 28 }}>
+            <div className="sf-w" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
+                <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Comprá por categoría</h2>
+                <button onClick={() => go('/catalogo')} style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer' }}>Ver todas →</button>
+            </div>
+
+            {isMarquee ? (
+                /* ── Marquee automático ── */
+                <div className="sf-marquee-wrap" style={{ paddingLeft: 0 }}>
+                    <div className="sf-marquee-track">
+                        {/* Duplicamos para el loop infinito */}
+                        {[...cats, ...cats].map((c, i) => (
+                            <CatPill key={`${c.id}-${i}`} c={c} go={go} />
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                /* ── Scroll estático si ≤ 4 ── */
+                <div className="sf-w">
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {cats.map(c => <CatPill key={c.id} c={c} go={go} />)}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 }
 
