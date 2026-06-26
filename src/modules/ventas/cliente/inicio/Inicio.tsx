@@ -350,7 +350,7 @@ function HeroCarousel({ go }: { go: (p: string) => void }) {
 
                                 {/* Card producto — se oculta en tablet */}
                                 <div className="sf-hero-card" style={{ position: 'relative' }}>
-                                    <div onClick={() => go('/producto/p4')} style={{ borderRadius: 16, overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 20px 56px rgba(0,0,0,0.28)', animation: 'sfFloat 6s ease-in-out infinite' }}>
+                                    <div onClick={() => go('/producto/p4')} style={{ borderRadius: 16, overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 20px 56px rgba(0,0,0,0.28)' }}>
                                         <ProdImage hue={s.hue} height={260} radius={0} />
                                         <div style={{ padding: 15, background: 'rgba(255,255,255,0.10)', backdropFilter: 'blur(18px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                                             <div style={{ minWidth: 0 }}>
@@ -366,7 +366,7 @@ function HeroCarousel({ go }: { go: (p: string) => void }) {
                                         </div>
                                     </div>
                                     {s.precioAnt && (
-                                        <div style={{ position: 'absolute', top: -10, left: -12, height: 24, padding: '0 10px', borderRadius: 999, background: 'linear-gradient(135deg,#F59E0B,#EF4444)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 10px rgba(239,68,68,0.35)', animation: 'sfBadge 3s ease-in-out infinite' }}>⭐ OFERTA</div>
+                                        <div style={{ position: 'absolute', top: -10, left: -12, height: 24, padding: '0 10px', borderRadius: 999, background: 'linear-gradient(135deg,#F59E0B,#EF4444)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 10px rgba(239,68,68,0.35)' }}>⭐ OFERTA</div>
                                     )}
                                 </div>
                             </div>
