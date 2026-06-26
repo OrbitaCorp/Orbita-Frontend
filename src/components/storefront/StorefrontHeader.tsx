@@ -9,22 +9,11 @@ type Props = {
   logged?: boolean
 }
 
-const NAV_SECTIONS = [
+const NAV_LINKS = [
   { label: 'Catálogo',     path: '/catalogo', hot: false },
   { label: 'Ofertas',      path: '/catalogo', hot: true  },
   { label: 'Novedades',    path: '/catalogo', hot: false },
   { label: 'Más vendidos', path: '/catalogo', hot: false },
-]
-
-const NAV_CATS = [
-  { label: 'Remeras',    id: 'remeras'    },
-  { label: 'Pantalones', id: 'pantalones' },
-  { label: 'Buzos',      id: 'buzos'      },
-  { label: 'Camperas',   id: 'camperas'   },
-  { label: 'Jeans',      id: 'jeans'      },
-  { label: 'Calzado',    id: 'calzado'    },
-  { label: 'Accesorios', id: 'accesorios' },
-  { label: 'Deportivo',  id: 'deportivo'  },
 ]
 
 export function StorefrontHeader({ tienda, carrito, logged }: Props) {
@@ -156,10 +145,9 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
         {/* Nav links — desktop */}
         <div className="sf-nav-wrap">
           <div className="sf-nav-scroll">
-            {/* Thin divider */}
             <span className="sf-nav-div" style={{ width: 1, height: 18, background: 'var(--color-border)', margin: '0 8px 0 4px', flexShrink: 0 }} />
 
-            {NAV_SECTIONS.map(s => (
+            {NAV_LINKS.map(s => (
               <a
                 key={s.label}
                 href={`${base}${s.path}`}
@@ -167,18 +155,6 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
               >
                 {s.hot && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
                 {s.label}
-              </a>
-            ))}
-
-            <span style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 2px', flexShrink: 0 }} />
-
-            {NAV_CATS.map(c => (
-              <a
-                key={c.id}
-                href={`${base}/catalogo/${c.id}`}
-                className={['sf-nav-link sf-nav-cat', isActive(`/catalogo/${c.id}`) ? 'active' : ''].filter(Boolean).join(' ')}
-              >
-                {c.label}
               </a>
             ))}
           </div>
@@ -242,18 +218,11 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
       {/* ── Mobile drawer ── */}
       {menuOpen && (
         <nav className="sf-drawer">
-          <div className="sf-drawer-section">Secciones</div>
-          {NAV_SECTIONS.map(s => (
+          {NAV_LINKS.map(s => (
             <a key={s.label} href={`${base}${s.path}`} className="sf-drawer-link" onClick={() => setMenuOpen(false)}
               style={s.hot ? { color: '#EF4444', fontWeight: 600 } : undefined}>
               {s.hot && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
               {s.label}
-            </a>
-          ))}
-          <div className="sf-drawer-section">Categorías</div>
-          {NAV_CATS.map(c => (
-            <a key={c.id} href={`${base}/catalogo/${c.id}`} className="sf-drawer-link" onClick={() => setMenuOpen(false)}>
-              {c.label}
             </a>
           ))}
         </nav>
