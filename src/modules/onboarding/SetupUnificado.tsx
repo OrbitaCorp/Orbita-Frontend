@@ -5,7 +5,7 @@ import {
   Check, ChevronLeft, ChevronRight,
   Banknote, Landmark, QrCode, CreditCard,
   User, Users, UsersRound, Building2,
-  Camera, Info, MapPin, Globe,
+  Camera, Info, MapPin, Globe, LocateFixed,
   type LucideIcon,
 } from 'lucide-react'
 import { Skeleton } from '@/design-system/components/Skeleton'
@@ -285,6 +285,7 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
 
 function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Dispatch<SetStateAction<Negocio>> }) {
   const [buscando,    setBuscando]    = useState(false)
+  const [locating,    setLocating]    = useState(false)
   const [buscarInput, setBuscarInput] = useState(negocio.direccion)
 
   const tipoLocal = negocio.tipoLocal
@@ -303,6 +304,24 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
         setBuscarInput(hit.display_name)
       }
     } finally { setBuscando(false) }
+  }
+
+  function usarUbicacion() {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const latLng: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+        setNegocio(prev => ({ ...prev, latLng }))
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latLng[0]}&lon=${latLng[1]}`)
+          .then(r => r.json())
+          .then(d => { if (d.display_name) { setNegocio(prev => ({ ...prev, direccion: d.display_name })); setBuscarInput(d.display_name) } })
+          .catch(() => {})
+          .finally(() => setLocating(false))
+      },
+      () => setLocating(false),
+      { timeout: 8000 }
+    )
   }
 
   function handleDragEnd(latLng: [number, number]) {
@@ -356,6 +375,27 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
                   style={{ padding: '0 16px', flexShrink: 0, background: 'var(--color-primary)', color: 'white', border: 'none', cursor: buscando ? 'default' : 'pointer', fontWeight: 600, fontSize: 13, opacity: buscando ? 0.7 : 1, transition: 'opacity 150ms' }}
                 >
                   {buscando ? '…' : 'Buscar'}
+                </button>
+              </div>
+              <div style={{ borderBottom: '1px solid var(--color-border)', padding: '6px 10px' }}>
+                <button
+                  onClick={usarUbicacion}
+                  disabled={locating}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 12px', borderRadius: 8, border: '1.5px solid var(--color-border)',
+                    background: 'transparent', color: locating ? 'var(--color-muted)' : 'var(--color-primary)',
+                    fontSize: 12, fontWeight: 600, cursor: locating ? 'default' : 'pointer',
+                    transition: 'all 150ms',
+                  }}
+                  onMouseEnter={e => { if (!locating) { e.currentTarget.style.background = 'rgba(59,130,246,0.06)'; e.currentTarget.style.borderColor = 'var(--color-primary)' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+                >
+                  {locating
+                    ? <span style={{ width: 13, height: 13, borderRadius: '50%', border: '2px solid var(--color-primary)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 600ms linear infinite' }} />
+                    : <LocateFixed size={13} strokeWidth={2} />
+                  }
+                  {locating ? 'Obteniendo ubicación…' : 'Usar mi ubicación actual'}
                 </button>
               </div>
               <MapPicker center={negocio.latLng} onDragEnd={handleDragEnd} />
