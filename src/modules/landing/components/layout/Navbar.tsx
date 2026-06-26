@@ -83,7 +83,7 @@ export function Navbar() {
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          <a href="/tienda/rama-tienda/login" className="hidden md:flex text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-colors px-3 py-2">
+          <a href="/login" className="hidden md:flex text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-colors px-3 py-2">
             Iniciar sesión
           </a>
 
