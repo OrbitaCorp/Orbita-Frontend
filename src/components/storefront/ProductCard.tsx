@@ -111,8 +111,8 @@ export function ProductCard({ producto, height = 240, rank, stockCount, onAdd }:
           style={{
             position: 'absolute', top: 10, right: 10, zIndex: 3,
             width: 30, height: 30, borderRadius: '50%',
-            background: hov ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.82)',
-            color: '#0F172A', display: 'grid', placeItems: 'center',
+            background: hov ? '#2563EB' : 'rgba(255,255,255,0.90)',
+            color: hov ? '#fff' : '#2563EB', display: 'grid', placeItems: 'center',
             boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
             transform: hov ? 'translateX(2px)' : 'translateX(0)',
             transition: 'transform 200ms ease, background 200ms ease',
