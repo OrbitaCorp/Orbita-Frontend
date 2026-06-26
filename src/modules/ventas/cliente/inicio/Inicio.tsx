@@ -192,25 +192,75 @@ export default function Inicio() {
 
             {/* ══ BANNER WHATSAPP ══ */}
             <section className="sf-w" style={{ paddingBottom: 52 }}>
-                <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 16, background: 'linear-gradient(125deg,#0A4731 0%,#128C7E 40%,#25D366 100%)' }}>
-                    <div style={{ position: 'absolute', top: -70, right: -70, width: 280, height: 280, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', filter: 'blur(70px)' }} />
-                    <div style={{ position: 'relative', zIndex: 1, padding: '32px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
-                        <div style={{ flex: '1 1 360px', minWidth: 240 }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 10px', borderRadius: 999, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em' }}>ATENCIÓN PERSONALIZADA</span>
-                            <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, margin: '10px 0 0', maxWidth: 400 }}>Pedí por WhatsApp y te respondemos en menos de 1 hora 💬</h2>
-                            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.84)', lineHeight: 1.55, margin: '8px 0 0', maxWidth: 380 }}>Consultá disponibilidad, talles, colores y coordinamos el envío de forma personalizada.</p>
-                            <div style={{ display: 'flex', gap: 22, marginTop: 16 }}>
-                                {([['< 1hs', 'tiempo de respuesta'], ['+1.200', 'pedidos coordinados']] as [string, string][]).map(([n, l]) => (
-                                    <div key={l}>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', fontFamily: '"Geist Mono", monospace' }}>{n}</div>
-                                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.70)', marginTop: 1 }}>{l}</div>
-                                    </div>
-                                ))}
+                <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, background: 'linear-gradient(135deg,#064E3B 0%,#065F46 50%,#047857 100%)', boxShadow: '0 20px 60px rgba(6,78,59,0.30)' }}>
+
+                    {/* Decoración fondo */}
+                    <div style={{ position: 'absolute', top: -80, right: 260, width: 320, height: 320, borderRadius: '50%', background: 'rgba(52,211,153,0.10)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', bottom: -60, left: -40, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', filter: 'blur(60px)', pointerEvents: 'none' }} />
+
+                    <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 32, padding: '40px 48px' }}>
+
+                        {/* ── Columna izquierda ── */}
+                        <div>
+                            {/* Badge */}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 26, padding: '0 12px', borderRadius: 999, background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.35)', marginBottom: 16 }}>
+                                {/* WhatsApp icon SVG */}
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="#34D399"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.528 5.845L.057 23.882l6.2-1.624A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.007-1.372l-.36-.213-3.681.965.982-3.594-.235-.369A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#6EE7B7', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Atención por WhatsApp</span>
+                            </div>
+
+                            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.15, margin: '0 0 10px', maxWidth: 460 }}>
+                                Respondemos en menos<br />de una hora
+                            </h2>
+                            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.6, margin: '0 0 24px', maxWidth: 400 }}>
+                                Consultá talles, disponibilidad o coordiná un envío. Te atendemos de lunes a sábado, sin bots.
+                            </p>
+
+                            {/* Stats + botón en fila */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+                                <button
+                                    onClick={() => openWpp(TIENDA.wpp, 'Hola! Quería hacer una consulta.')}
+                                    style={{ height: 46, padding: '0 22px', borderRadius: 10, background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(37,211,102,0.40)', transition: 'all 150ms', flexShrink: 0 }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#1DAA52'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#25D366'; e.currentTarget.style.transform = 'translateY(0)' }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.528 5.845L.057 23.882l6.2-1.624A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.007-1.372l-.36-.213-3.681.965.982-3.594-.235-.369A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+                                    Escribirnos ahora
+                                </button>
+
+                                <div style={{ display: 'flex', gap: 24 }}>
+                                    {([['< 1hs', 'respuesta'], ['+1.200', 'consultas']] as [string,string][]).map(([n, l]) => (
+                                        <div key={l} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', fontFamily: '"Geist Mono", monospace', letterSpacing: '-0.02em' }}>{n}</span>
+                                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>{l}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                        <button onClick={() => openWpp(TIENDA.wpp, 'Hola! Quería hacer una consulta.')} style={{ height: 50, padding: '0 26px', borderRadius: 10, background: '#fff', color: '#0A4731', fontSize: 14, fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 9, boxShadow: '0 6px 24px rgba(0,0,0,0.18)', flexShrink: 0 }}>
-                            💬 Escribirnos por WhatsApp
-                        </button>
+
+                        {/* ── Chat bubbles decorativas ── */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220, maxWidth: 260 }}>
+                            {/* Burbuja cliente */}
+                            <div style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px 16px 16px 4px', padding: '10px 14px', maxWidth: 200 }}>
+                                <p style={{ fontSize: 12.5, color: '#fff', margin: 0, lineHeight: 1.4 }}>Hola! ¿Tienen la campera en talle M?</p>
+                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 4, display: 'block', textAlign: 'right' }}>09:41</span>
+                            </div>
+                            {/* Burbuja tienda */}
+                            <div style={{ alignSelf: 'flex-end', background: '#25D366', borderRadius: '16px 16px 4px 16px', padding: '10px 14px', maxWidth: 210 }}>
+                                <p style={{ fontSize: 12.5, color: '#fff', margin: 0, lineHeight: 1.4 }}>¡Sí! Tenemos en M y L. Te coordinamos el envío hoy mismo 🎉</p>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.70)' }}>09:42</span>
+                                    <svg width="14" height="10" viewBox="0 0 16 11" fill="none"><path d="M1 5.5L5 9.5L15 1.5" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 5.5L9 9.5" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                </div>
+                            </div>
+                            {/* Burbuja cliente 2 */}
+                            <div style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px 16px 16px 4px', padding: '10px 14px', maxWidth: 170 }}>
+                                <p style={{ fontSize: 12.5, color: '#fff', margin: 0, lineHeight: 1.4 }}>¡Perfecto, muchas gracias! 🙌</p>
+                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 4, display: 'block', textAlign: 'right' }}>09:43</span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </section>
