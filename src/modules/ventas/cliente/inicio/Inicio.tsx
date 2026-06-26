@@ -193,9 +193,10 @@ export default function Inicio() {
             <section className="sf-w" style={{ paddingBottom: 44 }}>
                 <div className="sf-2col">
                     {/* Panel envíos oscuro */}
-                    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, background: 'linear-gradient(135deg,#0F172A 0%,#1E3A5F 55%,#2563EB 140%)', padding: '32px 32px 0', display: 'flex', flexDirection: 'column', minHeight: 300 }}>
+                    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, background: 'linear-gradient(135deg,#0F172A 0%,#1E3A5F 55%,#2563EB 140%)', padding: '32px 28px 28px', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ position: 'absolute', top: -50, right: -30, width: 240, height: 240, borderRadius: '50%', background: 'rgba(96,165,250,0.22)', filter: 'blur(60px)' }} />
-                        <div style={{ position: 'relative', zIndex: 1 }}>
+                        {/* Contenido */}
+                        <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 11px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.20)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                                 <Truck size={11} /> Envíos
                             </span>
@@ -205,8 +206,8 @@ export default function Inicio() {
                                 <Check size={13} /> Envío gratis desde {fmt(80000)}
                             </div>
                         </div>
-                        {/* Tracking */}
-                        <div style={{ position: 'relative', zIndex: 1, marginTop: 22, background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(14px)', borderTop: '1px solid rgba(255,255,255,0.14)', borderLeft: '1px solid rgba(255,255,255,0.14)', borderRight: '1px solid rgba(255,255,255,0.14)', borderRadius: '12px 12px 0 0', padding: '13px 16px', display: 'flex', alignItems: 'center' }}>
+                        {/* Tracking — pegado al fondo */}
+                        <div style={{ position: 'relative', zIndex: 1, marginTop: 28, background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(14px)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center' }}>
                             {([
                                 { Ico: ShoppingBag,  lbl: 'Confirmado', done: true  },
                                 { Ico: ShoppingCart, lbl: 'Preparando', done: true  },
