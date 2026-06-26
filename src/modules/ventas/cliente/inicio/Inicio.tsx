@@ -77,7 +77,7 @@ export default function Inicio() {
     const go = (path: string) => router.push(`${base}${path}`)
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--color-bg)', overflowX: 'hidden' }}>
             <style>{`
                 @keyframes sfFadeIn   { from { opacity:0; transform:translateY(8px)  } to { opacity:1; transform:translateY(0) } }
                 @keyframes sfDotPulse { 0%,100%{ opacity:1; transform:scale(1)  } 50%{ opacity:.4; transform:scale(.7) } }
