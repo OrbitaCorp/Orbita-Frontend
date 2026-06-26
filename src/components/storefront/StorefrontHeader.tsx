@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { ShoppingBag, Heart, Search, User, Menu, X } from 'lucide-react'
 import type { TiendaConfig, ItemCarrito } from '@/lib/storefront/types'
@@ -22,7 +22,31 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
   const { slug } = router.query as { slug: string }
   const base = `/tienda/${slug}`
   const cartCount = carrito.reduce((s, i) => s + i.qty, 0)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen,    setMenuOpen]    = useState(false)
+  const [searchOpen,  setSearchOpen]  = useState(false)
+  const [searchVal,   setSearchVal]   = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus()
+  }, [searchOpen])
+
+  function toggleSearch() {
+    setSearchOpen(o => !o)
+    if (searchOpen) setSearchVal('')
+  }
+
+  function handleSearchKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      router.push(`${base}/catalogo`)
+      setSearchOpen(false)
+      setSearchVal('')
+    }
+    if (e.key === 'Escape') {
+      setSearchOpen(false)
+      setSearchVal('')
+    }
+  }
 
   const currentPath = router.asPath.replace(base, '') || '/'
 
@@ -77,6 +101,26 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
           color: var(--color-muted); transition: color 150ms;
         }
         .sf-hdr-btn:hover { color: var(--color-text); }
+
+        /* ── Expandable search ── */
+        .sf-search-wrap {
+          display: flex; align-items: center; gap: 4;
+          overflow: hidden;
+        }
+        .sf-search-input {
+          width: 0; max-width: 220px;
+          height: 34px; padding: 0;
+          border: none; outline: none; background: transparent;
+          font-size: 13.5px; color: var(--color-text);
+          transition: width 250ms cubic-bezier(0.4,0,0.2,1), padding 250ms cubic-bezier(0.4,0,0.2,1);
+          white-space: nowrap; overflow: hidden;
+        }
+        .sf-search-input.open {
+          width: 220px;
+          padding: 0 10px;
+          border-bottom: 1.5px solid var(--color-border-strong);
+        }
+        .sf-search-input::placeholder { color: var(--color-subtle); }
 
         /* ── Nav area ── */
         .sf-nav-wrap { flex: 1; min-width: 0; overflow: hidden; }
@@ -151,9 +195,21 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
 
         {/* Acciones */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 'auto', flexShrink: 0 }}>
-          <button className="sf-hdr-btn" onClick={() => router.push(`${base}/catalogo`)} aria-label="Buscar">
-            <Search size={18} strokeWidth={1.5} />
-          </button>
+          <div className="sf-search-wrap">
+            <input
+              ref={searchRef}
+              className={`sf-search-input${searchOpen ? ' open' : ''}`}
+              placeholder="Buscar productos..."
+              value={searchVal}
+              onChange={e => setSearchVal(e.target.value)}
+              onKeyDown={handleSearchKey}
+              onBlur={() => { setSearchOpen(false); setSearchVal('') }}
+              aria-label="Buscar"
+            />
+            <button className="sf-hdr-btn" onClick={toggleSearch} aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}>
+              {searchOpen ? <X size={18} strokeWidth={1.5} /> : <Search size={18} strokeWidth={1.5} />}
+            </button>
+          </div>
 
           <button className="sf-hdr-btn" aria-label="Favoritos">
             <Heart size={18} strokeWidth={1.5} />

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { Minus, Plus, Trash2, ChevronLeft, Lock, Check, ShoppingCart, ArrowRight } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
+import { Breadcrumb } from '@/components/storefront/Breadcrumb'
 import { Thumb } from '@/components/storefront/Thumb'
 import { TIENDA, CARRITO_INICIAL } from '@/lib/storefront/mock'
 import { fmt } from '@/lib/storefront/utils'
@@ -30,7 +31,10 @@ export default function Carrito() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
         <StorefrontHeader tienda={TIENDA} carrito={[]} />
-        <div style={{ maxWidth: 600, margin: '80px auto', padding: '0 32px', textAlign: 'center' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 32px 0' }}>
+          <Breadcrumb items={[{ label: 'Inicio', href: base }, { label: 'Tu carrito' }]} />
+        </div>
+        <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 32px', textAlign: 'center' }}>
           <div style={{
             width: 96, height: 96, borderRadius: '50%',
             background: 'var(--color-surface)', color: 'var(--color-muted)',
@@ -60,8 +64,9 @@ export default function Carrito() {
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
       <StorefrontHeader tienda={TIENDA} carrito={items} />
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 48px' }}>
-        <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '0 0 4px' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 32px 48px' }}>
+        <Breadcrumb items={[{ label: 'Inicio', href: base }, { label: 'Tu carrito' }]} />
+        <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '16px 0 4px' }}>
           Tu carrito
         </h1>
         <div style={{ fontSize: 14, color: 'var(--color-muted)', marginBottom: 32, fontFamily: '"Geist Mono", monospace' }}>
