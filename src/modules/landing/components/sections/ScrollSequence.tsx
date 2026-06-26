@@ -318,6 +318,8 @@ export function ScrollSequence() {
 
     const GATHER_DURATION = 4200;
     let startTime: number | null = null;
+    let lastScroll = 0;
+    let velSmooth  = 0;
 
     const animate = (t = 0) => {
       if (startTime === null) startTime = t;
@@ -325,20 +327,40 @@ export function ScrollSequence() {
       if (width < 768) {
         canvas.style.opacity = '0';
 
-        // Órbita ambient reactiva al scroll: cada anillo gira a distinta
-        // velocidad/dirección y el conjunto se inclina a medida que se baja.
+        // Órbita ambient reactiva al scroll: deriva (wander) + parallax,
+        // momentum del gesto (kick al flickear) y cada anillo a distinta
+        // velocidad/dirección. Todo en transforms sobre la GPU.
         const ts   = t * 0.001;
         const sc   = window.scrollY;
         const docH = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
         const p    = Math.min(1, sc / docH);
 
+        // Velocidad de scroll suavizada → impulso táctil
+        const vRaw = sc - lastScroll; lastScroll = sc;
+        velSmooth += (Math.abs(vRaw) - velSmooth) * 0.08;
+        const kick  = Math.min(velSmooth * 0.6,   55);   // grados extra al flickear
+        const boost = Math.min(velSmooth * 0.002, 0.10); // escala extra al flickear
+
         if (mobOrbitRef.current) {
-          const tilt = p * 60;
-          mobOrbitRef.current.style.transform = `perspective(720px) rotateX(${tilt.toFixed(2)}deg)`;
+          const tilt   = p * 55;
+          // wander idle (Lissajous) + sway lateral por scroll + leve subida
+          const driftX = Math.sin(ts * 0.22) * 16 + Math.sin(p * Math.PI * 2) * 26;
+          const driftY = Math.cos(ts * 0.17) * 11 - p * 36;
+          const scale  = 1 + boost;
+          mobOrbitRef.current.style.transform =
+            `translate3d(${driftX.toFixed(1)}px, ${driftY.toFixed(1)}px, 0) perspective(760px) rotateX(${tilt.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+
+          // Color shift por sección: azul (cyan) → índigo, con intensidad
+          // que respira suave + un plus al flickear.
+          const hue = -30 + p * 80;
+          const sat = 1 + p * 0.25 + Math.sin(ts * 0.5) * 0.12 + boost * 2;
+          const bri = 1 + p * 0.12;
+          mobOrbitRef.current.style.filter =
+            `hue-rotate(${hue.toFixed(1)}deg) saturate(${sat.toFixed(3)}) brightness(${bri.toFixed(3)})`;
         }
-        if (ring1Ref.current) ring1Ref.current.style.transform = `rotate(${(ts * 7   + sc * 0.12).toFixed(2)}deg)`;
-        if (ring2Ref.current) ring2Ref.current.style.transform = `rotate(${(-ts * 4  - sc * 0.20).toFixed(2)}deg)`;
-        if (ring3Ref.current) ring3Ref.current.style.transform = `rotate(${(ts * 2.5 + sc * 0.07).toFixed(2)}deg)`;
+        if (ring1Ref.current) ring1Ref.current.style.transform = `rotate(${(ts * 7   + sc * 0.12 + kick).toFixed(2)}deg)`;
+        if (ring2Ref.current) ring2Ref.current.style.transform = `rotate(${(-ts * 4  - sc * 0.20 - kick).toFixed(2)}deg)`;
+        if (ring3Ref.current) ring3Ref.current.style.transform = `rotate(${(ts * 2.5 + sc * 0.07 + kick * 0.5).toFixed(2)}deg)`;
 
         animFrameRef.current = requestAnimationFrame(animate);
         return;
