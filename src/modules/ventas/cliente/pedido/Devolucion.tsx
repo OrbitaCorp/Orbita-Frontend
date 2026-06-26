@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { RotateCcw, ChevronLeft, AlertTriangle } from 'lucide-react'
+import { RotateCcw, ChevronLeft, AlertTriangle, MessageCircle } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { Breadcrumb } from '@/components/storefront/Breadcrumb'
@@ -15,15 +15,30 @@ export default function InicioDevolucion() {
   const { slug, id } = router.query as { slug: string; id: string }
   const base = `/tienda/${slug}`
 
-  const [seleccionado, setSeleccionado] = useState(CARRITO_INICIAL[1].id)
-  const [motivo,       setMotivo]       = useState('Talle incorrecto')
-  const [reembolso,    setReembolso]    = useState<'credito' | 'cuenta'>('credito')
-  const [nota,         setNota]         = useState('')
+  const [seleccionados, setSeleccionados] = useState<string[]>([])
+  const [motivos,       setMotivos]       = useState<Record<string, string>>({})
+  const [notas,         setNotas]         = useState<Record<string, string>>({})
+  const [reembolso,     setReembolso]     = useState<'credito' | 'cuenta'>('credito')
 
-  const itemSel = CARRITO_INICIAL.find(i => i.id === seleccionado)
-  const msg = itemSel
-    ? `Hola! Quiero solicitar la devolución del pedido #${PEDIDO_MOCK.id}. Producto: ${itemSel.nombre}. Motivo: ${motivo.toLowerCase()}.${nota ? ' Detalle: ' + nota : ''} Método: ${reembolso === 'credito' ? 'Nota de crédito' : 'Reembolso a cuenta original'}.`
-    : `Hola! Quiero solicitar una devolución del pedido #${PEDIDO_MOCK.id}.`
+  const toggleItem = (itemId: string) => {
+    setSeleccionados(prev =>
+      prev.includes(itemId) ? prev.filter(x => x !== itemId) : [...prev, itemId]
+    )
+    setMotivos(prev => prev[itemId] ? prev : { ...prev, [itemId]: MOTIVOS[0] })
+  }
+
+  const setMotivo = (itemId: string, m: string) => setMotivos(prev => ({ ...prev, [itemId]: m }))
+  const setNota   = (itemId: string, n: string) => setNotas(prev =>  ({ ...prev, [itemId]: n  }))
+
+  const itemsSeleccionados = CARRITO_INICIAL.filter(i => seleccionados.includes(i.id))
+
+  const msg = itemsSeleccionados.length === 0
+    ? `Hola! Quiero solicitar una devolución del pedido #${PEDIDO_MOCK.id}.`
+    : `Hola! Quiero solicitar la devolución del pedido #${PEDIDO_MOCK.id}.\n\n` +
+      itemsSeleccionados.map(it =>
+        `• ${it.nombre} (${it.variante}): ${motivos[it.id] ?? MOTIVOS[0]}${notas[it.id] ? ` — ${notas[it.id]}` : ''}`
+      ).join('\n') +
+      `\n\nMétodo: ${reembolso === 'credito' ? 'Nota de crédito' : 'Reembolso a cuenta original'}.`
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
@@ -49,23 +64,36 @@ export default function InicioDevolucion() {
           </div>
         </div>
 
+        {/* Selección de productos */}
         <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '4px 20px', marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', padding: '16px 0 8px' }}>
-            Seleccioná el producto a devolver
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0 8px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)' }}>
+              Seleccioná los productos a devolver
+            </div>
+            {seleccionados.length > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', background: 'var(--color-primary-bg)', padding: '2px 10px', borderRadius: 999 }}>
+                {seleccionados.length} seleccionado{seleccionados.length > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
           {CARRITO_INICIAL.map(it => {
-            const active = seleccionado === it.id
+            const active = seleccionados.includes(it.id)
             return (
-              <div key={it.id}>
+              <div key={it.id} style={{ marginBottom: 6 }}>
                 <label style={{
                   display: 'grid', gridTemplateColumns: '24px 64px 1fr',
                   gap: 14, alignItems: 'center',
                   padding: '14px 12px', margin: '0 -12px', borderRadius: 8,
                   background: active ? 'var(--color-primary-bg)' : 'transparent',
                   border: `1px solid ${active ? 'var(--color-primary)' : 'transparent'}`,
-                  cursor: 'pointer',
+                  cursor: 'pointer', transition: 'all 150ms',
                 }}>
-                  <input type="checkbox" checked={active} onChange={() => setSeleccionado(active ? '' : it.id)} style={{ accentColor: 'var(--color-primary)', width: 18, height: 18 }} />
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    onChange={() => toggleItem(it.id)}
+                    style={{ accentColor: 'var(--color-primary)', width: 18, height: 18 }}
+                  />
                   <Thumb hue={it.hue} size={64} radius={8} />
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>{it.nombre}</div>
@@ -74,21 +102,25 @@ export default function InicioDevolucion() {
                 </label>
 
                 {active && (
-                  <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 10, padding: 16, margin: '8px 0 12px' }}>
+                  <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 10, padding: 16, margin: '6px 0 10px', marginLeft: 38 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>Motivo</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                       {MOTIVOS.map(m => (
-                        <button key={m} onClick={() => setMotivo(m)} style={{
+                        <button key={m} onClick={() => setMotivo(it.id, m)} style={{
                           height: 32, padding: '0 12px', borderRadius: 999,
-                          background: motivo === m ? 'var(--color-text)' : 'var(--color-bg)',
-                          color: motivo === m ? 'var(--color-bg)' : 'var(--color-body)',
-                          border: `1px solid ${motivo === m ? 'var(--color-text)' : 'var(--color-border)'}`,
+                          background: (motivos[it.id] ?? MOTIVOS[0]) === m ? 'var(--color-text)' : 'var(--color-bg)',
+                          color: (motivos[it.id] ?? MOTIVOS[0]) === m ? 'var(--color-bg)' : 'var(--color-body)',
+                          border: `1px solid ${(motivos[it.id] ?? MOTIVOS[0]) === m ? 'var(--color-text)' : 'var(--color-border)'}`,
                           fontSize: 12, fontWeight: 500, cursor: 'pointer',
                         }}>{m}</button>
                       ))}
                     </div>
-                    <textarea value={nota} onChange={e => setNota(e.target.value)} placeholder="Contanos más detalles..."
-                      style={{ width: '100%', minHeight: 72, padding: 10, borderRadius: 8, boxSizing: 'border-box', background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', outline: 'none' }} />
+                    <textarea
+                      value={notas[it.id] ?? ''}
+                      onChange={e => setNota(it.id, e.target.value)}
+                      placeholder="Contanos más detalles..."
+                      style={{ width: '100%', minHeight: 68, padding: 10, borderRadius: 8, boxSizing: 'border-box', background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+                    />
                     <div style={{ marginTop: 10, padding: 12, background: 'var(--color-warning-bg)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 8, fontSize: 12, color: 'var(--color-body)', lineHeight: 1.5, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <AlertTriangle size={14} color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 1 }} />
                       <span><strong style={{ color: 'var(--color-text)' }}>Importante:</strong> el producto debe estar sin uso, con etiquetas originales y en su packaging.</span>
@@ -100,10 +132,11 @@ export default function InicioDevolucion() {
           })}
         </div>
 
+        {/* Método de reembolso */}
         <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Método de reembolso</div>
           {[
-            { id: 'credito' as const, titulo: 'Nota de crédito',             desc: 'Para usar en tu próxima compra', badge: 'Más rápido' },
+            { id: 'credito' as const, titulo: 'Nota de crédito',                desc: 'Para usar en tu próxima compra',  badge: 'Más rápido' },
             { id: 'cuenta' as const,  titulo: 'Reembolso a la cuenta original', desc: '5–10 días hábiles' },
           ].map(opt => {
             const active = reembolso === opt.id
@@ -127,6 +160,7 @@ export default function InicioDevolucion() {
           })}
         </div>
 
+        {/* Cómo funciona */}
         <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', marginBottom: 14 }}>¿Cómo funciona?</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -139,14 +173,24 @@ export default function InicioDevolucion() {
           </div>
         </div>
 
-        <button onClick={() => openWpp(TIENDA.wpp, msg)} style={{
-          width: '100%', height: 52, borderRadius: 10,
-          background: '#25D366', color: '#fff',
-          fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          boxShadow: '0 4px 16px rgba(37,211,102,0.30)',
-        }}>
-          💬 Enviar solicitud por WhatsApp
+        <button
+          onClick={() => openWpp(TIENDA.wpp, msg)}
+          disabled={seleccionados.length === 0}
+          style={{
+            width: '100%', height: 52, borderRadius: 10,
+            background: seleccionados.length === 0 ? 'var(--color-border)' : '#25D366',
+            color: seleccionados.length === 0 ? 'var(--color-muted)' : '#fff',
+            fontSize: 15, fontWeight: 700, border: 'none',
+            cursor: seleccionados.length === 0 ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            boxShadow: seleccionados.length === 0 ? 'none' : '0 4px 16px rgba(37,211,102,0.30)',
+            transition: 'all 200ms',
+          }}
+        >
+          <MessageCircle size={18} strokeWidth={1.5} />
+          {seleccionados.length === 0
+            ? 'Seleccioná al menos un producto'
+            : `Enviar solicitud${seleccionados.length > 1 ? ` (${seleccionados.length} productos)` : ''} por WhatsApp`}
         </button>
 
         <button onClick={() => router.push(`${base}/pedido/${id}`)} style={{
