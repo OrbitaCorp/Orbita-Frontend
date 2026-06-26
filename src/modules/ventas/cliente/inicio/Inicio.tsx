@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { ArrowRight, ChevronLeft, ChevronRight, Plus, ShoppingCart, Star, Truck, ShoppingBag, MapPin, Check, RefreshCw, Shield, MessageCircle, Lock } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Plus, ShoppingCart, Truck, ShoppingBag, MapPin, Check, RefreshCw, Shield, MessageCircle, Lock } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { AnnouncementBar } from '@/components/storefront/AnnouncementBar'
@@ -50,17 +50,17 @@ const CATS_CARRUSEL = [
 ]
 
 const OFERTA_FLASH = [
-    { nombre: 'Remera oversize negra',   precio: 24900, precioAnt: 32000, hue: 220, badge: '−22%', stock: 4 },
-    { nombre: 'Jogger gris melange',     precio: 34500, precioAnt: 45000, hue: 210, badge: '−23%', stock: 2 },
-    { nombre: 'Buzo sin capucha crema',  precio: 32000, precioAnt: 40000, hue: 45,  badge: '−20%', stock: 7 },
-    { nombre: 'Jean tiro medio celeste', precio: 56000, precioAnt: 68000, hue: 200, badge: '−18%', stock: 3 },
+    { id: 'of1', nombre: 'Remera oversize negra',   precio: 24900, precioAnt: 32000, hue: 220, badge: '−22%', cat: 'Remeras',    rating: 4.6, stock: true, stockCount: 4 },
+    { id: 'of2', nombre: 'Jogger gris melange',     precio: 34500, precioAnt: 45000, hue: 210, badge: '−23%', cat: 'Pantalones', rating: 4.7, stock: true, stockCount: 2 },
+    { id: 'of3', nombre: 'Buzo sin capucha crema',  precio: 32000, precioAnt: 40000, hue: 45,  badge: '−20%', cat: 'Buzos',      rating: 4.5, stock: true, stockCount: 7 },
+    { id: 'of4', nombre: 'Jean tiro medio celeste', precio: 56000, precioAnt: 68000, hue: 200, badge: '−18%', cat: 'Jeans',      rating: 4.8, stock: true, stockCount: 3 },
 ]
 
 const NUEVOS_INGRESOS = [
-    { nombre: 'Campera técnica impermeable', precio: 112000, hue: 200, rating: 4.8 },
-    { nombre: 'Remera estampada gráfica',    precio: 27500,  hue: 280, rating: 4.9 },
-    { nombre: 'Gorra trucker bordada',       precio: 15900,  hue: 30,  rating: 4.5 },
-    { nombre: 'Top deportivo lila',          precio: 19500,  hue: 270, rating: 4.7 },
+    { id: 'ni1', nombre: 'Campera técnica impermeable', precio: 112000, precioAnt: null, hue: 200, badge: 'Nuevo', cat: 'Camperas',    rating: 4.8, stock: true },
+    { id: 'ni2', nombre: 'Remera estampada gráfica',    precio: 27500,  precioAnt: null, hue: 280, badge: 'Nuevo', cat: 'Remeras',     rating: 4.9, stock: true },
+    { id: 'ni3', nombre: 'Gorra trucker bordada',       precio: 15900,  precioAnt: null, hue: 30,  badge: 'Nuevo', cat: 'Accesorios',  rating: 4.5, stock: true },
+    { id: 'ni4', nombre: 'Top deportivo lila',          precio: 19500,  precioAnt: null, hue: 270, badge: 'Nuevo', cat: 'Deportivo',   rating: 4.7, stock: true },
 ]
 
 const STATS: [string, string][] = [
@@ -144,10 +144,7 @@ export default function Inicio() {
                 <SectionHead color="#F59E0B" eyebrow="Top ventas" titulo="Más vendidos" onVer={() => go('/catalogo')} />
                 <div className="sf-g4">
                     {PRODUCTOS.slice(0, 4).map((p, i) => (
-                        <div key={p.id} style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', top: 10, left: 10, zIndex: 3, width: 22, height: 22, borderRadius: '50%', background: 'rgba(15,23,42,0.82)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center', fontFamily: '"Geist Mono", monospace' }}>{i + 1}</span>
-                            <ProductCard producto={p} />
-                        </div>
+                        <ProductCard key={p.id} producto={p} rank={i + 1} />
                     ))}
                 </div>
             </section>
@@ -156,7 +153,9 @@ export default function Inicio() {
             <section className="sf-w" style={{ paddingBottom: 36 }}>
                 <SectionHead color="#EF4444" eyebrow="Destacados" titulo="Productos destacados" onVer={() => go('/catalogo')} />
                 <div className="sf-g4">
-                    {OFERTA_FLASH.map((p, i) => <OfertaCard key={p.nombre} p={p} go={go} delay={i * 40} />)}
+                    {OFERTA_FLASH.map(p => (
+                        <ProductCard key={p.id} producto={p} stockCount={p.stockCount} />
+                    ))}
                 </div>
             </section>
 
@@ -164,7 +163,9 @@ export default function Inicio() {
             <section className="sf-w" style={{ paddingBottom: 36 }}>
                 <SectionHead color="#10B981" eyebrow="Nuevos ingresos" titulo="Recién llegados" onVer={() => go('/catalogo')} />
                 <div className="sf-g4">
-                    {NUEVOS_INGRESOS.map((p, i) => <NuevoCard key={p.nombre} p={p} go={go} delay={i * 40} />)}
+                    {NUEVOS_INGRESOS.map(p => (
+                        <ProductCard key={p.id} producto={p} />
+                    ))}
                 </div>
             </section>
 
@@ -441,61 +442,3 @@ const catArrow: React.CSSProperties = {
     background: 'var(--color-bg)', color: 'var(--color-body)', display: 'grid', placeItems: 'center', cursor: 'pointer',
 }
 
-// ─── Card destacado (badge % + stock) ─────────────────────────────────────────
-
-function OfertaCard({ p, go, delay = 0 }: { p: typeof OFERTA_FLASH[number]; go: (path: string) => void; delay?: number }) {
-    const [hov, setHov] = useState(false)
-    const lowStock = p.stock <= 3
-    return (
-        <div onClick={() => go('/producto/p1')} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ background: 'var(--color-bg)', border: `1px solid ${hov ? 'var(--color-border-strong)' : 'var(--color-border)'}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'transform 180ms ease, box-shadow 180ms ease', transform: hov ? 'translateY(-3px)' : 'translateY(0)', boxShadow: hov ? '0 10px 26px rgba(15,23,42,0.10)' : '0 1px 3px rgba(15,23,42,0.05)', animation: `sfFadeIn 480ms ${delay}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
-            <div style={{ position: 'relative', height: 185, overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', inset: 0, background: `repeating-linear-gradient(135deg, oklch(0.84 0.06 ${p.hue}) 0 28px, oklch(0.79 0.06 ${p.hue}) 28px 56px)`, transition: 'transform 380ms ease', transform: hov ? 'scale(1.04)' : 'scale(1)' }} />
-                {/* Badge % — color sólido para máximo contraste */}
-                <span style={{ position: 'absolute', top: 10, left: 10, zIndex: 2, height: 23, padding: '0 8px', borderRadius: 999, background: '#DC2626', color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', fontFamily: '"Geist Mono", monospace' }}>{p.badge}</span>
-                <span style={{ position: 'absolute', bottom: 10, left: 10, zIndex: 2, height: 22, padding: '0 8px', borderRadius: 999, background: lowStock ? '#D97706' : '#059669', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    {lowStock ? `⚡ ${p.stock} disponibles` : '✓ En stock'}
-                </span>
-            </div>
-            <div style={{ padding: 13 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 35 }}>{p.nombre}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 7 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{fmt(p.precio)}</span>
-                    {/* --color-muted sobre blanco = 4.5:1 ✓ */}
-                    <span style={{ fontSize: 12, color: 'var(--color-muted)', textDecoration: 'line-through', fontFamily: '"Geist Mono", monospace' }}>{fmt(p.precioAnt)}</span>
-                </div>
-                <button onClick={e => { e.stopPropagation(); go('/carrito') }} style={{ width: '100%', marginTop: 10, height: 34, borderRadius: 7, background: 'var(--color-primary)', color: '#fff', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                    <ShoppingCart size={13} /> Agregar
-                </button>
-            </div>
-        </div>
-    )
-}
-
-// ─── Card nuevo ingreso (badge + rating) ──────────────────────────────────────
-
-function NuevoCard({ p, go, delay = 0 }: { p: typeof NUEVOS_INGRESOS[number]; go: (path: string) => void; delay?: number }) {
-    const [hov, setHov] = useState(false)
-    return (
-        <div onClick={() => go('/producto/p9')} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ background: 'var(--color-bg)', border: `1px solid ${hov ? 'var(--color-border-strong)' : 'var(--color-border)'}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'transform 180ms ease, box-shadow 180ms ease', transform: hov ? 'translateY(-3px)' : 'translateY(0)', boxShadow: hov ? '0 10px 26px rgba(15,23,42,0.10)' : '0 1px 3px rgba(15,23,42,0.05)', animation: `sfFadeIn 480ms ${delay}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
-            <div style={{ position: 'relative', height: 185, overflow: 'hidden', background: `repeating-linear-gradient(135deg, oklch(0.84 0.06 ${p.hue}) 0 28px, oklch(0.79 0.06 ${p.hue}) 28px 56px)` }}>
-                {/* Badge sólido verde */}
-                <span style={{ position: 'absolute', top: 10, left: 10, height: 22, padding: '0 8px', borderRadius: 999, background: '#059669', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', display: 'inline-flex', alignItems: 'center', textTransform: 'uppercase' }}>Nuevo</span>
-            </div>
-            <div style={{ padding: 13 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 35 }}>{p.nombre}</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 7 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{fmt(p.precio)}</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12 }}>
-                        <Star size={11} fill="#F59E0B" color="#F59E0B" />
-                        <span style={{ fontWeight: 600, color: 'var(--color-body)', fontFamily: '"Geist Mono", monospace' }}>{p.rating}</span>
-                    </span>
-                </div>
-                <button onClick={e => { e.stopPropagation(); go('/producto/p9') }} style={{ width: '100%', marginTop: 10, height: 34, borderRadius: 7, background: 'transparent', color: 'var(--color-primary)', fontSize: 12, fontWeight: 600, border: '1.5px solid var(--color-primary)', cursor: 'pointer' }}>
-                    Ver producto
-                </button>
-            </div>
-        </div>
-    )
-}
