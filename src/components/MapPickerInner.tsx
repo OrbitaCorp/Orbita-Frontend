@@ -48,5 +48,5 @@ export default function MapPickerInner({ center, onDragEnd }: Props) {
     mapRef.current.setView(center, 15)
   }, [center[0], center[1]])
 
-  return <div ref={containerRef} style={{ height: 240 }} />
+  return <div ref={containerRef} style={{ height: 320 }} />
 }

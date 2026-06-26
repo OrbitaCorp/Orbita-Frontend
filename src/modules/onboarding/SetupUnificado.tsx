@@ -361,48 +361,66 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
       {tipoLocal === 'fisico' && (
         <div style={{ animation: 'fadeSlideDown 220ms ease' }}>
           <Field label="Dirección de tu negocio" required>
-            <div style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
+            <div style={{
+              border: '1.5px solid var(--color-border)', borderRadius: 14,
+              overflow: 'hidden',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            }}>
+
+              {/* Barra de búsqueda */}
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)', padding: '4px 4px 4px 12px', gap: 8 }}>
+                <MapPin size={15} strokeWidth={2} color="var(--color-muted)" style={{ flexShrink: 0 }} />
                 <input
                   value={buscarInput}
                   onChange={e => setBuscarInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); geocodificar() } }}
                   placeholder="Buscá tu dirección..."
-                  style={{ ...inputBase, border: 'none', borderRadius: 0, flex: 1, outline: 'none' }}
+                  style={{ ...inputBase, border: 'none', borderRadius: 0, flex: 1, outline: 'none', background: 'transparent', padding: '8px 0', fontSize: 13 }}
                 />
                 <button
                   onClick={geocodificar} disabled={buscando}
-                  style={{ padding: '0 16px', flexShrink: 0, background: 'var(--color-primary)', color: 'white', border: 'none', cursor: buscando ? 'default' : 'pointer', fontWeight: 600, fontSize: 13, opacity: buscando ? 0.7 : 1, transition: 'opacity 150ms' }}
+                  style={{
+                    flexShrink: 0, height: 36, padding: '0 18px', borderRadius: 10,
+                    background: buscando ? 'var(--color-surface-alt)' : 'var(--color-primary)',
+                    color: buscando ? 'var(--color-muted)' : 'white',
+                    border: 'none', cursor: buscando ? 'default' : 'pointer',
+                    fontWeight: 600, fontSize: 13, transition: 'all 150ms',
+                  }}
                 >
                   {buscando ? '…' : 'Buscar'}
                 </button>
               </div>
-              <div style={{ borderBottom: '1px solid var(--color-border)', padding: '6px 10px' }}>
+
+              {/* Botón de geolocalización */}
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', padding: '8px 12px' }}>
                 <button
-                  onClick={usarUbicacion}
-                  disabled={locating}
+                  onClick={usarUbicacion} disabled={locating}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '5px 12px', borderRadius: 8, border: '1.5px solid var(--color-border)',
-                    background: 'transparent', color: locating ? 'var(--color-muted)' : 'var(--color-primary)',
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '6px 14px', borderRadius: 20,
+                    border: `1.5px solid ${locating ? 'var(--color-border)' : 'rgba(59,130,246,0.3)'}`,
+                    background: locating ? 'transparent' : 'rgba(59,130,246,0.05)',
+                    color: locating ? 'var(--color-muted)' : 'var(--color-primary)',
                     fontSize: 12, fontWeight: 600, cursor: locating ? 'default' : 'pointer',
                     transition: 'all 150ms',
                   }}
-                  onMouseEnter={e => { if (!locating) { e.currentTarget.style.background = 'rgba(59,130,246,0.06)'; e.currentTarget.style.borderColor = 'var(--color-primary)' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+                  onMouseEnter={e => { if (!locating) { e.currentTarget.style.background = 'rgba(59,130,246,0.10)'; e.currentTarget.style.borderColor = 'var(--color-primary)' } }}
+                  onMouseLeave={e => { if (!locating) { e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)' } }}
                 >
                   {locating
-                    ? <span style={{ width: 13, height: 13, borderRadius: '50%', border: '2px solid var(--color-primary)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 600ms linear infinite' }} />
-                    : <LocateFixed size={13} strokeWidth={2} />
+                    ? <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--color-muted)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 600ms linear infinite', flexShrink: 0 }} />
+                    : <LocateFixed size={13} strokeWidth={2.2} />
                   }
-                  {locating ? 'Obteniendo ubicación…' : 'Usar mi ubicación actual'}
+                  {locating ? 'Obteniendo tu ubicación…' : 'Usar mi ubicación actual'}
                 </button>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-subtle)' }}>
+                  o arrastrá el marcador
+                </span>
               </div>
+
+              {/* Mapa */}
               <MapPicker center={negocio.latLng} onDragEnd={handleDragEnd} />
             </div>
-            <p style={{ fontSize: 11, color: 'var(--color-muted)', margin: '5px 0 0' }}>
-              Arrastrá el marcador para ajustar la ubicación exacta.
-            </p>
           </Field>
         </div>
       )}
