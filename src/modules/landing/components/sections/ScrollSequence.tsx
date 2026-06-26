@@ -142,6 +142,7 @@ export function ScrollSequence() {
   const { isDark }    = useTheme();
   const containerRef  = useRef<HTMLDivElement>(null);
   const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const mobOrbitRef   = useRef<HTMLDivElement>(null);
   const stateRef      = useRef({ progress: 0, gatherProgress: 0, heroScroll: 0, trailAlpha: 1.0, opacity: 0.55 });
   const animFrameRef  = useRef<number>(0);
   const mouseRef      = useRef({ x: -9999, y: -9999 });
@@ -164,6 +165,15 @@ export function ScrollSequence() {
         mobileScrollTimer = setTimeout(() => { mobileScrolling = false; }, 120);
       }
       state.heroScroll = Math.min(1, window.scrollY / window.innerHeight);
+
+      if (window.innerWidth < 768 && mobOrbitRef.current) {
+        const p    = Math.min(1, window.scrollY / (window.innerHeight * 0.60));
+        const tilt = p * 52;
+        const fade = Math.max(0, 1 - p * 0.85);
+        const rise = -p * 70;
+        mobOrbitRef.current.style.transform = `translateY(${rise}px) perspective(700px) rotateX(${tilt}deg)`;
+        mobOrbitRef.current.style.opacity   = String(fade);
+      }
 
       const fill  = document.querySelector<HTMLElement>('.progress-fill');
       const total = document.documentElement.scrollHeight - window.innerHeight;
@@ -366,51 +376,55 @@ export function ScrollSequence() {
 
       {/* Mobile ambient — CSS-only, ambos temas */}
       <div className="fixed inset-0 z-0 pointer-events-none block md:hidden overflow-hidden">
-        {/* Radial glow */}
-        <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:500, height:500,
-          background: isDark
-            ? 'radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(99,102,241,0.07) 45%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(59,130,246,0.13) 0%, rgba(99,102,241,0.04) 45%, transparent 70%)'
-        }} />
 
-        {/* Nucleus */}
-        <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:10, height:10, borderRadius:'50%',
-          background: isDark ? 'radial-gradient(circle, #bfdbfe 0%, #3b82f6 70%)' : 'radial-gradient(circle, #60a5fa 0%, #2563eb 70%)',
-          boxShadow: isDark ? '0 0 22px 6px rgba(96,165,250,0.65)' : '0 0 16px 5px rgba(37,99,235,0.30)',
-          animation:'twinkle 2.8s ease-in-out infinite'
-        }} />
-
-        {/* Ring 1 */}
-        <div style={{ position:'absolute', top:'26%', left:'50%', width:180, height:180, marginLeft:-90, marginTop:-90,
-          border: isDark ? '1px solid rgba(129,140,248,0.28)' : '1px solid rgba(59,130,246,0.20)',
-          borderRadius:'50%', animation:'orbitSpin 28s linear infinite' }}>
-          <div style={{ position:'absolute', top:-5, left:'50%', transform:'translateX(-50%)', width:9, height:9, borderRadius:'50%',
-            background: isDark ? '#a5b4fc' : '#3b82f6',
-            boxShadow: isDark ? '0 0 14px 4px rgba(165,180,252,0.65)' : '0 0 10px 3px rgba(59,130,246,0.38)'
+        {/* Orbit group — tilts with scroll */}
+        <div ref={mobOrbitRef} style={{ position:'absolute', inset:0, transformOrigin:'50% 26%', willChange:'transform, opacity' }}>
+          {/* Radial glow */}
+          <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:500, height:500,
+            background: isDark
+              ? 'radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(99,102,241,0.07) 45%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(59,130,246,0.13) 0%, rgba(99,102,241,0.04) 45%, transparent 70%)'
           }} />
+
+          {/* Nucleus */}
+          <div style={{ position:'absolute', top:'26%', left:'50%', transform:'translate(-50%,-50%)', width:10, height:10, borderRadius:'50%',
+            background: isDark ? 'radial-gradient(circle, #bfdbfe 0%, #3b82f6 70%)' : 'radial-gradient(circle, #60a5fa 0%, #2563eb 70%)',
+            boxShadow: isDark ? '0 0 22px 6px rgba(96,165,250,0.65)' : '0 0 16px 5px rgba(37,99,235,0.30)',
+            animation:'twinkle 2.8s ease-in-out infinite'
+          }} />
+
+          {/* Ring 1 */}
+          <div style={{ position:'absolute', top:'26%', left:'50%', width:180, height:180, marginLeft:-90, marginTop:-90,
+            border: isDark ? '1px solid rgba(129,140,248,0.28)' : '1px solid rgba(59,130,246,0.20)',
+            borderRadius:'50%', animation:'orbitSpin 28s linear infinite' }}>
+            <div style={{ position:'absolute', top:-5, left:'50%', transform:'translateX(-50%)', width:9, height:9, borderRadius:'50%',
+              background: isDark ? '#a5b4fc' : '#3b82f6',
+              boxShadow: isDark ? '0 0 14px 4px rgba(165,180,252,0.65)' : '0 0 10px 3px rgba(59,130,246,0.38)'
+            }} />
+          </div>
+
+          {/* Ring 2 */}
+          <div style={{ position:'absolute', top:'26%', left:'50%', width:320, height:190, marginLeft:-160, marginTop:-95,
+            border: isDark ? '1px solid rgba(59,130,246,0.18)' : '1px solid rgba(59,130,246,0.13)',
+            borderRadius:'50%', animation:'orbitSpin 44s linear infinite reverse' }}>
+            <div style={{ position:'absolute', top:-4, left:'50%', transform:'translateX(-50%)', width:7, height:7, borderRadius:'50%',
+              background: isDark ? '#60a5fa' : '#2563eb',
+              boxShadow: isDark ? '0 0 10px 3px rgba(96,165,250,0.60)' : '0 0 8px 3px rgba(37,99,235,0.32)'
+            }} />
+          </div>
+
+          {/* Ring 3 */}
+          <div style={{ position:'absolute', top:'26%', left:'50%', width:470, height:260, marginLeft:-235, marginTop:-130,
+            border: isDark ? '1px solid rgba(56,189,248,0.10)' : '1px solid rgba(59,130,246,0.08)',
+            borderRadius:'50%', animation:'orbitSpin 70s linear infinite' }}>
+            <div style={{ position:'absolute', top:-3.5, left:'50%', transform:'translateX(-50%)', width:6, height:6, borderRadius:'50%',
+              background: isDark ? '#38bdf8' : '#60a5fa',
+              boxShadow: isDark ? '0 0 8px 2px rgba(56,189,248,0.50)' : '0 0 6px 2px rgba(96,165,250,0.32)'
+            }} />
+          </div>
         </div>
 
-        {/* Ring 2 */}
-        <div style={{ position:'absolute', top:'26%', left:'50%', width:320, height:190, marginLeft:-160, marginTop:-95,
-          border: isDark ? '1px solid rgba(59,130,246,0.18)' : '1px solid rgba(59,130,246,0.13)',
-          borderRadius:'50%', animation:'orbitSpin 44s linear infinite reverse' }}>
-          <div style={{ position:'absolute', top:-4, left:'50%', transform:'translateX(-50%)', width:7, height:7, borderRadius:'50%',
-            background: isDark ? '#60a5fa' : '#2563eb',
-            boxShadow: isDark ? '0 0 10px 3px rgba(96,165,250,0.60)' : '0 0 8px 3px rgba(37,99,235,0.32)'
-          }} />
-        </div>
-
-        {/* Ring 3 */}
-        <div style={{ position:'absolute', top:'26%', left:'50%', width:470, height:260, marginLeft:-235, marginTop:-130,
-          border: isDark ? '1px solid rgba(56,189,248,0.10)' : '1px solid rgba(59,130,246,0.08)',
-          borderRadius:'50%', animation:'orbitSpin 70s linear infinite' }}>
-          <div style={{ position:'absolute', top:-3.5, left:'50%', transform:'translateX(-50%)', width:6, height:6, borderRadius:'50%',
-            background: isDark ? '#38bdf8' : '#60a5fa',
-            boxShadow: isDark ? '0 0 8px 2px rgba(56,189,248,0.50)' : '0 0 6px 2px rgba(96,165,250,0.32)'
-          }} />
-        </div>
-
-        {/* Stars / partículas */}
+        {/* Stars — independientes del scroll */}
         {MOB_STARS.map((st, i) => (
           <div key={i} style={{ position:'absolute', left:`${st.x}%`, top:`${st.y}%`, width:st.s, height:st.s, borderRadius:'50%',
             background: isDark ? 'white' : 'rgba(37,99,235,0.28)',

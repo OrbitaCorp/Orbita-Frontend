@@ -21,7 +21,7 @@ export function SectionDivider({ variant = 'default' }: Props) {
   const py = variant === 'wide' ? 'py-12 lg:py-16' : variant === 'subtle' ? 'py-6 lg:py-10' : 'py-10 lg:py-14';
 
   return (
-    <div ref={ref} className={`w-full flex items-center justify-center ${py} relative z-20 pointer-events-none select-none overflow-hidden`} aria-hidden>
+    <div ref={ref} className={`w-full hidden md:flex items-center justify-center ${py} relative z-20 pointer-events-none select-none overflow-hidden`} aria-hidden>
       <div className="flex items-center w-full transition-all duration-1000"
         style={{
           maxWidth: variant === 'wide' ? 800 : 520,

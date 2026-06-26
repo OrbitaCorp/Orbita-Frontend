@@ -18,7 +18,11 @@
       "Bash(echo \"export { default } from '@/modules/ventas/cliente/catalogo/Catalogo'\")",
       "Bash(echo \"export { default } from '@/modules/ventas/cliente/catalogo/Categoria'\")",
       "Bash(echo \"export { default } from '@/modules/ventas/cliente/producto/ProductoDetalle'\")",
-      "Bash(echo \"export { default } from '@/modules/ventas/cliente/checkout/Carrito'\")"
+      "Bash(echo \"export { default } from '@/modules/ventas/cliente/checkout/Carrito'\")",
+      "Bash(rm -f cliente/auth/LoginCliente.tsx cliente/auth/RegistroCliente.tsx cliente/catalogo/Busqueda.tsx cliente/catalogo/CatalogoCategoria.tsx cliente/catalogo/CatalogoTodos.tsx cliente/inicio/HomeNegocio.tsx cliente/pedido/MisPedidos.tsx layout/FooterTienda.tsx layout/LayoutTienda.tsx layout/NavbarTienda.tsx)",
+      "Bash(rmdir layout *)",
+      "Bash(curl -sI https://github.com)",
+      "Bash(git ls-remote *)"
     ]
   }
 }

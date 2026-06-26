@@ -42,7 +42,7 @@ export default function Login() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>Contraseña</label>
-              <button type="button" style={{ fontSize: 11, color: 'var(--color-primary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}>¿Olvidaste?</button>
+              <a href={`${base}/forgot-password`} style={{ fontSize: 11, color: 'var(--color-primary)', fontWeight: 500, textDecoration: 'none' }}>¿Olvidaste?</a>
             </div>
             <Input
               type={showPw ? 'text' : 'password'}
