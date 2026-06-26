@@ -118,7 +118,7 @@ export function TiendaSetup() {
       PrimerPaso={StepTipo}
       toggleFn={toggleTienda}
       conEquipo={false}
-      successPath="/onboarding/tienda/success"
+      successPath="/onboarding/plan?next=/onboarding/tienda/success"
     />
   )
 }

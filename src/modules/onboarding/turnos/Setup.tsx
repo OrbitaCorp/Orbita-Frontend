@@ -69,7 +69,7 @@ export function TurnosSetup() {
       primerPasoLabel="Tus servicios"
       PrimerPaso={StepServicios}
       conEquipo={true}
-      successPath="/onboarding/turnos/success"
+      successPath="/onboarding/plan?next=/onboarding/turnos/success"
     />
   )
 }
