@@ -10,8 +10,13 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-surface)', display: 'grid', placeItems: 'center' }}>
-      <div style={{
+    <div style={{ minHeight: '100vh', background: 'var(--color-surface)', display: 'grid', placeItems: 'center', padding: '16px' }}>
+      <style>{`
+        @media (max-width: 480px) {
+          .sf-login-card { width: 100% !important; padding: 24px !important; }
+        }
+      `}</style>
+      <div className="sf-login-card" style={{
         width: 420,
         background: 'var(--color-bg)', border: '1px solid var(--color-border)',
         borderRadius: 16, padding: 36,

@@ -105,6 +105,8 @@ export default function Inicio() {
                     .sf-hero-grid { grid-template-columns:1fr; padding:0 32px }
                     .sf-hero-card { display:none }
                     .sf-2col      { grid-template-columns:1fr }
+                    .sf-wpp-grid  { grid-template-columns:1fr !important; gap:24px !important; padding:32px 28px !important; }
+                    .sf-wpp-chat  { display:none !important; }
                 }
                 /* ── Mobile (≤640px) ── */
                 @media(max-width:640px){
@@ -114,6 +116,7 @@ export default function Inicio() {
                     .sf-stats-row  { flex-wrap:wrap; gap:8px 0 }
                     .sf-stats-div  { display:none !important }
                     .sf-stats-item { padding:4px 16px !important }
+                    .sf-wpp-grid   { padding:24px 20px !important; }
                 }
             `}</style>
 
@@ -198,7 +201,7 @@ export default function Inicio() {
                     <div style={{ position: 'absolute', top: -80, right: 260, width: 320, height: 320, borderRadius: '50%', background: 'rgba(52,211,153,0.10)', filter: 'blur(80px)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', bottom: -60, left: -40, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
-                    <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: '1fr 300px', alignItems: 'center', gap: 48, padding: '40px 48px' }}>
+                    <div className="sf-wpp-grid" style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: '1fr 300px', alignItems: 'center', gap: 48, padding: '40px 48px' }}>
 
                         {/* ── Columna izquierda ── */}
                         <div>
@@ -234,7 +237,7 @@ export default function Inicio() {
                         </div>
 
                         {/* ── Chat animado ── */}
-                        <WppChat />
+                        <div className="sf-wpp-chat"><WppChat /></div>
 
                     </div>
                 </div>

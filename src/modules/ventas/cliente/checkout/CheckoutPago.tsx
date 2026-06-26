@@ -44,9 +44,16 @@ export default function CheckoutPago() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-pago-wrap   { padding: 24px 16px 48px !important; }
+          .sf-pago-layout { grid-template-columns: 1fr !important; }
+          .sf-pago-aside  { position: static !important; }
+        }
+      `}</style>
+      <div className="sf-pago-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
         <CheckoutStepper step={2} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
+        <div className="sf-pago-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24 }}>
@@ -212,7 +219,7 @@ export default function CheckoutPago() {
             </button>
           </div>
 
-          <aside style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24, position: 'sticky', top: 76 }}>
+          <aside className="sf-pago-aside" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24, position: 'sticky', top: 76 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: 14 }}>
               Resumen del pedido
             </div>

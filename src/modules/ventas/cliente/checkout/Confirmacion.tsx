@@ -14,7 +14,13 @@ export default function Confirmacion() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
-      <header style={{
+      <style>{`
+        @media (max-width: 640px) {
+          .sf-conf-bar  { padding: 0 16px !important; }
+          .sf-conf-wrap { padding: 20px 16px 48px !important; }
+        }
+      `}</style>
+      <header className="sf-conf-bar" style={{
         position: 'sticky', top: 0, zIndex: 50,
         height: 60, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
         padding: '0 32px', display: 'flex', alignItems: 'center',
@@ -27,7 +33,7 @@ export default function Confirmacion() {
         </a>
       </header>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
+      <div className="sf-conf-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
         <CheckoutStepper step={3} />
 
         <div style={{ textAlign: 'center', maxWidth: 540, margin: '0 auto' }}>

@@ -44,8 +44,20 @@ export default function ProductoDetalle() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-pd-wrap    { padding: 16px 16px 48px !important; }
+          .sf-pd-main    { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .sf-pd-reviews { grid-template-columns: 1fr !important; }
+          .sf-pd-related { grid-template-columns: repeat(2, 1fr) !important; }
+          .sf-pd-thumbs  { flex-direction: row !important; overflow-x: auto; gap: 6px !important; }
+        }
+        @media (max-width: 480px) {
+          .sf-pd-related { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} />
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 64px' }}>
+      <div className="sf-pd-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 64px' }}>
         <Breadcrumb items={[
           { label: 'Inicio',   href: base },
           { label: 'Catálogo', href: `${base}/catalogo` },
@@ -54,7 +66,7 @@ export default function ProductoDetalle() {
         ]} />
 
         {/* ══ GRILLA PRINCIPAL ══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 460px', gap: 56, marginBottom: 72 }}>
+        <div className="sf-pd-main" style={{ display: 'grid', gridTemplateColumns: '1fr 460px', gap: 56, marginBottom: 72 }}>
 
           {/* ── Galería + Características ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -63,7 +75,7 @@ export default function ProductoDetalle() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
 
               {/* Columna vertical de thumbnails */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+              <div className="sf-pd-thumbs" style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
                 {HUES.map((hue, i) => (
                   <button
                     key={i}
@@ -227,7 +239,7 @@ export default function ProductoDetalle() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
+          <div className="sf-pd-reviews" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
             {RESENAS.map((r, i) => (
               <div key={i} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -270,7 +282,7 @@ export default function ProductoDetalle() {
         {/* ══ TAMBIÉN TE PUEDE GUSTAR ══ */}
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', marginBottom: 16 }}>También te puede gustar</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div className="sf-pd-related" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             {relacionados.map(p => <ProductCard key={p.id} producto={p} />)}
           </div>
         </div>

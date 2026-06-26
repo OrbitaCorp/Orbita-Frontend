@@ -60,12 +60,27 @@ export default function Perfil() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-prf-wrap        { padding: 20px 16px 48px !important; }
+          .sf-prf-hero        { padding: 20px !important; flex-direction: column !important; gap: 16px !important; }
+          .sf-prf-hero-stats  { width: 100% !important; justify-content: flex-start !important; gap: 32px !important; }
+          .sf-prf-layout      { grid-template-columns: 1fr !important; }
+          .sf-prf-sidebar     { position: static !important; display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 0 !important; overflow: hidden !important; }
+          .sf-prf-sidebar button { border-top: none !important; border-right: 1px solid var(--color-border) !important; flex: 1 1 auto !important; padding: 10px 8px !important; font-size: 12px !important; }
+          .sf-prf-sidebar button:last-child { border-right: none !important; }
+          .sf-prf-2col        { grid-template-columns: 1fr !important; }
+          .sf-prf-3col        { grid-template-columns: 1fr !important; }
+          .sf-prf-pedido-row  { grid-template-columns: 1fr auto !important; }
+          .sf-prf-pedido-chev { display: none !important; }
+        }
+      `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} logged />
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
+      <div className="sf-prf-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
 
         {/* ── Hero del perfil ── */}
-        <div style={{
+        <div className="sf-prf-hero" style={{
           background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 60%, #3B82F6 100%)',
           borderRadius: 16, padding: '32px 36px', marginBottom: 32,
           display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
@@ -88,7 +103,7 @@ export default function Perfil() {
               Cliente desde {USUARIO_MOCK.miembro}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div className="sf-prf-hero-stats" style={{ display: 'flex', gap: 24 }}>
             {[
               { label: 'Pedidos',      value: HISTORIAL_MOCK.length },
               { label: 'Total gastado', value: fmt(totalGastado) },
@@ -102,10 +117,10 @@ export default function Perfil() {
         </div>
 
         {/* ── Layout sidebar + contenido ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'flex-start' }}>
+        <div className="sf-prf-layout" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'flex-start' }}>
 
           {/* Sidebar nav */}
-          <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden', position: 'sticky', top: 80 }}>
+          <div className="sf-prf-sidebar" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden', position: 'sticky', top: 80 }}>
             {TABS.map((t, i) => {
               const active = tab === t.id
               return (
@@ -163,6 +178,7 @@ export default function Perfil() {
                     <div
                       key={p.id}
                       onClick={() => router.push(`${base}/pedido/${p.id}`)}
+                      className="sf-prf-pedido-row"
                       style={{
                         display: 'grid', gridTemplateColumns: '1fr auto auto',
                         alignItems: 'center', gap: 16,
@@ -187,7 +203,7 @@ export default function Perfil() {
                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace', textAlign: 'right' }}>
                         {fmt(p.total)}
                       </div>
-                      <ChevronRight size={16} color="var(--color-subtle)" />
+                      <ChevronRight className="sf-prf-pedido-chev" size={16} color="var(--color-subtle)" />
                     </div>
                   )
                 })}
@@ -287,7 +303,7 @@ export default function Perfil() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="sf-prf-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                   <FI label="Nombre">
                     <input value={nombre} onChange={e => setNombre(e.target.value)} style={inputStyle} />
                   </FI>
@@ -295,7 +311,7 @@ export default function Perfil() {
                     <input value={apellido} onChange={e => setApellido(e.target.value)} style={inputStyle} />
                   </FI>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="sf-prf-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                   <FI label="Email">
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
                   </FI>
@@ -303,7 +319,7 @@ export default function Perfil() {
                     <input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)} style={inputStyle} />
                   </FI>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                <div className="sf-prf-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                   <FI label="Fecha de nacimiento">
                     <input type="date" defaultValue="1995-03-14" style={inputStyle} />
                   </FI>

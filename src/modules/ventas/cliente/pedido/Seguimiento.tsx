@@ -30,14 +30,21 @@ export default function SeguimientoPedido() {
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} logged />
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 64px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-seg-wrap   { padding: 20px 16px 48px !important; }
+          .sf-seg-layout { grid-template-columns: 1fr !important; }
+          .sf-seg-sidebar { position: static !important; }
+        }
+      `}</style>
+      <div className="sf-seg-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 64px' }}>
         <Breadcrumb items={[
           { label: 'Inicio', href: base },
           { label: 'Mi cuenta' },
           { label: `Pedido #${PEDIDO_MOCK.id}` },
         ]} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
+        <div className="sf-seg-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Encabezado pedido */}
@@ -149,7 +156,7 @@ export default function SeguimientoPedido() {
           </div>
 
           {/* Sidebar derecho */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="sf-seg-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             <SideCard title="Contacto con la tienda">
               <button

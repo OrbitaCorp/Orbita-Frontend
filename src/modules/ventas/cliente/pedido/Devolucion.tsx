@@ -15,6 +15,7 @@ export default function InicioDevolucion() {
   const { slug, id } = router.query as { slug: string; id: string }
   const base = `/tienda/${slug}`
 
+
   const [seleccionados, setSeleccionados] = useState<string[]>([])
   const [motivos,       setMotivos]       = useState<Record<string, string>>({})
   const [notas,         setNotas]         = useState<Record<string, string>>({})
@@ -42,9 +43,16 @@ export default function InicioDevolucion() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-dev-wrap     { padding: 20px 16px 48px !important; }
+          .sf-dev-funciona { grid-template-columns: 1fr !important; }
+          .sf-dev-motivos  { margin-left: 0 !important; }
+        }
+      `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} logged />
 
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 32px 64px' }}>
+      <div className="sf-dev-wrap" style={{ maxWidth: 760, margin: '0 auto', padding: '32px 32px 64px' }}>
         <Breadcrumb items={[
           { label: 'Inicio', href: base },
           { label: 'Mi cuenta' },
@@ -163,7 +171,7 @@ export default function InicioDevolucion() {
         {/* Cómo funciona */}
         <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', marginBottom: 14 }}>¿Cómo funciona?</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div className="sf-dev-funciona" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {['Enviá la solicitud por WhatsApp.', 'Coordinamos el retiro del producto.', 'Procesamos el reembolso elegido.'].map((p, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff', fontSize: 12, fontWeight: 700, display: 'grid', placeItems: 'center', flexShrink: 0 }}>{i + 1}</span>

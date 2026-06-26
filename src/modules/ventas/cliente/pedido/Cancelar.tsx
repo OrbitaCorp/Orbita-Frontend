@@ -21,9 +21,14 @@ export default function CancelarPedido() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .sf-can-wrap { padding: 20px 16px 48px !important; }
+        }
+      `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} logged />
 
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '32px 32px 64px' }}>
+      <div className="sf-can-wrap" style={{ maxWidth: 600, margin: '0 auto', padding: '32px 32px 64px' }}>
         <Breadcrumb items={[
           { label: 'Inicio', href: base },
           { label: 'Mi cuenta' },

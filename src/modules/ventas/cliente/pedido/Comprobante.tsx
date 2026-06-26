@@ -22,10 +22,14 @@ export default function Comprobante() {
           body { background: #fff !important; }
           .receipt-wrap { box-shadow: none !important; border: none !important; }
         }
+        @media (max-width: 640px) {
+          .sf-comp-bar  { padding: 0 16px !important; }
+          .sf-comp-body { padding: 24px 12px 48px !important; }
+        }
       `}</style>
 
       {/* Barra de acciones — oculta al imprimir */}
-      <div className="no-print" style={{
+      <div className="no-print sf-comp-bar" style={{
         position: 'sticky', top: 0, zIndex: 50,
         height: 60, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
         padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -55,7 +59,7 @@ export default function Comprobante() {
       </div>
 
       {/* Comprobante */}
-      <div style={{ minHeight: 'calc(100vh - 60px)', background: '#F1F5F9', padding: '40px 24px 64px', display: 'flex', justifyContent: 'center' }}>
+      <div className="sf-comp-body" style={{ minHeight: 'calc(100vh - 60px)', background: '#F1F5F9', padding: '40px 24px 64px', display: 'flex', justifyContent: 'center' }}>
         <div
           className="receipt-wrap"
           style={{

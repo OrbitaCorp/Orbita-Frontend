@@ -62,9 +62,18 @@ export default function Carrito() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-cart-wrap   { padding: 16px 16px 40px !important; }
+          .sf-cart-layout { grid-template-columns: 1fr !important; }
+          .sf-cart-aside  { position: static !important; }
+          .sf-cart-item   { grid-template-columns: 64px 1fr !important; }
+          .sf-cart-price  { display: none !important; }
+        }
+      `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={items} />
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 32px 48px' }}>
+      <div className="sf-cart-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 32px 48px' }}>
         <Breadcrumb items={[{ label: 'Inicio', href: base }, { label: 'Tu carrito' }]} />
         <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '16px 0 4px' }}>
           Tu carrito
@@ -73,7 +82,7 @@ export default function Carrito() {
           ({items.length} productos · {items.reduce((s, i) => s + i.qty, 0)} unidades)
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 32, alignItems: 'flex-start' }}>
+        <div className="sf-cart-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 32, alignItems: 'flex-start' }}>
 
           <div>
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '4px 24px' }}>
@@ -83,6 +92,7 @@ export default function Carrito() {
                 return (
                   <div
                     key={idx}
+                    className="sf-cart-item"
                     style={{
                       display: 'grid', gridTemplateColumns: '80px 1fr auto',
                       gap: 16, alignItems: 'flex-start',
@@ -159,7 +169,7 @@ export default function Carrito() {
             </button>
           </div>
 
-          <aside style={{
+          <aside className="sf-cart-aside" style={{
             background: 'var(--color-bg)', border: '1px solid var(--color-border)',
             borderRadius: 12, padding: 24, position: 'sticky', top: 76,
           }}>

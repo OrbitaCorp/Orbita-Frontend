@@ -27,15 +27,32 @@ export default function Catalogo() {
     return 0
   })
 
+  const [filtrosOpen, setFiltrosOpen] = useState(false)
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-cat-wrap        { padding: 16px !important; }
+          .sf-cat-title       { font-size: 26px !important; }
+          .sf-cat-layout      { grid-template-columns: 1fr !important; }
+          .sf-cat-sidebar     { position: static !important; display: none; }
+          .sf-cat-sidebar.open{ display: block !important; }
+          .sf-cat-grid        { grid-template-columns: repeat(2, 1fr) !important; }
+          .sf-cat-filter-btn  { display: inline-flex !important; }
+        }
+        @media (max-width: 400px) {
+          .sf-cat-grid { grid-template-columns: 1fr !important; }
+        }
+        .sf-cat-filter-btn { display: none; }
+      `}</style>
       <StorefrontHeader tienda={TIENDA} carrito={CARRITO_INICIAL} />
       <AnnouncementBar />
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px' }}>
+      <div className="sf-cat-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px' }}>
         <Breadcrumb items={[{ label: 'Inicio', href: base }, { label: 'Catálogo' }]} />
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--color-text)', margin: 0 }}>Catálogo</h1>
+            <h1 className="sf-cat-title" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--color-text)', margin: 0 }}>Catálogo</h1>
             <div style={{ fontSize: 14, color: 'var(--color-muted)', marginTop: 4 }}>Toda nuestra selección actual</div>
           </div>
         </div>
@@ -51,8 +68,11 @@ export default function Catalogo() {
           })}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 32, alignItems: 'flex-start' }}>
-          <aside style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, position: 'sticky', top: 76 }}>
+        <button className="sf-cat-filter-btn" onClick={() => setFiltrosOpen(o => !o)} style={{ marginBottom: 16, height: 38, padding: '0 16px', borderRadius: 8, background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', alignItems: 'center', gap: 8 }}>
+          <Filter size={14} strokeWidth={1.5} /> {filtrosOpen ? 'Ocultar filtros' : 'Filtros'}
+        </button>
+        <div className="sf-cat-layout" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 32, alignItems: 'flex-start' }}>
+          <aside className={`sf-cat-sidebar${filtrosOpen ? ' open' : ''}`} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 20, position: 'sticky', top: 76 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
               <Filter size={14} strokeWidth={1.5} /> Filtros
             </div>
@@ -107,7 +127,7 @@ export default function Catalogo() {
                 </div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div className="sf-cat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {ordenados.map(p => <ProductCard key={p.id} producto={p} />)}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 40 }}>

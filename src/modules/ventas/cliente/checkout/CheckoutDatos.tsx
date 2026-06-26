@@ -37,19 +37,31 @@ export default function CheckoutDatos() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-co-wrap   { padding: 24px 16px 48px !important; }
+          .sf-co-layout { grid-template-columns: 1fr !important; }
+          .sf-co-aside  { position: static !important; }
+          .sf-co-2col   { grid-template-columns: 1fr !important; }
+          .sf-co-3col   { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 400px) {
+          .sf-co-3col { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div className="sf-co-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
         <CheckoutStepper step={1} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
+        <div className="sf-co-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'flex-start' }}>
 
           <form style={{ display: 'flex', flexDirection: 'column', gap: 20 }} onSubmit={e => { e.preventDefault(); router.push(`${base}/checkout/pago`) }}>
 
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24 }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: '0 0 16px' }}>¿Quién recibe el pedido?</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="sf-co-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <F label="Nombre" required><I placeholder="María" /></F>
                 <F label="Apellido" required><I placeholder="Fernández" /></F>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="sf-co-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <F label="Email" required><I type="email" placeholder="hola@mail.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} /></F>
                 <F label="Teléfono" required><I type="tel" placeholder="+54 9 11..." icon={<Phone size={15} strokeWidth={1.5} color="var(--color-subtle)" />} /></F>
               </div>
@@ -106,12 +118,12 @@ export default function CheckoutDatos() {
                   <F label="Dirección" required style={{ marginBottom: 14 }}>
                     <I placeholder="Av. Corrientes 1234" icon={<MapPin size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
                   </F>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                  <div className="sf-co-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <F label="Piso"><I placeholder="5" /></F>
                     <F label="Departamento"><I placeholder="B" /></F>
                     <F label="Entre calles"><I placeholder="Opcional" /></F>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 14 }}>
+                  <div className="sf-co-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 14 }}>
                     <F label="Provincia" required>
                       <select style={{ width: '100%', height: 44, padding: '0 14px', borderRadius: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', fontSize: 14, outline: 'none' }}>
                         <option>CABA</option><option>Buenos Aires</option><option>Córdoba</option>
@@ -144,7 +156,7 @@ export default function CheckoutDatos() {
             </div>
           </form>
 
-          <aside style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24, position: 'sticky', top: 76 }}>
+          <aside className="sf-co-aside" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 24, position: 'sticky', top: 76 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: 14 }}>
               Resumen del pedido
             </div>

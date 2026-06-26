@@ -12,8 +12,18 @@ export function StorefrontFooter({ tienda, slug }: Props) {
       background: 'var(--color-surface)',
       padding: '48px 32px 24px',
     }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-footer-outer  { padding: 32px 16px 20px !important; }
+          .sf-footer-grid   { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
+          .sf-footer-bottom { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+        }
+        @media (max-width: 480px) {
+          .sf-footer-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-        <div style={{
+        <div className="sf-footer-grid" style={{
           display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr',
           gap: 40, marginBottom: 32,
         }}>
@@ -110,7 +120,7 @@ export function StorefrontFooter({ tienda, slug }: Props) {
         </div>
 
         {/* Bottom */}
-        <div style={{
+        <div className="sf-footer-bottom" style={{
           borderTop: '1px solid var(--color-border)', paddingTop: 20,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontSize: 12, color: 'var(--color-subtle)', gap: 12, flexWrap: 'wrap',
