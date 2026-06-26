@@ -167,12 +167,11 @@ export function ScrollSequence() {
       state.heroScroll = Math.min(1, window.scrollY / window.innerHeight);
 
       if (window.innerWidth < 768 && mobOrbitRef.current) {
-        const p    = Math.min(1, window.scrollY / (window.innerHeight * 0.60));
-        const tilt = p * 52;
-        const fade = Math.max(0, 1 - p * 0.85);
-        const rise = -p * 70;
+        const total = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const p     = Math.min(1, window.scrollY / total);
+        const tilt  = p * 58;
+        const rise  = -(p * 150);
         mobOrbitRef.current.style.transform = `translateY(${rise}px) perspective(700px) rotateX(${tilt}deg)`;
-        mobOrbitRef.current.style.opacity   = String(fade);
       }
 
       const fill  = document.querySelector<HTMLElement>('.progress-fill');
