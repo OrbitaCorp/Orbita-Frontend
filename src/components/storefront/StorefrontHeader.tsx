@@ -9,11 +9,12 @@ type Props = {
   logged?: boolean
 }
 
+// matcher = pathname suffix que activa este link; null = nunca activo
 const NAV_LINKS = [
-  { label: 'Catálogo',     path: '/catalogo', hot: false },
-  { label: 'Ofertas',      path: '/catalogo', hot: true  },
-  { label: 'Novedades',    path: '/catalogo', hot: false },
-  { label: 'Más vendidos', path: '/catalogo', hot: false },
+  { label: 'Catálogo',     path: '/catalogo', matcher: '/catalogo' as string | null },
+  { label: 'Ofertas',      path: '/catalogo', matcher: null                         },
+  { label: 'Novedades',    path: '/catalogo', matcher: null                         },
+  { label: 'Más vendidos', path: '/catalogo', matcher: null                         },
 ]
 
 export function StorefrontHeader({ tienda, carrito, logged }: Props) {
@@ -22,10 +23,12 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
   const base = `/tienda/${slug}`
   const cartCount = carrito.reduce((s, i) => s + i.qty, 0)
   const [menuOpen, setMenuOpen] = useState(false)
+
   const currentPath = router.asPath.replace(base, '') || '/'
 
-  function isActive(path: string) {
-    return currentPath.startsWith(path)
+  function isActive(matcher: string | null) {
+    if (!matcher) return false
+    return currentPath.startsWith(matcher)
   }
 
   return (
@@ -35,100 +38,89 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
       borderBottom: '1px solid var(--color-border)',
     }}>
       <style>{`
-        /* Nav links */
+        /* ── Nav links ── */
         .sf-nav-link {
-          display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
-          padding: 0 12px; height: 64px;
-          text-decoration: none; font-size: 13px; font-weight: 500;
-          color: var(--color-body); white-space: nowrap;
-          border-bottom: 2px solid transparent;
-          transition: color 150ms, border-color 150ms;
           position: relative;
+          display: inline-flex; align-items: center; flex-shrink: 0;
+          padding: 0 14px; height: 64px;
+          text-decoration: none; font-size: 13.5px; font-weight: 500;
+          color: var(--color-muted); white-space: nowrap;
+          transition: color 200ms;
+        }
+        /* Underline: empieza aplastada, crece al hover */
+        .sf-nav-link::after {
+          content: '';
+          position: absolute; bottom: 0; left: 14px; right: 14px;
+          height: 2px; border-radius: 2px 2px 0 0;
+          background: var(--color-text);
+          transform: scaleX(0);
+          transform-origin: center;
+          transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sf-nav-link:hover { color: var(--color-text); }
-        .sf-nav-link:hover::after {
-          content: ''; position: absolute; bottom: 0; left: 12px; right: 12px;
-          height: 2px; background: var(--color-border-strong); border-radius: 2px 2px 0 0;
-        }
-        .sf-nav-link.active { color: var(--color-primary); font-weight: 600; }
-        .sf-nav-link.active::after {
-          content: ''; position: absolute; bottom: 0; left: 12px; right: 12px;
-          height: 2px; background: var(--color-primary); border-radius: 2px 2px 0 0;
-        }
-        .sf-nav-link.hot { color: #EF4444; font-weight: 600; }
-        .sf-nav-link.hot:hover { color: #DC2626; }
-        .sf-nav-link.hot:hover::after, .sf-nav-link.hot.active::after { background: #EF4444; }
-        .sf-nav-cat { color: var(--color-muted); font-weight: 400; }
-        .sf-nav-cat:hover { color: var(--color-body); }
+        .sf-nav-link:hover::after { transform: scaleX(1); }
 
-        /* Action icon buttons */
+        /* Active: color primario + línea azul permanente */
+        .sf-nav-link.sf-active {
+          color: var(--color-text); font-weight: 600;
+        }
+        .sf-nav-link.sf-active::after {
+          transform: scaleX(1);
+          background: var(--color-primary);
+        }
+
+        /* ── Action icon buttons ── */
         .sf-hdr-btn {
           width: 36px; height: 36px; border-radius: 8px;
           display: grid; place-items: center; position: relative;
           background: transparent; border: none; cursor: pointer;
-          color: var(--color-body); transition: background 120ms, color 120ms;
+          color: var(--color-muted); transition: color 150ms;
         }
-        .sf-hdr-btn:hover { background: var(--color-surface); color: var(--color-text); }
+        .sf-hdr-btn:hover { color: var(--color-text); }
 
-        /* Nav scroll area */
-        .sf-nav-scroll { overflow-x: auto; scrollbar-width: none; display: flex; align-items: center; }
+        /* ── Nav area ── */
+        .sf-nav-wrap { flex: 1; min-width: 0; overflow: hidden; }
+        .sf-nav-scroll { display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; }
         .sf-nav-scroll::-webkit-scrollbar { display: none; }
 
-        /* Right fade on nav scroll */
-        .sf-nav-wrap { position: relative; flex: 1; min-width: 0; }
-        .sf-nav-wrap::after {
-          content: ''; position: absolute; right: 0; top: 0; bottom: 0;
-          width: 40px; pointer-events: none;
-          background: linear-gradient(to right, transparent, var(--color-bg));
-        }
-
-        /* Mobile */
-        .sf-hdr-mobile-only { display: none !important; }
-        .sf-hdr-desktop-only { display: flex; }
+        /* ── Mobile ── */
+        .sf-mobile-only { display: none !important; }
         @media (max-width: 768px) {
-          .sf-hdr-mobile-only  { display: grid !important; }
-          .sf-hdr-desktop-only { display: none !important; }
-          .sf-nav-wrap         { display: none !important; }
-          .sf-nav-div          { display: none !important; }
+          .sf-mobile-only  { display: grid !important; }
+          .sf-desktop-only { display: none !important; }
         }
 
-        /* Mobile drawer */
+        /* ── Mobile drawer ── */
         .sf-drawer {
-          position: fixed; inset: 0; top: 65px; background: var(--color-bg);
-          z-index: 100; overflow-y: auto;
+          position: fixed; inset: 0; top: 65px;
+          background: var(--color-bg); z-index: 100; overflow-y: auto;
           border-top: 1px solid var(--color-border);
           animation: sfDrawerIn 200ms ease;
         }
-        @keyframes sfDrawerIn { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes sfDrawerIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         .sf-drawer-link {
           display: flex; align-items: center; gap: 10px;
-          padding: 14px 20px; font-size: 15px; font-weight: 500;
+          padding: 15px 20px; font-size: 15px; font-weight: 500;
           color: var(--color-text); text-decoration: none;
           border-bottom: 1px solid var(--color-border);
           transition: background 100ms;
         }
         .sf-drawer-link:hover { background: var(--color-surface); }
-        .sf-drawer-section {
-          padding: 16px 20px 6px;
-          font-size: 11px; font-weight: 700; color: var(--color-subtle);
-          text-transform: uppercase; letter-spacing: 0.07em;
-        }
       `}</style>
 
-      {/* ── Single unified row ── */}
-      <div style={{
-        height: 64,
-        padding: '0 20px',
-        display: 'flex', alignItems: 'center', gap: 4,
-      }}>
+      {/* ── Row única ── */}
+      <div style={{ height: 64, padding: '0 24px', display: 'flex', alignItems: 'center', gap: 4 }}>
+
         {/* Logo */}
-        <a href={base} style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', flexShrink: 0, marginRight: 4 }}>
+        <a href={base} style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', flexShrink: 0, marginRight: 6 }}>
           <div style={{
-            width: 32, height: 32, borderRadius: 9,
+            width: 32, height: 32, borderRadius: 9, flexShrink: 0,
             background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
             display: 'grid', placeItems: 'center',
-            boxShadow: '0 2px 8px rgba(37,99,235,0.28)',
-            flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
           }}>
             <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#fff' }} />
           </div>
@@ -142,18 +134,15 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
           </div>
         </a>
 
-        {/* Nav links — desktop */}
-        <div className="sf-nav-wrap">
+        {/* Nav — desktop */}
+        <div className="sf-nav-wrap sf-desktop-only">
           <div className="sf-nav-scroll">
-            <span className="sf-nav-div" style={{ width: 1, height: 18, background: 'var(--color-border)', margin: '0 8px 0 4px', flexShrink: 0 }} />
-
             {NAV_LINKS.map(s => (
               <a
                 key={s.label}
                 href={`${base}${s.path}`}
-                className={['sf-nav-link', s.hot ? 'hot' : '', isActive(s.path) ? 'active' : ''].filter(Boolean).join(' ')}
+                className={`sf-nav-link${isActive(s.matcher) ? ' sf-active' : ''}`}
               >
-                {s.hot && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
                 {s.label}
               </a>
             ))}
@@ -176,17 +165,17 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
               <span style={{
                 position: 'absolute', top: 4, right: 4,
                 minWidth: 15, height: 15, padding: '0 3px',
-                background: '#2563EB', color: '#fff',
-                borderRadius: 999, fontSize: 9, fontWeight: 700,
+                background: '#2563EB', color: '#fff', borderRadius: 999,
+                fontSize: 9, fontWeight: 700, lineHeight: 1,
                 display: 'grid', placeItems: 'center',
-                fontFamily: '"Geist Mono", monospace', lineHeight: 1,
+                fontFamily: '"Geist Mono", monospace',
               }}>
                 {cartCount}
               </span>
             )}
           </button>
 
-          <div style={{ width: 1, height: 22, background: 'var(--color-border)', margin: '0 6px', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 8px', flexShrink: 0 }} />
 
           {logged ? (
             <button onClick={() => router.push(`${base}/pedido`)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 6px', height: 36, background: 'transparent', border: 'none', cursor: 'pointer' }}>
@@ -194,7 +183,9 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text)' }}>María</span>
             </button>
           ) : (
-            <button onClick={() => router.push(`${base}/login`)} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 150ms', flexShrink: 0 }}
+            <button
+              onClick={() => router.push(`${base}/login`)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 14px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 150ms', flexShrink: 0 }}
               onMouseEnter={e => { e.currentTarget.style.background = '#1D4ED8' }}
               onMouseLeave={e => { e.currentTarget.style.background = '#2563EB' }}
             >
@@ -205,7 +196,7 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
 
           {/* Hamburger — mobile only */}
           <button
-            className="sf-hdr-btn sf-hdr-mobile-only"
+            className="sf-hdr-btn sf-mobile-only"
             style={{ marginLeft: 4 }}
             onClick={() => setMenuOpen(o => !o)}
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
@@ -219,9 +210,12 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
       {menuOpen && (
         <nav className="sf-drawer">
           {NAV_LINKS.map(s => (
-            <a key={s.label} href={`${base}${s.path}`} className="sf-drawer-link" onClick={() => setMenuOpen(false)}
-              style={s.hot ? { color: '#EF4444', fontWeight: 600 } : undefined}>
-              {s.hot && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF4444', flexShrink: 0 }} />}
+            <a
+              key={s.label}
+              href={`${base}${s.path}`}
+              className="sf-drawer-link"
+              onClick={() => setMenuOpen(false)}
+            >
               {s.label}
             </a>
           ))}
