@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import {
   Package, MapPin, User, Lock, LogOut,
@@ -34,6 +34,8 @@ export default function Perfil() {
   const base = `/tienda/${slug}`
 
   const [tab,         setTab]         = useState<Tab>('pedidos')
+
+  useEffect(() => { window.scrollTo({ top: 0 }) }, [tab])
   const [showPass,    setShowPass]    = useState(false)
   const [showNew,     setShowNew]     = useState(false)
   const [guardado,    setGuardado]    = useState(false)
@@ -146,7 +148,7 @@ export default function Perfil() {
           </div>
 
           {/* Contenido */}
-          <div>
+          <div style={{ minHeight: 600 }}>
 
             {/* ══ PEDIDOS ══ */}
             {tab === 'pedidos' && (
