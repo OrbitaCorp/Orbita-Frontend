@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { ArrowRight, ChevronLeft, ChevronRight, Plus, ShoppingCart, Truck, ShoppingBag, MapPin, Check, RefreshCw, Shield, MessageCircle, Lock } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { AnnouncementBar } from '@/components/storefront/AnnouncementBar'
@@ -189,78 +189,6 @@ export default function Inicio() {
                 </div>
             </section>
 
-            {/* ══ ENVÍOS + BENEFICIOS ══ */}
-            <section className="sf-w" style={{ paddingBottom: 44 }}>
-                <div className="sf-2col">
-                    {/* Panel envíos oscuro */}
-                    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, background: 'linear-gradient(135deg,#0F172A 0%,#1E3A5F 55%,#2563EB 140%)', padding: '32px 28px 28px', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ position: 'absolute', top: -50, right: -30, width: 240, height: 240, borderRadius: '50%', background: 'rgba(96,165,250,0.22)', filter: 'blur(60px)' }} />
-                        {/* Contenido */}
-                        <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 11px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.20)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                                <Truck size={11} /> Envíos
-                            </span>
-                            <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: '#fff', marginTop: 14, maxWidth: 320 }}>Llega a todo el país en 24–48 hs</h2>
-                            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.55, marginTop: 8, maxWidth: 340 }}>Despachamos por correo y moto con seguimiento en tiempo real.</p>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 14, height: 34, padding: '0 13px', borderRadius: 9, background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(52,211,153,0.35)', color: '#6EE7B7', fontSize: 12, fontWeight: 600 }}>
-                                <Check size={13} /> Envío gratis desde {fmt(80000)}
-                            </div>
-                        </div>
-                        {/* Tracking — pegado al fondo */}
-                        <div style={{ position: 'relative', zIndex: 1, marginTop: 28, background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(14px)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center' }}>
-                            {([
-                                { Ico: ShoppingBag,  lbl: 'Confirmado', done: true  },
-                                { Ico: ShoppingCart, lbl: 'Preparando', done: true  },
-                                { Ico: Truck,        lbl: 'En camino',  done: false },
-                                { Ico: MapPin,       lbl: 'Entregado',  done: false },
-                            ]).map((s, i, arr) => (
-                                <span key={s.lbl} style={{ display: 'contents' }}>
-                                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                                        <span style={{ width: 30, height: 30, borderRadius: '50%', background: s.done ? '#34D399' : 'rgba(255,255,255,0.13)', color: s.done ? '#052E2B' : 'rgba(255,255,255,0.55)', display: 'grid', placeItems: 'center', border: !s.done && i === 2 ? '2px solid #60A5FA' : 'none' }}>
-                                            <s.Ico size={14} />
-                                        </span>
-                                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{s.lbl}</span>
-                                    </span>
-                                    {i < arr.length - 1 && <span style={{ flex: 1, height: 2, background: s.done ? '#34D399' : 'rgba(255,255,255,0.16)', margin: '0 3px 14px' }} />}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Beneficios */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {([
-                            { Ico: RefreshCw,    c: '#7C3AED', t: 'Cambios sin vueltas',      d: '30 días para cambiar talle o modelo, coordinado por WhatsApp.' },
-                            { Ico: Shield,       c: '#10B981', t: 'Compra protegida',          d: 'Tarjeta, transferencia o Mercado Pago en hasta 3 cuotas sin interés.' },
-                            { Ico: MessageCircle,c: '#F59E0B', t: 'Atención en menos de 1 hora', d: 'Te respondemos por WhatsApp de lunes a sábado, sin bots.' },
-                        ]).map((b, i) => (
-                            <div key={b.t} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 14, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 14, padding: '18px 20px', animation: `sfFadeIn 450ms ${i * 55}ms cubic-bezier(0.2,0.8,0.2,1) both` }}>
-                                <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: `linear-gradient(135deg,${b.c},${b.c}bb)`, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: `0 6px 14px ${b.c}38` }}>
-                                    <b.Ico size={20} />
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', marginBottom: 2 }}>{b.t}</div>
-                                    <div style={{ fontSize: 12, color: 'var(--color-body)', lineHeight: 1.5 }}>{b.d}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Métodos de pago */}
-                <div style={{ marginTop: 12, padding: '14px 22px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pagás con</span>
-                        {['Visa', 'Mastercard', 'Amex', 'Mercado Pago', 'Transferencia'].map(m => (
-                            <span key={m} style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-body)', padding: '4px 9px', borderRadius: 6, background: 'var(--color-bg)', border: '1px solid var(--color-border)', fontFamily: '"Geist Mono", monospace' }}>{m}</span>
-                        ))}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-body)', fontWeight: 500 }}>
-                        <Lock size={13} color="var(--color-success)" />
-                        Pago cifrado y protegido
-                    </div>
-                </div>
-            </section>
 
             {/* ══ BANNER WHATSAPP ══ */}
             <section className="sf-w" style={{ paddingBottom: 52 }}>

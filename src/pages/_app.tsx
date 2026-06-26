@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@/styles/globals.css'
 import 'leaflet/dist/leaflet.css'
 import { PageLoader } from '@/components/PageLoader'
+import { StorefrontLoader } from '@/components/storefront/StorefrontLoader'
+import { TIENDA } from '@/lib/storefront/mock'
 
 const queryClient = new QueryClient()
 
@@ -31,6 +33,8 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, [router.events])
 
+  const isStorefront = router.pathname.startsWith('/tienda')
+
   return (
     <QueryClientProvider client={queryClient}>
       {/*
@@ -46,7 +50,10 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         })();
       `}} />
-      <PageLoader visible={loading} />
+      {isStorefront
+        ? <StorefrontLoader visible={loading} nombre={TIENDA.nombre} />
+        : <PageLoader visible={loading} />
+      }
       <Component {...pageProps} />
     </QueryClientProvider>
   )
