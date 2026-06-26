@@ -75,7 +75,7 @@ export default function PlanPage() {
                   }}>
                     {done ? <Check size={11} strokeWidth={3} /> : i + 1}
                   </div>
-                  <span style={{
+                  <span className="ob-step-label" style={{
                     fontSize: 13, fontWeight: 600,
                     color: current ? 'var(--color-text)' : done ? '#10B981' : 'var(--color-subtle)',
                   }}>
@@ -92,7 +92,7 @@ export default function PlanPage() {
       </div>
 
       {/* ── Contenido ── */}
-      <div style={{
+      <div className="ob-plan-content" style={{
         maxWidth: 480, margin: '0 auto',
         padding: '52px 24px 80px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',

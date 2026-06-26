@@ -242,7 +242,7 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
         <Field label="Descripción">
           <Textarea value={negocio.descripcion} onChange={set('descripcion')} placeholder="Breve descripción de tu negocio..." />
         </Field>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="ob-email-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Field label="Email de contacto" required>
             <Input type="email" value={negocio.email} onChange={set('email')} placeholder="hola@minegocio.com" />
           </Field>
@@ -678,7 +678,7 @@ export function SetupUnificado({
                   }}>
                     {done ? <Check size={11} strokeWidth={3} /> : i + 1}
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: current ? 'var(--color-text)' : done ? '#10B981' : 'var(--color-subtle)' }}>
+                  <span className="ob-step-label" style={{ fontSize: 13, fontWeight: 600, color: current ? 'var(--color-text)' : done ? '#10B981' : 'var(--color-subtle)' }}>
                     {label}
                   </span>
                 </div>
@@ -690,14 +690,14 @@ export function SetupUnificado({
           })}
         </div>
 
-        <a href="/login" style={{ marginLeft: 'auto', textDecoration: 'none', fontSize: 13, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
+        <a href="/login" className="ob-login-link" style={{ marginLeft: 'auto', textDecoration: 'none', fontSize: 13, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
           ¿Ya tenés cuenta?{' '}
           <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Iniciá sesión</span>
         </a>
       </div>
 
       {/* ── Inner step progress ── */}
-      <div style={{
+      <div className="ob-inner-progress" style={{
         borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)',
         padding: '0 28px', overflowX: 'auto', scrollbarWidth: 'none',
       }}>
@@ -737,8 +737,29 @@ export function SetupUnificado({
         </div>
       </div>
 
+      {/* Mobile compact step indicator (shown only below 640px) */}
+      <div className="ob-mobile-step" style={{
+        display: 'none', borderBottom: '1px solid var(--color-border)',
+        background: 'var(--color-surface)', padding: '10px 16px',
+        alignItems: 'center', justifyContent: 'center', gap: 8,
+      }}>
+        <div style={{
+          width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+          background: '#2563EB', color: 'white', fontSize: 10, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {paso + 1}
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
+          {PASOS_INTERNOS[paso]}
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>
+          · {paso + 1} de {PASOS_INTERNOS.length}
+        </span>
+      </div>
+
       {/* ── Step content ── */}
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '36px 24px 160px' }}>
+      <div className="ob-step-content" style={{ maxWidth: 720, margin: '0 auto', padding: '36px 24px 160px' }}>
         {cargandoPaso ? renderSkeleton() : renderStep()}
       </div>
 
@@ -756,7 +777,7 @@ export function SetupUnificado({
       />
 
       {/* ── Navigation bar ── */}
-      <div style={{
+      <div className="ob-nav-bar" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         padding: '14px 32px', background: 'var(--color-bg)',
         borderTop: '1px solid var(--color-border)',

@@ -245,6 +245,34 @@ html.light body { background: #eef4ff; color: #0f172a; }
   padding-bottom: clamp(1rem, 3vh, 2.5rem);
 }
 
+/* ─── Onboarding · responsive ───────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  /* Header: hide stepper text labels + login link to prevent overflow */
+  .ob-step-label { display: none !important; }
+  .ob-login-link { display: none !important; }
+
+  /* ElegirRubro */
+  .ob-rubro-h1  { font-size: 22px !important; }
+  .ob-bottom-bar { padding: 12px 16px !important; }
+
+  /* SetupUnificado: hide full progress bar, show compact step indicator */
+  .ob-inner-progress { display: none !important; }
+  .ob-mobile-step    { display: flex !important; }
+
+  /* SetupUnificado: step content + nav bar padding */
+  .ob-step-content { padding: 24px 16px 140px !important; }
+  .ob-nav-bar      { padding: 12px 16px !important; }
+
+  /* Plan page */
+  .ob-plan-content { padding: 28px 16px 64px !important; }
+}
+
+@media (max-width: 480px) {
+  /* Email/phone two-column grid → single column on narrow screens */
+  .ob-email-grid { grid-template-columns: 1fr !important; }
+}
+
 /* Stop suave SOLO en la sección Rubros (desktop): pin corto que da tiempo a
    que las partículas del fondo se reagrupen en el núcleo antes de continuar. */
 @media (min-width: 1024px) {

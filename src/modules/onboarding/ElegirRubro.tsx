@@ -173,7 +173,7 @@ export function ElegirRubro() {
                 }}>
                   {i + 1}
                 </div>
-                <span style={{
+                <span className="ob-step-label" style={{
                   fontSize: 13, fontWeight: 600,
                   color: i === 0 ? 'var(--color-text)' : 'var(--color-subtle)',
                 }}>
@@ -187,7 +187,7 @@ export function ElegirRubro() {
           ))}
         </div>
 
-        <a href="/login" style={{ marginLeft: 'auto', textDecoration: 'none', fontSize: 13, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
+        <a href="/login" className="ob-login-link" style={{ marginLeft: 'auto', textDecoration: 'none', fontSize: 13, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
           ¿Ya tenés cuenta?{' '}
           <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Iniciá sesión</span>
         </a>
@@ -219,7 +219,7 @@ export function ElegirRubro() {
 
         {/* Título */}
         <div style={{ textAlign: 'center', paddingTop: 20, marginBottom: 32 }}>
-          <h1 style={{
+          <h1 className="ob-rubro-h1" style={{
             fontSize: 30, fontWeight: 800, letterSpacing: '-0.025em',
             color: 'var(--color-text)', margin: '0 0 8px',
           }}>
@@ -368,7 +368,7 @@ export function ElegirRubro() {
 
       {/* ── Barra de continuar ── */}
       {seleccionado && (
-        <div style={{
+        <div className="ob-bottom-bar" style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           padding: '14px 32px',
           background: 'var(--color-bg)',
