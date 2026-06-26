@@ -237,24 +237,12 @@ html.light body { background: #eef4ff; color: #0f172a; }
 .light .progress-bar { background: rgba(37,99,235,0.15); }
 .progress-fill { position: absolute; top: 0; left: 0; width: 100%; height: 0%; background: #3b82f6; border-radius: 2px; }
 
-.slide-container { position: relative; height: 150vh; }
-.slide-container:last-child { height: 115vh; }
-.sticky-slide {
-  position: sticky; top: 0; height: 100vh;
-  overflow: hidden; display: flex; align-items: center;
-}
+.slide-container { position: relative; height: auto; }
+.sticky-slide { position: relative; height: auto; overflow: visible; display: block; }
 .sticky-slide > section {
   width: 100%;
   padding-top:    clamp(1rem, 3vh, 2.5rem);
   padding-bottom: clamp(1rem, 3vh, 2.5rem);
-}
-
-/* Mobile: drop sticky scroll — sections flow normally, no pause, no clipping */
-@media (max-width: 767px) {
-  .slide-container       { height: auto; }
-  .slide-container:last-child { height: auto; }
-  .sticky-slide          { position: relative; height: auto; overflow: visible; display: block; }
-  .sticky-slide > section { padding-top: 1.5rem; padding-bottom: 1.5rem; }
 }
 
 .hero-height { height: 100vh; }
