@@ -117,7 +117,7 @@ export function ElegirRubro() {
   const router = useRouter()
 
   const [filtro,         setFiltro]         = useState<Filtro>('todos')
-  const [seleccionados,  setSeleccionados]  = useState<string[]>([])
+  const [seleccionado,   setSeleccionado]   = useState<string>('')
   const [orbiAbierto,    setOrbiAbierto]    = useState(false)
   const [tooltipVisible, setTooltipVisible] = useState(false)
   const [cargando,       setCargando]       = useState(true)
@@ -132,22 +132,17 @@ export function ElegirRubro() {
     .slice()
     .sort((a, b) => Number(b.disponible) - Number(a.disponible))
 
-  function toggleRubro(r: Rubro) {
+  function elegirRubro(r: Rubro) {
     if (!r.disponible) return
-    setSeleccionados(prev =>
-      prev.includes(r.key) ? prev.filter(k => k !== r.key) : [...prev, r.key]
-    )
+    setSeleccionado(prev => prev === r.key ? '' : r.key)
   }
 
   function continuar() {
-    const conSetup = RUBROS.find(r => seleccionados.includes(r.key) && r.href && r.href !== '#')
-    router.push(conSetup?.href ?? '/onboarding/proximamente')
+    const rubro = RUBROS.find(r => r.key === seleccionado)
+    router.push(rubro?.href ?? '/onboarding/proximamente')
   }
 
-  const nombresSelec = seleccionados
-    .slice(0, 3)
-    .map(k => RUBROS.find(r => r.key === k)?.label ?? '')
-    .filter(Boolean)
+  const rubroSelec = RUBROS.find(r => r.key === seleccionado)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
@@ -202,7 +197,7 @@ export function ElegirRubro() {
       <div style={{
         maxWidth: 1100,
         margin: '0 auto',
-        padding: `0 24px ${seleccionados.length > 0 ? '104px' : '48px'}`,
+        padding: `0 24px ${seleccionado ? '104px' : '48px'}`,
       }}>
 
         {/* Atrás */}
@@ -231,7 +226,7 @@ export function ElegirRubro() {
             ¿Qué tipo de negocio tenés?
           </h1>
           <p style={{ fontSize: 15, color: 'var(--color-muted)', margin: 0 }}>
-            Elegí uno o más rubros. Podemos activar varios módulos juntos.
+            Elegí el rubro principal de tu negocio.
           </p>
         </div>
 
@@ -278,12 +273,12 @@ export function ElegirRubro() {
             ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)
             : visibles.map(rubro => {
             const { key, Icon, label, descripcion, disponible } = rubro
-            const sel = seleccionados.includes(key)
+            const sel = seleccionado === key
 
             return (
               <button
                 key={key}
-                onClick={() => toggleRubro(rubro)}
+                onClick={() => elegirRubro(rubro)}
                 style={{
                   position: 'relative',
                   textAlign: 'left',
@@ -372,7 +367,7 @@ export function ElegirRubro() {
       </div>
 
       {/* ── Barra de continuar ── */}
-      {seleccionados.length > 0 && (
+      {seleccionado && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           padding: '14px 32px',
@@ -383,13 +378,17 @@ export function ElegirRubro() {
           animation: 'fadeUp 0.3s ease forwards',
           zIndex: 100,
         }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 2 }}>
-              {seleccionados.length} {seleccionados.length === 1 ? 'rubro seleccionado' : 'rubros seleccionados'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(59,130,246,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {rubroSelec && <rubroSelec.Icon size={18} strokeWidth={1.75} color="var(--color-primary)" />}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-              {nombresSelec.join(' · ')}
-              {seleccionados.length > 3 && ` · +${seleccionados.length - 3} más`}
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', marginBottom: 1 }}>
+                {rubroSelec?.label}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
+                Rubro principal seleccionado
+              </div>
             </div>
           </div>
           <button
@@ -416,7 +415,7 @@ export function ElegirRubro() {
       <OrbiChat
         abierto={orbiAbierto}
         tooltipVisible={tooltipVisible}
-        conBarra={seleccionados.length > 0}
+        conBarra={!!seleccionado}
         onToggle={() => setOrbiAbierto(p => !p)}
         mensaje="¿Todavía eligiendo tu rubro? Decime qué tipo de negocio tenés y te muestro las opciones perfectas."
         quickActions={[
