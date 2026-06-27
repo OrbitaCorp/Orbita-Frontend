@@ -134,7 +134,7 @@ export default function CheckoutPago() {
 
             {/* Link secundario */}
             <button
-              onClick={() => router.push(`${base}/checkout/confirmacion`)}
+              onClick={() => router.push(`${base}/checkout/confirmacion?metodo=transferencia`)}
               style={{
                 fontSize: 13, color: 'var(--color-primary)', fontWeight: 600,
                 background: 'none', border: 'none', cursor: 'pointer',
