@@ -38,7 +38,15 @@ export default function PagoComprobante() {
         { label: 'Total',     valor: 5000, tipo: 'total'  },
       ]}
       textoFooter="Este comprobante acredita el pago realizado a través de MercadoPago."
-      onBack={() => router.back()}
+      onBack={() => {
+        // Si fue abierta como nueva pestaña no hay historial — cerramos la pestaña.
+        // Si no se puede cerrar (el usuario la abrió directamente), navegamos al plan.
+        if (window.history.length <= 1) {
+          window.close()
+        } else {
+          router.back()
+        }
+      }}
       backLabel="Volver"
       autoPrint={autoPrint}
     />
