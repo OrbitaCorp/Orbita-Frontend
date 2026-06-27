@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { QrCode, Landmark, Lock, ChevronLeft, CreditCard, Store, CheckCircle2, Clock } from 'lucide-react'
+import { QrCode, Landmark, Lock, ChevronLeft, CreditCard, Store, CheckCircle2, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 import { CheckoutStepper } from '@/components/storefront/CheckoutStepper'
 import { Thumb } from '@/components/storefront/Thumb'
 import { TIENDA, CARRITO_INICIAL } from '@/lib/storefront/mock'
@@ -19,12 +19,137 @@ export default function CheckoutPago() {
   const { slug } = router.query as { slug: string }
   const base = `/tienda/${slug}`
 
-  const [metodo, setMetodo] = useState<Metodo>('mp')
+  const [metodo, setMetodo]         = useState<Metodo>('mp')
+  const [mostrarWpp, setMostrarWpp] = useState(false)
 
   const subtotal  = CARRITO_INICIAL.reduce((s, i) => s + i.precio * i.qty, 0)
   const descuento = CARRITO_INICIAL.reduce((s, i) => s + (i.precioAnt ? (i.precioAnt - i.precio) * i.qty : 0), 0)
   const cupon     = Math.round((subtotal - descuento) * 0.1)
   const total     = subtotal - descuento - cupon
+
+  const NUM_PEDIDO = 'P-2025-00182'
+  const wppLink = `https://wa.me/${TIENDA.wpp}?text=${encodeURIComponent(
+    `Hola! Quiero enviar el comprobante de pago del pedido #${NUM_PEDIDO}. Total: ${fmt(total)}.`
+  )}`
+
+  function confirmar() {
+    if (metodo === 'transferencia') {
+      setMostrarWpp(true)
+    } else {
+      router.push(`${base}/checkout/confirmacion`)
+    }
+  }
+
+  // ── Pantalla intermediaria: envío de comprobante por WhatsApp ──
+  if (mostrarWpp) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          height: 60, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
+          padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <a href={base} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'linear-gradient(135deg, #2563EB, #3B82F6)', display: 'grid', placeItems: 'center' }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>{TIENDA.nombre}</span>
+          </a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--color-muted)' }}>
+            <Lock size={13} strokeWidth={1.5} /> Pago seguro · SSL 256-bit
+          </div>
+        </header>
+
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '60px 24px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+
+          {/* Icono animado */}
+          <style>{`
+            @keyframes sf-pop { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+            .sf-wpp-icon { animation: sf-pop 420ms cubic-bezier(.34,1.56,.64,1) both; }
+            @keyframes sf-fadein { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+            .sf-wpp-body { animation: sf-fadein 350ms 200ms ease both; }
+          `}</style>
+
+          <div className="sf-wpp-icon" style={{
+            width: 88, height: 88, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #16A34A, #22C55E)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 12px 40px rgba(34,197,94,0.30)',
+            marginBottom: 28,
+          }}>
+            <CheckCircle2 size={44} strokeWidth={1.5} color="#fff" />
+          </div>
+
+          <div className="sf-wpp-body" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+
+            <div style={{ textAlign: 'center' }}>
+              <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-text)', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
+                ¡Pedido registrado!
+              </h1>
+              <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0, lineHeight: 1.6, maxWidth: 380 }}>
+                Tu pedido <strong style={{ color: 'var(--color-text)' }}>#{NUM_PEDIDO}</strong> fue recibido correctamente.
+                Para completarlo, envianos el comprobante de la transferencia por WhatsApp.
+              </p>
+            </div>
+
+            {/* Card con datos de la transferencia a modo de recordatorio */}
+            <div style={{
+              width: '100%', padding: '16px 20px', borderRadius: 12,
+              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-subtle)', marginBottom: 12 }}>
+                Datos de la transferencia
+              </div>
+              {[['CBU', '0720049288000012345678'], ['Alias', 'rama.indumentaria'], ['Titular', 'Rama Indumentaria S.A.S.'], ['Total a transferir', fmt(total)]].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--color-border)', alignItems: 'baseline' }}>
+                  <span style={{ color: 'var(--color-subtle)', minWidth: 130, fontSize: 11, textTransform: 'uppercase', fontWeight: 600, flexShrink: 0 }}>{k}</span>
+                  <span style={{ color: 'var(--color-text)', fontWeight: 600, fontFamily: '"Geist Mono", monospace', fontSize: 13, wordBreak: 'break-all' }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Botón WhatsApp */}
+            <a
+              href={wppLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                width: '100%', height: 56, borderRadius: 14, textDecoration: 'none',
+                background: '#25D366', color: '#fff',
+                fontSize: 15, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                boxShadow: '0 8px 28px rgba(37,211,102,0.35)',
+                transition: 'opacity 150ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.90')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              <MessageCircle size={20} strokeWidth={1.5} />
+              Enviar comprobante por WhatsApp
+            </a>
+
+            <p style={{ fontSize: 12, color: 'var(--color-subtle)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+              Una vez que recibamos el comprobante, confirmamos tu pedido.
+            </p>
+
+            {/* Link secundario */}
+            <button
+              onClick={() => router.push(`${base}/checkout/confirmacion`)}
+              style={{
+                fontSize: 13, color: 'var(--color-primary)', fontWeight: 600,
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 0',
+              }}
+            >
+              Ya lo envié, ver mi pedido <ArrowRight size={13} />
+            </button>
+
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
@@ -196,7 +321,7 @@ export default function CheckoutPago() {
             </div>
 
             <button
-              onClick={() => router.push(`${base}/checkout/confirmacion`)}
+              onClick={confirmar}
               style={{
                 width: '100%', height: 56, borderRadius: 12,
                 background: 'var(--color-primary)', color: '#fff',
