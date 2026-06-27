@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { CheckCircle, Check, Clock, ArrowRight, MessageCircle } from 'lucide-react'
 import { CheckoutStepper } from '@/components/storefront/CheckoutStepper'
@@ -10,7 +11,7 @@ export default function Confirmacion() {
   const { slug, metodo } = router.query as { slug: string; metodo?: string }
   const base = `/tienda/${slug}`
 
-  const pendiente = metodo === 'transferencia'
+  const [pendiente, setPendiente] = useState(metodo === 'transferencia')
 
   const total = CARRITO_INICIAL.reduce((s, i) => s + i.precio * i.qty, 0)
 
@@ -42,6 +43,30 @@ export default function Confirmacion() {
 
       <div className="sf-conf-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 64px' }}>
         <CheckoutStepper step={3} />
+
+        {/* Toggle de demo */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <div style={{
+            display: 'inline-flex', background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)', borderRadius: 999, padding: 4, gap: 4,
+          }}>
+            {([{ label: 'Pendiente', value: true }, { label: 'Confirmado', value: false }] as const).map(opt => (
+              <button
+                key={opt.label}
+                onClick={() => setPendiente(opt.value)}
+                style={{
+                  height: 30, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, transition: 'all 150ms',
+                  background: pendiente === opt.value ? 'var(--color-bg)' : 'transparent',
+                  color: pendiente === opt.value ? 'var(--color-text)' : 'var(--color-muted)',
+                  boxShadow: pendiente === opt.value ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div style={{ textAlign: 'center', maxWidth: 540, margin: '0 auto' }}>
           <div style={{
