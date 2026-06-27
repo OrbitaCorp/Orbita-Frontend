@@ -1,15 +1,23 @@
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent } from 'lucide-react'
+import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent, FileText, Printer, ArrowRight } from 'lucide-react'
 
 const FEATURES = [
-  { Icon: Zap,              texto: 'Panel de administración completo'       },
-  { Icon: Globe,            texto: 'Subdominio .orbita.site incluido'       },
-  { Icon: Percent,          texto: 'Sin comisiones por venta o turno'       },
-  { Icon: HeadphonesIcon,   texto: 'Soporte prioritario por WhatsApp'       },
-  { Icon: Shield,           texto: 'Cancelá cuando quieras, sin penalidad'  },
+  { texto: 'Panel de administración completo'      },
+  { texto: 'Subdominio .orbita.site incluido'      },
+  { texto: 'Sin comisiones por venta o turno'      },
+  { texto: 'Soporte prioritario por WhatsApp'      },
+  { texto: 'Cancelá cuando quieras, sin penalidad' },
 ]
 
 const PASOS = ['Rubro', 'Configuración', 'Listo']
+
+const N_COMPROBANTE = 'OB-2025-004817'
+const FECHA_HOY = new Date().toLocaleDateString('es-AR', {
+  day: '2-digit', month: 'long', year: 'numeric',
+})
+
+// ─── Logos ──────────────────────────────────────────────────────────────────
 
 function OrbitaLogo({ size = 28 }: { size?: number }) {
   return (
@@ -21,9 +29,9 @@ function OrbitaLogo({ size = 28 }: { size?: number }) {
   )
 }
 
-function MercadoPagoLogo() {
+function MercadoPagoLogo({ size = 22 }: { size?: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
       <circle cx="24" cy="24" r="24" fill="#009EE3"/>
       <path d="M8 24c0-8.837 7.163-16 16-16 4.418 0 8.418 1.791 11.314 4.686L24 24H8z" fill="white" opacity=".9"/>
       <path d="M24 24l11.314-11.314A15.96 15.96 0 0 1 40 24c0 8.837-7.163 16-16 16-4.418 0-8.418-1.791-11.314-4.686L24 24z" fill="white" opacity=".6"/>
@@ -31,74 +39,64 @@ function MercadoPagoLogo() {
   )
 }
 
-export default function PlanPage() {
-  const router = useRouter()
-  const next   = (router.query.next as string) ?? '/admin'
+// ─── Header con stepper (compartido) ────────────────────────────────────────
 
-  function pagar() {
-    // En producción: redirigir al link de MP generado por el backend
-    router.push(next)
-  }
+function Header() {
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', height: 56, padding: '0 28px',
+      background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
+    }}>
+      <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+        <OrbitaLogo size={24} />
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>Órbita</span>
+      </a>
+      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {PASOS.map((paso, i) => {
+          const done    = i < 2
+          const current = i === 2
+          return (
+            <div key={paso} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700,
+                  background: done ? '#10B981' : current ? '#2563EB' : 'var(--color-surface-alt)',
+                  color: (done || current) ? 'white' : 'var(--color-subtle)',
+                }}>
+                  {done ? <Check size={11} strokeWidth={3} /> : i + 1}
+                </div>
+                <span style={{
+                  fontSize: 13, fontWeight: 600,
+                  color: current ? 'var(--color-text)' : done ? '#10B981' : 'var(--color-subtle)',
+                }}>
+                  {paso}
+                </span>
+              </div>
+              {i < PASOS.length - 1 && (
+                <div style={{ width: 24, height: 1, background: done ? '#10B981' : 'var(--color-border)' }} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
-  function explorarPrimero() {
-    router.push(next)
-  }
+// ─── Pantalla 1: Selección de plan ──────────────────────────────────────────
 
+function PlanScreen({ onPagar, onExplorar }: { onPagar: () => void; onExplorar: () => void }) {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)', fontFamily: 'inherit' }}>
-
-      {/* ── Header ── */}
+      <Header />
       <div style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        display: 'flex', alignItems: 'center', height: 56, padding: '0 28px',
-        background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
-      }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <OrbitaLogo size={24} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>Órbita</span>
-        </a>
-
-        {/* Stepper */}
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {PASOS.map((paso, i) => {
-            const done    = i < 2
-            const current = i === 2
-            return (
-              <div key={paso} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700,
-                    background: done ? '#10B981' : current ? '#2563EB' : 'var(--color-surface-alt)',
-                    color: (done || current) ? 'white' : 'var(--color-subtle)',
-                  }}>
-                    {done ? <Check size={11} strokeWidth={3} /> : i + 1}
-                  </div>
-                  <span className="ob-step-label" style={{
-                    fontSize: 13, fontWeight: 600,
-                    color: current ? 'var(--color-text)' : done ? '#10B981' : 'var(--color-subtle)',
-                  }}>
-                    {paso}
-                  </span>
-                </div>
-                {i < PASOS.length - 1 && (
-                  <div style={{ width: 24, height: 1, background: done ? '#10B981' : 'var(--color-border)' }} />
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Contenido ── */}
-      <div className="ob-plan-content" style={{
         maxWidth: 480, margin: '0 auto',
         padding: '52px 24px 80px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
-
-        {/* Ícono top */}
         <div style={{
           width: 64, height: 64, borderRadius: '50%', marginBottom: 20,
           background: 'linear-gradient(135deg, #1e3a8a 0%, #2563EB 100%)',
@@ -115,7 +113,6 @@ export default function PlanPage() {
           Tu negocio está configurado. Elegí el plan de inicio para publicar tu espacio en Órbita.
         </p>
 
-        {/* ── Card de plan ── */}
         <div style={{
           width: '100%',
           background: 'var(--color-bg)',
@@ -124,8 +121,6 @@ export default function PlanPage() {
           overflow: 'hidden',
           boxShadow: '0 8px 32px rgba(37,99,235,0.12)',
         }}>
-
-          {/* Encabezado del plan */}
           <div style={{
             background: 'linear-gradient(135deg, #1e3a8a 0%, #2563EB 100%)',
             padding: '24px 28px 20px',
@@ -156,10 +151,9 @@ export default function PlanPage() {
             </div>
           </div>
 
-          {/* Features */}
           <div style={{ padding: '20px 28px 24px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-              {FEATURES.map(({ Icon, texto }) => (
+              {FEATURES.map(({ texto }) => (
                 <div key={texto} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{
                     width: 22, height: 22, borderRadius: 6, flexShrink: 0,
@@ -173,9 +167,8 @@ export default function PlanPage() {
               ))}
             </div>
 
-            {/* Botón MercadoPago */}
             <button
-              onClick={pagar}
+              onClick={onPagar}
               style={{
                 width: '100%', height: 52, borderRadius: 12, border: 'none',
                 background: '#009EE3', color: 'white',
@@ -185,13 +178,12 @@ export default function PlanPage() {
                 transition: 'all 150ms',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = '#0085C1'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#009EE3'; e.currentTarget.style.transform = 'translateY(0)'    }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#009EE3'; e.currentTarget.style.transform = 'translateY(0)' }}
             >
               <MercadoPagoLogo />
               Pagar con MercadoPago
             </button>
 
-            {/* Seguridad */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 10 }}>
               <Shield size={11} strokeWidth={2} color="var(--color-subtle)" />
               <span style={{ fontSize: 11, color: 'var(--color-subtle)' }}>
@@ -201,16 +193,14 @@ export default function PlanPage() {
           </div>
         </div>
 
-        {/* Separador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '24px 0 0' }}>
           <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
           <span style={{ fontSize: 12, color: 'var(--color-subtle)', whiteSpace: 'nowrap' }}>o si preferís</span>
           <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
         </div>
 
-        {/* Explorar primero */}
         <button
-          onClick={explorarPrimero}
+          onClick={onExplorar}
           style={{
             marginTop: 16, background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 13, color: 'var(--color-muted)', fontWeight: 500,
@@ -229,4 +219,272 @@ export default function PlanPage() {
       </div>
     </div>
   )
+}
+
+// ─── Pantalla 2: Procesando ──────────────────────────────────────────────────
+
+function ProcesandoScreen() {
+  const [dots, setDots] = useState(1)
+
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => (d % 3) + 1), 500)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#0B1222',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 28, padding: 24, fontFamily: 'inherit',
+    }}>
+      <style>{`
+        @keyframes mpSpin    { to { transform: rotate(360deg) } }
+        @keyframes mpPulse   { 0%,100%{ opacity:.3;transform:scale(.7) } 50%{ opacity:1;transform:scale(1) } }
+        @keyframes mpFadeUp  { from { opacity:0;transform:translateY(12px) } to { opacity:1;transform:translateY(0) } }
+      `}</style>
+
+      {/* Spinner + logo MP */}
+      <div style={{ position: 'relative', width: 80, height: 80 }}>
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          border: '3px solid rgba(0,158,227,0.12)',
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          border: '3px solid transparent',
+          borderTopColor: '#009EE3',
+          animation: 'mpSpin 0.85s linear infinite',
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <MercadoPagoLogo size={36} />
+        </div>
+      </div>
+
+      {/* Texto */}
+      <div style={{ textAlign: 'center', animation: 'mpFadeUp 0.5s ease' }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: 'white', marginBottom: 8 }}>
+          Conectando con MercadoPago
+        </div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+          Procesando tu pago de forma segura{'.'.repeat(dots)}<br />
+          <span style={{ fontSize: 12 }}>No cerrés esta ventana.</span>
+        </div>
+      </div>
+
+      {/* Dots loader */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            style={{
+              width: 8, height: 8, borderRadius: '50%', background: '#009EE3',
+              animation: `mpPulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Seguridad */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 16px', borderRadius: 999,
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        <Shield size={12} color="rgba(255,255,255,0.35)" />
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+          Pago encriptado · 100% seguro
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Pantalla 3: Pago exitoso ────────────────────────────────────────────────
+
+function ExitoScreen({ next, router }: { next: string; router: ReturnType<typeof useRouter> }) {
+  const DETALLES: [string, string][] = [
+    ['Plan',    'Órbita Starter'],
+    ['Monto',   '$5.000 ARS'],
+    ['Período', '3 meses'],
+    ['Fecha',   FECHA_HOY],
+    ['Método',  'MercadoPago'],
+    ['N° comp.', N_COMPROBANTE],
+  ]
+
+  function verComprobante() {
+    window.open(`/onboarding/pago-comprobante`, '_blank')
+  }
+  function imprimir() {
+    const w = window.open(`/onboarding/pago-comprobante?print=1`, '_blank')
+    if (w) w.focus()
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--color-surface)', fontFamily: 'inherit' }}>
+      <style>{`
+        @keyframes exitoScale { from { opacity:0;transform:scale(0.5) } to { opacity:1;transform:scale(1) } }
+        @keyframes exitoFade  { from { opacity:0;transform:translateY(16px) } to { opacity:1;transform:translateY(0) } }
+      `}</style>
+
+      <Header />
+
+      <div style={{
+        maxWidth: 480, margin: '0 auto',
+        padding: '52px 24px 80px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+
+        {/* Check animado */}
+        <div style={{
+          width: 80, height: 80, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 32px rgba(16,185,129,0.40)',
+          marginBottom: 20,
+          animation: 'exitoScale 0.55s cubic-bezier(0.34,1.56,0.64,1)',
+        }}>
+          <Check size={40} color="white" strokeWidth={2.5} />
+        </div>
+
+        <div style={{ textAlign: 'center', animation: 'exitoFade 0.5s ease 0.1s both' }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '0 0 8px' }}>
+            ¡Pago confirmado!
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0, lineHeight: 1.5 }}>
+            Tu cuenta <strong style={{ color: 'var(--color-text)' }}>Órbita Starter</strong> está activa.
+          </p>
+        </div>
+
+        {/* Card comprobante */}
+        <div style={{
+          width: '100%', marginTop: 32,
+          background: 'var(--color-bg)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 16, overflow: 'hidden',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+          animation: 'exitoFade 0.5s ease 0.2s both',
+        }}>
+          {/* Encabezado verde */}
+          <div style={{
+            background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+            padding: '16px 20px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>
+                Comprobante de pago
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'white', fontFamily: '"Geist Mono", monospace' }}>
+                {N_COMPROBANTE}
+              </div>
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: 999, padding: '4px 12px',
+            }}>
+              <Check size={11} strokeWidth={3} color="white" />
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'white' }}>Aprobado</span>
+            </div>
+          </div>
+
+          {/* Detalle */}
+          <div style={{ padding: '4px 0' }}>
+            {DETALLES.map(([label, valor], i) => (
+              <div key={label} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 20px',
+                borderBottom: i < DETALLES.length - 1 ? '1px solid var(--color-border)' : 'none',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {label}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', fontFamily: label === 'N° comp.' || label === 'Monto' ? '"Geist Mono", monospace' : 'inherit' }}>
+                  {valor}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Botones comprobante */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '14px 20px 18px' }}>
+            <button
+              onClick={verComprobante}
+              style={{
+                height: 40, borderRadius: 8, border: '1px solid var(--color-border)',
+                background: 'var(--color-bg)', color: 'var(--color-text)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-bg)'}
+            >
+              <FileText size={14} strokeWidth={1.5} /> Ver
+            </button>
+            <button
+              onClick={imprimir}
+              style={{
+                height: 40, borderRadius: 8, border: '1px solid var(--color-border)',
+                background: 'var(--color-bg)', color: 'var(--color-text)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-bg)'}
+            >
+              <Printer size={14} strokeWidth={1.5} /> Imprimir
+            </button>
+          </div>
+        </div>
+
+        {/* Separador */}
+        <div style={{ height: 1, background: 'var(--color-border)', width: '100%', margin: '28px 0' }} />
+
+        {/* CTA continuar */}
+        <button
+          onClick={() => router.push(next)}
+          style={{
+            width: '100%', height: 52, borderRadius: 12, border: 'none',
+            background: 'var(--color-primary)', color: 'white',
+            fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            boxShadow: '0 4px 16px rgba(37,99,235,0.30)',
+            transition: 'all 150ms',
+            animation: 'exitoFade 0.5s ease 0.35s both',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1D4ED8'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.transform = 'translateY(0)' }}
+        >
+          Continuar al panel
+          <ArrowRight size={16} strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Página principal ────────────────────────────────────────────────────────
+
+export default function PlanPage() {
+  const router = useRouter()
+  const next   = (router.query.next as string) ?? '/admin'
+  const [estado, setEstado] = useState<'plan' | 'procesando' | 'exito'>('plan')
+
+  function pagar() {
+    setEstado('procesando')
+    // En producción: redirigir a MP y recibir callback. Aquí simulamos.
+    setTimeout(() => setEstado('exito'), 2800)
+  }
+
+  if (estado === 'procesando') return <ProcesandoScreen />
+  if (estado === 'exito')      return <ExitoScreen next={next} router={router} />
+  return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} />
 }
