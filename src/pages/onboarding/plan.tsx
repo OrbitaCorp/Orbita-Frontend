@@ -234,7 +234,7 @@ function ProcesandoScreen() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0B1222',
+      background: 'var(--color-bg)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 28, padding: 24, fontFamily: 'inherit',
     }}>
@@ -248,7 +248,7 @@ function ProcesandoScreen() {
       <div style={{ position: 'relative', width: 80, height: 80 }}>
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%',
-          border: '3px solid rgba(0,158,227,0.12)',
+          border: '3px solid rgba(0,158,227,0.15)',
         }} />
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%',
@@ -266,10 +266,10 @@ function ProcesandoScreen() {
 
       {/* Texto */}
       <div style={{ textAlign: 'center', animation: 'mpFadeUp 0.5s ease' }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: 'white', marginBottom: 8 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text)', marginBottom: 8 }}>
           Conectando con MercadoPago
         </div>
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 14, color: 'var(--color-muted)', lineHeight: 1.6 }}>
           Procesando tu pago de forma segura{'.'.repeat(dots)}<br />
           <span style={{ fontSize: 12 }}>No cerrés esta ventana.</span>
         </div>
@@ -292,11 +292,11 @@ function ProcesandoScreen() {
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '8px 16px', borderRadius: 999,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
       }}>
-        <Shield size={12} color="rgba(255,255,255,0.35)" />
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+        <Shield size={12} color="var(--color-subtle)" />
+        <span style={{ fontSize: 11, color: 'var(--color-subtle)' }}>
           Pago encriptado · 100% seguro
         </span>
       </div>
