@@ -1,67 +1,141 @@
-// Panel de chat con un cliente — reutilizado por la Bandeja (V28) y el Chat full (V29).
-
 import { useEffect, useRef, useState } from 'react'
-import { FileText, Package, Paperclip, Send } from 'lucide-react'
-import { Avatar } from '@/design-system/components/Avatar'
-import { Button } from '@/design-system/components/Button'
-import { CHAT_MSGS, type ChatMsg } from '../mock/mensajes.mock'
+import { MessageSquare, Package } from 'lucide-react'
+import type { Conversacion, ChatMsg, Plantilla } from '../mock/mensajes.mock'
+import { CHAT_MSGS_BY_CV, PEDIDOS_POR_CLIENTE } from '../mock/mensajes.mock'
+import { ChatHeader } from './ChatHeader'
+import { Composer } from './Composer'
 
-interface ChatPanelProps {
-    onToast:   (m: string) => void
-    onPerfil:  () => void
-    full?:     boolean
+interface Props {
+  cv:              Conversacion | null
+  onToast:         (m: string) => void
+  onPerfil:        () => void
+  onArchivar:      (id: string) => void
+  plantillas:      Plantilla[]
+  onIrAPlantillas: () => void
 }
 
-export function ChatPanel({ onToast, onPerfil, full }: ChatPanelProps) {
-    const [msgs, setMsgs] = useState<ChatMsg[]>(CHAT_MSGS)
-    const [draft, setDraft] = useState('')
-    const scrollRef = useRef<HTMLDivElement>(null)
+const MONO = '"Geist Mono", "Fira Code", monospace'
 
-    useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight }, [msgs])
+/** Renderiza texto con chips inline para patrones #XXXX */
+function BurbujaTxt({ txt, me }: { txt: string; me: boolean }) {
+  const partes = txt.split(/(#\d+)/g)
+  return (
+    <>
+      {partes.map((p, i) =>
+        /^#\d+$/.test(p) ? (
+          <span
+            key={i}
+            title="Ver pedido"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '1px 7px', borderRadius: 9999,
+              background: me ? 'rgba(255,255,255,.22)' : 'var(--color-primary-bg)',
+              color: me ? '#fff' : 'var(--color-primary)',
+              fontSize: 12, fontWeight: 700, fontFamily: MONO,
+              cursor: 'pointer', verticalAlign: 'middle',
+              border: me ? '1px solid rgba(255,255,255,.3)' : '1px solid var(--color-primary)',
+            }}
+          >
+            <Package size={9} />
+            {p}
+          </span>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
+  )
+}
 
-    const send = (txt?: string) => {
-        const m = (txt ?? draft).trim()
-        if (!m) return
-        setMsgs(x => [...x, { from: 'me', txt: m, hora: '14:32' }])
-        setDraft('')
-        onToast('Mensaje enviado')
-    }
+export function ChatPanel({ cv, onToast, onPerfil, onArchivar, plantillas, onIrAPlantillas }: Props) {
+  const [msgs, setMsgs] = useState<ChatMsg[]>([])
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-    const iconBtn: React.CSSProperties = { width: 32, height: 32, borderRadius: 6, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center' }
+  const pedidos = PEDIDOS_POR_CLIENTE[cv?.id ?? ''] ?? []
 
+  useEffect(() => {
+    setMsgs(CHAT_MSGS_BY_CV[cv?.id ?? ''] ?? [])
+  }, [cv?.id])
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [msgs])
+
+  const handleEnviar = (txt: string) => {
+    const d = new Date()
+    const hora = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+    setMsgs((prev) => [...prev, { from: 'me', txt, hora }])
+  }
+
+  if (!cv) {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: full ? 'calc(100vh - 240px)' : 560, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Avatar name="María Fernández" size={36} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>María Fernández</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>maria.f@gmail.com</div>
-                </div>
-                <Button variant="outline" size="sm" onClick={onPerfil}>Ver perfil</Button>
-            </div>
-
-            {/* Mensajes */}
-            <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--color-surface)' }}>
-                {msgs.map((m, i) => {
-                    const me = m.from === 'me'
-                    return (
-                        <div key={i} style={{ alignSelf: me ? 'flex-end' : 'flex-start', maxWidth: '72%' }}>
-                            <div style={{ padding: '10px 13px', borderRadius: 12, background: me ? 'var(--color-primary-bg)' : 'var(--color-bg)', border: `1px solid ${me ? 'var(--color-primary)' : 'var(--color-border)'}`, color: 'var(--color-text)', fontSize: 13.5, lineHeight: 1.5, borderBottomRightRadius: me ? 4 : 12, borderBottomLeftRadius: me ? 12 : 4 }}>{m.txt}</div>
-                            <div style={{ fontSize: 10, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', marginTop: 3, textAlign: me ? 'right' : 'left' }}>{m.hora}</div>
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* Composer */}
-            <div style={{ padding: '8px 12px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 6, alignItems: 'center' }}>
-                <button title="Plantilla" onClick={() => send('Hola María! Tu pedido #1284 fue confirmado 😊')} style={iconBtn}><FileText size={16} /></button>
-                <button title="Tracking" onClick={() => setDraft('Tu código de seguimiento es: AR3489573')} style={iconBtn}><Package size={16} /></button>
-                <button title="Adjuntar" onClick={() => onToast('Comprobante adjuntado')} style={iconBtn}><Paperclip size={16} /></button>
-                <input value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send() }} placeholder="Escribí un mensaje…" style={{ flex: 1, height: 40, padding: '0 12px', background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', borderRadius: 10, fontSize: 13, color: 'var(--color-text)', fontFamily: 'inherit', outline: 'none' }} />
-                <button onClick={() => send()} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: draft.trim() ? 'var(--color-primary)' : 'var(--color-surface-alt)', color: draft.trim() ? '#fff' : 'var(--color-subtle)', cursor: draft.trim() ? 'pointer' : 'default', display: 'grid', placeItems: 'center' }}><Send size={16} strokeWidth={1.8} /></button>
-            </div>
-        </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--color-muted)', padding: 32 }}>
+        <MessageSquare size={40} strokeWidth={1.3} />
+        <p style={{ margin: 0, fontSize: 14, textAlign: 'center', lineHeight: 1.5, maxWidth: 240 }}>
+          Seleccioná una conversación para ver los mensajes.
+        </p>
+      </div>
     )
+  }
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
+      <ChatHeader
+        cv={cv}
+        pedidos={pedidos}
+        onPerfil={onPerfil}
+        onArchivar={() => onArchivar(cv.id)}
+      />
+
+      {/* Mensajes */}
+      <div
+        ref={scrollRef}
+        style={{
+          flex: 1, overflowY: 'auto',
+          padding: 18, display: 'flex',
+          flexDirection: 'column', gap: 10,
+          background: 'var(--color-surface)',
+          minHeight: 0,
+        }}
+      >
+        {msgs.map((m, i) => {
+          const me = m.from === 'me'
+          return (
+            <div key={i} style={{ alignSelf: me ? 'flex-end' : 'flex-start', maxWidth: '72%' }}>
+              <div style={{
+                padding: '10px 13px',
+                borderRadius: 12,
+                background: me ? 'var(--color-primary)' : 'var(--color-bg)',
+                border: me ? 'none' : '1px solid var(--color-border)',
+                color: me ? '#fff' : 'var(--color-text)',
+                fontSize: 13.5, lineHeight: 1.6,
+                borderBottomRightRadius: me ? 4 : 12,
+                borderBottomLeftRadius: me ? 12 : 4,
+              }}>
+                <BurbujaTxt txt={m.txt} me={me} />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--color-muted)', fontFamily: MONO, marginTop: 3, textAlign: me ? 'right' : 'left' }}>
+                {m.hora}
+              </div>
+            </div>
+          )
+        })}
+
+        {msgs.length === 0 && (
+          <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--color-muted)', fontSize: 13 }}>
+            Sé el primero en escribir un mensaje
+          </div>
+        )}
+      </div>
+
+      <Composer
+        cv={cv}
+        plantillas={plantillas}
+        pedidos={pedidos}
+        onSend={(txt) => { handleEnviar(txt); onToast('Mensaje enviado') }}
+        onIrAPlantillas={onIrAPlantillas}
+        onToast={onToast}
+      />
+    </div>
+  )
 }
