@@ -1,4 +1,4 @@
-import type { Producto, Categoria, ItemCarrito, Direccion, Pedido, TiendaConfig, Usuario, PedidoResumen } from './types'
+import type { Producto, Categoria, ItemCarrito, Direccion, Pedido, TiendaConfig, Usuario, PedidoResumen, Cupon, DescuentoExclusivo } from './types'
 
 export const TIENDA: TiendaConfig = {
   nombre:  'Rama Indumentaria',
@@ -57,6 +57,18 @@ export const HISTORIAL_MOCK: PedidoResumen[] = [
   { id: 'ORB-2610', fecha: '03 abr 2026', total: 47800,  items: 2, estado: 'Entregado',       estadoTipo: 'success' },
   { id: 'ORB-2391', fecha: '12 feb 2026', total: 24900,  items: 1, estado: 'Entregado',       estadoTipo: 'success' },
   { id: 'ORB-2104', fecha: '28 ene 2026', total: 134700, items: 3, estado: 'Cancelado',       estadoTipo: 'error'   },
+]
+
+export const CUPONES_MOCK: Cupon[] = [
+  { codigo: 'BIENVENIDA15', tipo: 'porcentaje', valor: 15, descripcion: '15% off en tu primera compra. Bienvenido a la tienda.', minCompra: 30000, vencimiento: '31 jul 2026' },
+  { codigo: 'ORBITA10',     tipo: 'porcentaje', valor: 10, descripcion: '10% off en toda la tienda. Sin mínimo de compra.', vencimiento: '30 jun 2026' },
+  { codigo: 'REMERAS20',    tipo: 'porcentaje', valor: 20, descripcion: '20% off exclusivo en remeras. Temporada de verano.', categorias: ['Remeras'], minCompra: 20000, vencimiento: '15 jul 2026' },
+  { codigo: 'ENVIOGRATIS',  tipo: 'monto',      valor: 5000, descripcion: 'Envío bonificado: $5.000 de descuento en tu pedido.', minCompra: 50000, vencimiento: '20 jun 2026' },
+]
+
+export const DESCUENTOS_EXCLUSIVOS: DescuentoExclusivo[] = [
+  { codigo: 'vip30verano',   nombre: '30% OFF — Club VIP Verano',   descripcion: 'Precio especial exclusivo para clientes VIP. Válido en toda la tienda por tiempo limitado.', tipo: 'porcentaje', valor: 30, vencimiento: '30 jun 2026' },
+  { codigo: 'influencer20',  nombre: '20% OFF — Descuento especial', descripcion: 'Tu descuento personal. Válido en toda la tienda. No acumulable con otras promociones.',         tipo: 'porcentaje', valor: 20, vencimiento: '15 jul 2026' },
 ]
 
 export const PEDIDO_MOCK: Pedido = {

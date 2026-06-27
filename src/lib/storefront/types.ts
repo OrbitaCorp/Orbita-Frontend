@@ -80,3 +80,23 @@ export type TiendaConfig = {
   wpp:     string
   email:   string
 }
+
+export type Cupon = {
+  codigo:      string
+  tipo:        'porcentaje' | 'monto'
+  valor:       number
+  descripcion: string
+  minCompra?:  number
+  vencimiento?: string
+  categorias?: string[]
+}
+
+export type DescuentoExclusivo = {
+  codigo:      string
+  nombre:      string
+  descripcion: string
+  tipo:        'porcentaje' | 'monto'
+  valor:       number
+  vencimiento?: string
+  categorias?: string[]
+}

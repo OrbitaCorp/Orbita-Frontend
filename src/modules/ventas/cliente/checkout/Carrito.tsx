@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { Minus, Plus, Trash2, ChevronLeft, Lock, Check, ShoppingCart, ArrowRight } from 'lucide-react'
+import { Minus, Plus, Trash2, ChevronLeft, Lock, Check, ShoppingCart, ArrowRight, Tag } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { Breadcrumb } from '@/components/storefront/Breadcrumb'
@@ -203,6 +203,16 @@ export default function Carrito() {
                   <Check size={12} strokeWidth={2.5} /> Cupón ORBITA10 aplicado
                 </div>
               )}
+              <button
+                onClick={() => router.push(`${base}/cupones`)}
+                style={{
+                  marginTop: 8, fontSize: 12, color: 'var(--color-primary)', fontWeight: 500,
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <Tag size={11} /> Ver cupones disponibles
+              </button>
             </div>
 
             <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 0 }}>
