@@ -58,7 +58,7 @@ export default function Dashboard() {
                 @media (max-width: 760px) {
                     .dash-page   { padding: 16px 14px 48px !important; }
                     .dash-kpis   { grid-template-columns: repeat(2,1fr) !important; }
-                    .dash-alerts { grid-template-columns: 1fr !important; }
+                    .dash-alerts { grid-template-columns: repeat(2, 1fr) !important; }
                     .dash-act-hide { display: none !important; }
                     .dash-act-row  { grid-template-columns: 90px 1fr auto !important; gap: 8px !important; }
                 }
@@ -104,18 +104,21 @@ export default function Dashboard() {
                         <div style={{ flex: 1 }} />
                         <button onClick={() => setAlertas([])} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Limpiar todas</button>
                     </div>
-                    <div className="dash-alerts" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px,1fr))', gap: 10 }}>
+                    <div className="dash-alerts" style={{ display: 'grid', gridTemplateColumns: `repeat(${alertas.length}, 1fr)`, gap: 10 }}>
                         {alertas.map(a => {
                             const col = a.nivel === 'danger' ? 'var(--color-error)' : 'var(--color-warning)'
                             const bg  = a.nivel === 'danger' ? 'var(--color-error-bg)' : 'var(--color-warning-bg)'
                             return (
-                                <div key={a.id} style={{ background: bg, borderLeft: `3px solid ${col}`, borderRadius: 8, padding: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.4 }}>{a.titulo}</div>
-                                        {a.desc && <div style={{ fontSize: 11.5, color: 'var(--color-muted)', marginTop: 2, lineHeight: 1.4 }}>{a.desc}</div>}
-                                        <button onClick={() => goSeccion(a.seccion, a.extra)} style={{ marginTop: 6, background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Ir →</button>
+                                <div key={a.id} style={{ background: bg, borderLeft: `3px solid ${col}`, borderRadius: 8, padding: '10px 12px 10px 14px', display: 'flex', flexDirection: 'column', gap: 0, minHeight: 80 }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.4 }}>{a.titulo}</div>
+                                            {a.desc && <div style={{ fontSize: 11.5, color: 'var(--color-muted)', marginTop: 2, lineHeight: 1.35 }}>{a.desc}</div>}
+                                        </div>
+                                        <button onClick={() => setAlertas(al => al.filter(x => x.id !== a.id))} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}><X size={12} strokeWidth={2} /></button>
                                     </div>
-                                    <button onClick={() => setAlertas(al => al.filter(x => x.id !== a.id))} style={{ width: 22, height: 22, borderRadius: 5, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}><X size={13} strokeWidth={1.8} /></button>
+                                    <div style={{ flex: 1 }} />
+                                    <button onClick={() => goSeccion(a.seccion, a.extra)} style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left' }}>Ir →</button>
                                 </div>
                             )
                         })}
