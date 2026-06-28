@@ -1,4 +1,5 @@
 import { useReducer, useEffect } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { reducerDescuento, initialDescuentoState, validarDescuentoForm } from './reducerDescuento'
 import type { DescuentoFormState } from './reducerDescuento'
 import { SectionCard, FormField } from './components/FormField'
@@ -106,12 +107,43 @@ export function DescuentosCrear({ id, onVolver }: Props) {
   const d = (key: keyof DescuentoFormState) => set(dispatch, key)
   const t = state.tipo
 
+  const header = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <button
+        type="button"
+        onClick={onVolver}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-body)', cursor: 'pointer', flexShrink: 0 }}
+      >
+        <ArrowLeft size={16} />
+      </button>
+      <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--color-text)' }}>
+        {id ? 'Editar descuento' : 'Nuevo descuento'}
+      </h1>
+    </div>
+  )
+
   if (isLoading && id) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-muted)' }}>Cargando…</div>
+    return (
+      <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
+        {header}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[148, 220, 260, 130].map((h, i) => (
+              <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ height: 190, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+            <div style={{ height: 170, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
+      {header}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
         {/* Columna principal */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { LockKeyhole, Unlock } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import { useCajaStore } from './stores/useCajaStore'
 import { useTicketStore } from './stores/useTicketStore'
 import { CatalogoPOS } from './components/CatalogoPOS/CatalogoPOS'
@@ -9,57 +9,38 @@ import { ModalPostVenta } from './components/Cobro/ModalPostVenta'
 import { ModalVariante } from './components/Modales/ModalVariante'
 import type { ProductoPOS, MetodoPago, ResultadoVenta } from './types'
 
-// ─── Estado: caja cerrada ─────────────────────────────────────────────────────
+const SK: CSSProperties = { background: 'var(--color-surface-alt)', borderRadius: 8 }
 
-function CajaCerrada({ onAbrir }: { onAbrir: () => void }) {
+function CobroSkeleton() {
   return (
-    <div style={{ flex: 1, display: 'grid', placeItems: 'center', background: 'var(--color-surface)', padding: 24 }}>
-      <div
-        style={{
-          maxWidth: 420,
-          width: '100%',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 20,
-          background: 'var(--color-bg)',
-          borderRadius: 20,
-          padding: '48px 40px',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,.07), 0 10px 40px -4px rgba(0,0,0,.10)',
-        }}
-      >
-        <div style={{ width: 64, height: 64, borderRadius: 16, background: 'var(--color-surface)', border: '1px solid var(--color-border)', display: 'grid', placeItems: 'center', color: 'var(--color-muted)' }}>
-          <LockKeyhole size={28} strokeWidth={1.5} />
+    <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* Catálogo */}
+      <div style={{ flex: '0 0 60%', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, borderRight: '1px solid var(--color-border)', overflow: 'hidden' }}>
+        <div style={{ ...SK, height: 36 }} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[72, 92, 80, 72, 96].map((w, i) => (
+            <div key={i} style={{ ...SK, height: 28, width: w, borderRadius: 9999 }} />
+          ))}
         </div>
-        <div>
-          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 700, fontFamily: 'Sora, Inter, sans-serif', color: 'var(--color-text)' }}>
-            La caja está cerrada
-          </h2>
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--color-muted)', lineHeight: 1.7 }}>
-            Para empezar a cobrar tenés que abrir la caja<br />y registrar el monto inicial del turno.
-          </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flex: 1, alignContent: 'start' }}>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} style={{ ...SK, height: 116, borderRadius: 12 }} />
+          ))}
         </div>
-        <button
-          onClick={onAbrir}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 32px', borderRadius: 12, border: 'none', background: 'var(--color-primary)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}
-        >
-          <Unlock size={16} /> Abrir caja
-        </button>
+      </div>
+      {/* Ticket */}
+      <div style={{ flex: '0 0 40%', display: 'flex', flexDirection: 'column', gap: 12, padding: 20, overflow: 'hidden' }}>
+        <div style={{ ...SK, height: 40, borderRadius: 10 }} />
+        <div style={{ ...SK, flex: 1, borderRadius: 12 }} />
+        <div style={{ ...SK, height: 88, borderRadius: 12 }} />
       </div>
     </div>
   )
 }
 
-// ─── Pantalla principal ───────────────────────────────────────────────────────
-
-interface Props {
-  onAbrirCaja: () => void
-  onCerrarCaja: () => void
-}
-
-export function POSCobro({ onAbrirCaja }: Props) {
-  const { estado, sesion, incrementarAcumulado } = useCajaStore()
+export function POSCobro() {
+  const [loading, setLoading] = useState(true)
+  const { incrementarAcumulado } = useCajaStore()
   const { agregarItem, items, cliente, limpiarTicket } = useTicketStore()
 
   const [totalACobrar, setTotalACobrar] = useState(0)
@@ -69,9 +50,12 @@ export function POSCobro({ onAbrirCaja }: Props) {
   const [productoVariante, setProductoVariante] = useState<ProductoPOS | null>(null)
   const contadorRef = useRef(888)
 
-  if (estado === 'cerrada' || !sesion) {
-    return <CajaCerrada onAbrir={onAbrirCaja} />
-  }
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (loading) return <CobroSkeleton />
 
   const handleAgregarProducto = (producto: ProductoPOS) => {
     if (producto.tieneVariantes) {

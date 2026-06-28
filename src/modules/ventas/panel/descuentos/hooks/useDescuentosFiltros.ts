@@ -13,20 +13,13 @@ import type {
 } from '../types'
 
 // Estado de filtros del listado persistido en la URL.
-//
-// Pages Router (Next 16): `useSearchParams` de `next/navigation` es solo lectura
-// y devuelve null en prerender, así que leemos y escribimos con `useRouter` de
-// `next/router`. El módulo se monta en la ruta dinámica
-// `/admin/[negocioId]/[moduloPadre]/[seccion]`, por eso preservamos esos
-// segmentos en cada `replace`.
-
-export type DescuentosTab = 'descuentos' | 'cupones'
+// Descuentos y Cupones son ahora rutas separadas (seccion='descuentos' / 'cupones'),
+// así que el parámetro `tab` ya no es necesario.
 
 const RUTA_KEYS = ['negocioId', 'moduloPadre', 'seccion'] as const
-const FILTER_KEYS = ['tab', 'estado', 'tipo', 'q', 'pagina', 'porPagina', 'orden', 'dir'] as const
+const FILTER_KEYS = ['estado', 'tipo', 'q', 'pagina', 'porPagina', 'orden', 'dir'] as const
 
 const DEF = {
-  tab: 'descuentos' as DescuentosTab,
   estado: 'todos',
   tipo: 'todos',
   q: '',
@@ -53,7 +46,6 @@ export function useDescuentosFiltros() {
   const { query } = router
 
   // ── Lectura ──
-  const tab: DescuentosTab = str(query.tab, DEF.tab) === 'cupones' ? 'cupones' : 'descuentos'
   const estado = str(query.estado, DEF.estado)
   const tipo = str(query.tipo, DEF.tipo)
   const busqueda = str(query.q, DEF.q)
@@ -80,14 +72,12 @@ export function useDescuentosFiltros() {
     [router, query]
   )
 
-  // Cambiar un filtro siempre vuelve a la página 1.
   const setEstado = useCallback((v: string) => aplicar({ estado: v === 'todos' ? undefined : v, pagina: undefined }), [aplicar])
   const setTipo = useCallback((v: string) => aplicar({ tipo: v === 'todos' ? undefined : v, pagina: undefined }), [aplicar])
   const setBusqueda = useCallback((v: string) => aplicar({ q: v, pagina: undefined }), [aplicar])
   const setPagina = useCallback((v: number) => aplicar({ pagina: v === 1 ? undefined : v }), [aplicar])
   const setPorPagina = useCallback((v: number) => aplicar({ porPagina: v === DEF.porPagina ? undefined : v, pagina: undefined }), [aplicar])
 
-  // Ordenar por una columna; reclickear la misma alterna la dirección.
   const setOrden = useCallback(
     (columna: string) => {
       const mismaCol = columna === orden
@@ -98,21 +88,6 @@ export function useDescuentosFiltros() {
       })
     },
     [aplicar, orden, dir]
-  )
-
-  // Cambiar de tab limpia los filtros (los dominios no comparten estados/tipos).
-  const setTab = useCallback(
-    (next: DescuentosTab) =>
-      aplicar({
-        tab: next === DEF.tab ? undefined : next,
-        estado: undefined,
-        tipo: undefined,
-        q: undefined,
-        pagina: undefined,
-        orden: undefined,
-        dir: undefined,
-      }),
-    [aplicar]
   )
 
   const resetFiltros = useCallback(
@@ -148,7 +123,6 @@ export function useDescuentosFiltros() {
   )
 
   return {
-    tab,
     estado: estado as EstadoDescuento | EstadoCupon | 'todos',
     tipo,
     busqueda,
@@ -158,7 +132,6 @@ export function useDescuentosFiltros() {
     ordenDireccion: dir,
     descuentosFiltros,
     cuponesFiltros,
-    setTab,
     setEstado,
     setTipo,
     setBusqueda,

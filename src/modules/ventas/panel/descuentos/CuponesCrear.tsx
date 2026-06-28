@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Shuffle } from 'lucide-react'
+import { ArrowLeft, Shuffle } from 'lucide-react'
 import { SectionCard, FormField, LabelRow } from './components/FormField'
 import { TipoCuponSelector } from './components/TipoCuponSelector'
 import { AlcanceSelector } from './components/AlcanceSelector'
@@ -101,12 +101,43 @@ export function CuponesCrear({ id, onVolver }: Props) {
 
   const isSaving = crearMutation.isPending || editarMutation.isPending
 
+  const header = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <button
+        type="button"
+        onClick={onVolver}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-body)', cursor: 'pointer', flexShrink: 0 }}
+      >
+        <ArrowLeft size={16} />
+      </button>
+      <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--color-text)' }}>
+        {id ? 'Editar cupón' : 'Nuevo cupón'}
+      </h1>
+    </div>
+  )
+
   if (isLoading && id) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-muted)' }}>Cargando…</div>
+    return (
+      <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
+        {header}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[190, 240, 130, 130].map((h, i) => (
+              <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ height: 190, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+            <div style={{ height: 170, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
+      {header}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <SectionCard title="Información básica" subtitle="Definí el código y nombre del cupón.">

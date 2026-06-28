@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { CSSProperties } from 'react'
+import { useRouter } from 'next/router'
 import { RotateCcw, Pause } from 'lucide-react'
 import { useCajaStore } from './stores/useCajaStore'
 import { usePausadosStore } from './stores/usePausadosStore'
 import { POSApertura } from './POSApertura'
-import { POSCobro } from './POScobro'
+import { POSCobro } from './POSCobro'
 import { POSCierre } from './POSCierre'
 import { POSHistorial } from './POSHistorial'
+import { POSReporte } from './POSReporte'
 import { DrawerPausados } from './components/Modales/DrawerPausados'
 import { ModalDevolucion } from './components/Modales/ModalDevolucion'
 
@@ -20,15 +22,6 @@ function abreviarNombre(nombre: string) {
   const p = nombre.trim().split(' ')
   return p.length === 1 ? p[0] : `${p[0]} ${p[1][0]}.`
 }
-
-type Pantalla = 'cobro' | 'apertura' | 'cierre' | 'historial'
-type TabId = 'cobro' | 'historial' | 'cierre'
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'cobro',     label: 'Cobro rápido' },
-  { id: 'historial', label: 'Historial'    },
-  { id: 'cierre',    label: 'Cierre'       },
-]
 
 const btnAccion: CSSProperties = {
   display: 'flex',
@@ -47,61 +40,52 @@ const btnAccion: CSSProperties = {
 }
 
 export function POSShell() {
+  const router = useRouter()
+  const vista = (router.query.vista as string) || ''
+  const negocioId = (router.query.negocioId as string) ?? 'rama-tienda'
+
   const { estado, sesion, acumuladoTurno } = useCajaStore()
   const { tickets: pausados } = usePausadosStore()
-  const [pantalla, setPantalla] = useState<Pantalla>('cobro')
   const [drawerPausados, setDrawerPausados] = useState(false)
   const [modalDevolucion, setModalDevolucion] = useState(false)
 
-  const tabActivo: TabId = pantalla === 'apertura' ? 'cobro' : (pantalla as TabId)
   const cajaAbierta = estado === 'abierta' && sesion
+  const esHistorial = vista === 'historial'
+  const esApertura = vista === 'apertura'
+
+  const irA = useCallback((v?: string) => {
+    const query: Record<string, string> = { negocioId, moduloPadre: 'ventas', seccion: 'pos' }
+    if (v) query.vista = v
+    router.push({ pathname: '/admin/[negocioId]/[moduloPadre]/[seccion]', query })
+  }, [router, negocioId])
+
+  // Redirige a apertura si navegan directamente a rutas que requieren caja sin sesión activa
+  useEffect(() => {
+    if (!cajaAbierta && !esHistorial && !esApertura) {
+      const query: Record<string, string> = { negocioId, moduloPadre: 'ventas', seccion: 'pos', vista: 'apertura' }
+      router.replace({ pathname: '/admin/[negocioId]/[moduloPadre]/[seccion]', query })
+    }
+  }, [cajaAbierta, esHistorial, esApertura, negocioId, router])
+
+  const mostrarBarraSesion = cajaAbierta && !esHistorial && !esApertura
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
 
-      {/* ── Barra unificada ── */}
-      <div
-        style={{
-          display: cajaAbierta ? 'flex' : 'none',
-          alignItems: 'center',
-          padding: '0 24px',
-          height: 52,
-          borderBottom: '1px solid var(--color-border)',
-          background: 'var(--color-bg)',
-          flexShrink: 0,
-          gap: 0,
-        }}
-      >
-        {/* Tabs */}
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setPantalla(tab.id)}
-            style={{
-              padding: '0 4px',
-              marginRight: 24,
-              height: 52,
-              border: 'none',
-              borderBottom: `2px solid ${tabActivo === tab.id ? 'var(--color-primary)' : 'transparent'}`,
-              background: 'transparent',
-              color: tabActivo === tab.id ? 'var(--color-primary)' : 'var(--color-muted)',
-              fontSize: 14,
-              fontWeight: tabActivo === tab.id ? 600 : 400,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
-              transition: 'color 0.15s, border-color 0.15s',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-
-        {/* Separador */}
-        <div style={{ width: 1, height: 24, background: 'var(--color-border)', margin: '0 20px', flexShrink: 0 }} />
-
-        {/* Estado de caja */}
-        {cajaAbierta && (
+      {/* Barra de sesión — visible solo cuando hay caja abierta, fuera del historial y apertura */}
+      {mostrarBarraSesion && sesion && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 24px',
+            height: 52,
+            borderBottom: '1px solid var(--color-border)',
+            background: 'var(--color-bg)',
+            flexShrink: 0,
+            gap: 0,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-success)', flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
@@ -111,13 +95,9 @@ export function POSShell() {
               · desde {formatHora(sesion.fechaApertura)}
             </span>
           </div>
-        )}
 
-        {/* Separador */}
-        <div style={{ width: 1, height: 24, background: 'var(--color-border)', margin: '0 20px', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 24, background: 'var(--color-border)', margin: '0 20px', flexShrink: 0 }} />
 
-        {/* Acumulado */}
-        {cajaAbierta && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--color-muted)' }}>
               Acum.
@@ -126,13 +106,9 @@ export function POSShell() {
               $ {FORMATO.format(acumuladoTurno)}
             </span>
           </div>
-        )}
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
+          <div style={{ flex: 1 }} />
 
-        {/* Acciones */}
-        {cajaAbierta && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button onClick={() => setModalDevolucion(true)} style={btnAccion}>
               <RotateCcw size={14} /> Devolución
@@ -153,33 +129,33 @@ export function POSShell() {
               )}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* ── Contenido ── */}
+      {/* Contenido */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {pantalla === 'apertura' && (
-          <POSApertura
-            onConfirm={() => setPantalla('cobro')}
-            onCancel={() => setPantalla('cobro')}
-          />
+
+        {esApertura && (
+          <POSApertura onConfirm={() => irA()} onCancel={() => irA('apertura')} />
         )}
-        {pantalla === 'cobro' && (
-          <POSCobro
-            onAbrirCaja={() => setPantalla('apertura')}
-            onCerrarCaja={() => setPantalla('cierre')}
-          />
+
+        {esHistorial && <POSHistorial />}
+
+        {!esApertura && !esHistorial && cajaAbierta && (
+          <>
+            {vista === '' && <POSCobro />}
+            {vista === 'reporte' && <POSReporte />}
+            {vista === 'cierre' && (
+              <POSCierre
+                onVolverAlPOS={() => irA()}
+                onCierreConfirmado={() => irA()}
+              />
+            )}
+          </>
         )}
-        {pantalla === 'cierre' && (
-          <POSCierre
-            onVolverAlPOS={() => setPantalla('cobro')}
-            onCierreConfirmado={() => setPantalla('cobro')}
-          />
-        )}
-        {pantalla === 'historial' && <POSHistorial />}
+        {/* null cuando !cajaAbierta && !esHistorial && !esApertura — redirect pendiente */}
       </div>
 
-      {/* Modales levantados al shell */}
       <DrawerPausados isOpen={drawerPausados} onClose={() => setDrawerPausados(false)} />
       <ModalDevolucion isOpen={modalDevolucion} onClose={() => setModalDevolucion(false)} />
     </div>

@@ -1,4 +1,4 @@
-export { POSCobro } from './POScobro'
+export { POSCobro } from './POSCobro'
 export { POSApertura } from './POSApertura'
 export { POSCierre } from './POSCierre'
 export { POSHistorial } from './POSHistorial'

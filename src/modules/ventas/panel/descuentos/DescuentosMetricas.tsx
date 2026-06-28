@@ -44,7 +44,7 @@ export function DescuentosMetricas({ onVolver, onVerDetalle }: Props) {
           ← Volver
         </button>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--color-text)' }}>
-          Métricas de descuentos
+          Rendimiento de descuentos
         </h2>
       </div>
 
@@ -53,11 +53,26 @@ export function DescuentosMetricas({ onVolver, onVerDetalle }: Props) {
         <MetricasFiltros filtros={filtros} onChange={handleFiltroChange} />
       </div>
 
-      {isLoading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-          <p style={{ color: 'var(--color-muted)', fontSize: 14 }}>Cargando métricas…</p>
-        </div>
-      )}
+      {isLoading && (() => {
+        const sk = (h: number, w?: string | number): React.CSSProperties => ({
+          height: h, width: w ?? '100%',
+          background: 'var(--color-surface-alt)', borderRadius: 8,
+        })
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+              {[1, 2, 3, 4].map((i) => <div key={i} style={{ ...sk(96), borderRadius: 12 }} />)}
+            </div>
+            {/* Gráfico */}
+            <div style={{ ...sk(240), borderRadius: 12 }} />
+            {/* Filas tabla */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[1, 2, 3, 4, 5].map((i) => <div key={i} style={sk(44)} />)}
+            </div>
+          </div>
+        )
+      })()}
 
       {isError && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>

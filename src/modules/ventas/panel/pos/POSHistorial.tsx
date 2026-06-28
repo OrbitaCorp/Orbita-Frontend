@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import { useHistorialCajas, useForzarCierre } from './hooks/useCaja'
 import type { FilaSesion } from './hooks/useCaja'
 import { FiltrosHistorial } from './components/Historial/FiltrosHistorial'
@@ -8,6 +9,29 @@ import { ModalConfirmacion } from '../../_shared/components/ModalConfirmacion'
 import type { FiltrosHistorial as Filtros } from './types'
 
 const FMT_FECHA = new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+const SK: CSSProperties = { background: 'var(--color-surface-alt)', borderRadius: 8 }
+
+function HistorialSkeleton() {
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px', background: 'var(--color-surface)', display: 'flex', flexDirection: 'column', gap: 20, minHeight: 0 }}>
+      <div>
+        <div style={{ ...SK, height: 28, width: 200, marginBottom: 8 }} />
+        <div style={{ ...SK, height: 14, width: 260 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[140, 120, 120, 100, 80].map((w, i) => (
+          <div key={i} style={{ ...SK, height: 36, width: w, borderRadius: 8 }} />
+        ))}
+      </div>
+      <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ ...SK, height: 44, borderRadius: 0 }} />
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} style={{ ...SK, height: 52, borderRadius: 0, borderBottom: '1px solid var(--color-border)' }} />
+        ))}
+      </div>
+    </div>
+  )
+}
 const FMT_NUM = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 
 function exportarCSV(datos: FilaSesion[]) {
@@ -37,8 +61,14 @@ function exportarCSV(datos: FilaSesion[]) {
 }
 
 export function POSHistorial() {
+  const [loading, setLoading] = useState(true)
   const { data: sesiones = [], isLoading } = useHistorialCajas()
   const forzarCierre = useForzarCierre()
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [])
 
   const [filtros, setFiltros] = useState<Filtros>({})
   const [sesionDetalle, setSesionDetalle] = useState<FilaSesion | null>(null)
@@ -61,6 +91,8 @@ export function POSHistorial() {
       onSuccess: () => setSesionAForzar(null),
     })
   }
+
+  if (loading) return <HistorialSkeleton />
 
   const descripcionForzar = sesionAForzar
     ? `Estás cerrando la caja de ${sesionAForzar.sesion.cajero.nombre}, abierta el ${FMT_FECHA.format(new Date(sesionAForzar.sesion.fechaApertura))} hs. Esta acción queda registrada y no se puede deshacer.`

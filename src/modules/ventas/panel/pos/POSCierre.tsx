@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import { LockKeyhole, AlertTriangle } from 'lucide-react'
 import { useCajaStore } from './stores/useCajaStore'
 import { usePausadosStore } from './stores/usePausadosStore'
@@ -10,6 +11,30 @@ import { ModalConfirmacion } from '../../_shared/components/ModalConfirmacion'
 import type { TipoMetodoPago } from './types'
 
 const FMT = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+const SK: CSSProperties = { background: 'var(--color-surface-alt)', borderRadius: 8 }
+
+function CierreSkeleton() {
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px', background: 'var(--color-surface)', display: 'flex', flexDirection: 'column', gap: 24, minHeight: 0 }}>
+      <div>
+        <div style={{ ...SK, height: 28, width: 160, marginBottom: 8 }} />
+        <div style={{ ...SK, height: 14, width: 320 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 24, flex: 1, alignItems: 'flex-start' }}>
+        <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {[1, 2, 3, 4].map((i) => <div key={i} style={{ ...SK, height: 80, borderRadius: 12 }} />)}
+          </div>
+          <div style={{ ...SK, height: 200, borderRadius: 12 }} />
+        </div>
+        <div style={{ flex: '0 0 calc(42% - 24px)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ ...SK, height: 180, borderRadius: 12 }} />
+          <div style={{ ...SK, height: 120, borderRadius: 12 }} />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function parseMonto(raw: string): number {
   return parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0
@@ -25,8 +50,14 @@ interface Props {
 }
 
 export function POSCierre({ onVolverAlPOS, onCierreConfirmado }: Props) {
+  const [loading, setLoading] = useState(true)
   const { sesion, acumuladoTurno, cerrarCaja } = useCajaStore()
   const { tickets: pausados } = usePausadosStore()
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [])
 
   const { data: ticketsData = [] } = useTicketsRecientes(sesion?.id)
   const { data: movimientos = [] } = useMovimientosCaja(sesion?.id)
@@ -62,6 +93,7 @@ export function POSCierre({ onVolverAlPOS, onCierreConfirmado }: Props) {
   const puedeConfirmar =
     !hayDiferencia || motivo.trim().length > 0
 
+  if (loading) return <CierreSkeleton />
   if (!sesion) return null
 
   const cajaId = `C-${sesion.id.slice(-4).padStart(4, '0')}`
@@ -86,7 +118,7 @@ export function POSCierre({ onVolverAlPOS, onCierreConfirmado }: Props) {
       style={{
         flex: 1,
         overflowY: 'auto',
-        padding: '32px 40px',
+        padding: '30px 40px',
         background: 'var(--color-surface)',
         display: 'flex',
         flexDirection: 'column',

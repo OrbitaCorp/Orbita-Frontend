@@ -2,7 +2,6 @@
 export { useDescuentos, fetchDescuentos } from './useDescuentos'
 export { useCupones, fetchCupones } from './useCupones'
 export { useDescuentosFiltros } from './useDescuentosFiltros'
-export type { DescuentosTab } from './useDescuentosFiltros'
 export { useToggleDescuento } from './useToggleDescuento'
 export { useToggleCupon } from './useToggleCupon'
 export { useEliminarDescuento } from './useEliminarDescuento'

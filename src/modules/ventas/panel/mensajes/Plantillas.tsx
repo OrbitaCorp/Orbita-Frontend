@@ -1,5 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
+
+const SK: React.CSSProperties = { background: 'var(--color-surface-alt)', borderRadius: 8 }
+
+function PlantillasSkeleton() {
+  return (
+    <div>
+      {/* Fila filtros + botón */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[56, 72, 64, 72, 88].map((w, i) => (
+            <div key={i} style={{ ...SK, height: 30, width: w, borderRadius: 9999 }} />
+          ))}
+        </div>
+        <div style={{ ...SK, height: 36, width: 140, borderRadius: 8 }} />
+      </div>
+      {/* Grid de cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{ ...SK, height: 148, borderRadius: 12 }} />
+        ))}
+      </div>
+    </div>
+  )
+}
 import type { Plantilla, CategoriaPlantilla } from './mock/mensajes.mock'
 import { PLANTILLAS, CATEGORIAS_PLANTILLA } from './mock/mensajes.mock'
 import { PlantillaCard } from './components/PlantillaCard'
@@ -13,10 +37,18 @@ interface Props {
 type FiltroCategoria = 'todas' | CategoriaPlantilla
 
 export function PlantillasMensajes({ onToast }: Props) {
+  const [loading, setLoading] = useState(true)
   const [plantillas, setPlantillas] = useState<Plantilla[]>(PLANTILLAS)
   const [filtro, setFiltro]         = useState<FiltroCategoria>('todas')
   const [modalEditar, setModalEditar]  = useState<Plantilla | true | null>(null)
   const [modalUsar, setModalUsar]      = useState<Plantilla | null>(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (loading) return <PlantillasSkeleton />
 
   const filtradas = filtro === 'todas'
     ? plantillas
@@ -55,23 +87,9 @@ export function PlantillasMensajes({ onToast }: Props) {
 
   return (
     <>
-      {/* Encabezado */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: 0 }}>
-          Plantillas de mensajes
-        </h1>
-        <button
-          onClick={() => setModalEditar(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 16px', borderRadius: 8, border: 'none', background: 'var(--color-primary)', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-        >
-          <Plus size={15} />
-          Nueva plantilla
-        </button>
-      </div>
-
-      {/* Filtro por categoría */}
-      {categoriasPresentes.length > 1 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      {/* Filtros + botón en la misma fila */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button style={pillStyle(filtro === 'todas')} onClick={() => setFiltro('todas')}>Todas</button>
           {categoriasPresentes.map((c) => (
             <button key={c.id} style={pillStyle(filtro === c.id)} onClick={() => setFiltro(c.id)}>
@@ -79,7 +97,13 @@ export function PlantillasMensajes({ onToast }: Props) {
             </button>
           ))}
         </div>
-      )}
+        <button
+          onClick={() => setModalEditar(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', borderRadius: 8, border: 'none', background: 'var(--color-primary)', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+        >
+          <Plus size={15} /> Nueva plantilla
+        </button>
+      </div>
 
       {/* Grid */}
       {filtradas.length === 0 ? (
@@ -100,7 +124,6 @@ export function PlantillasMensajes({ onToast }: Props) {
         </div>
       )}
 
-      {/* Modal crear/editar */}
       {modalEditar && (
         <ModalPlantilla
           plantilla={modalEditar === true ? undefined : modalEditar}
@@ -109,7 +132,6 @@ export function PlantillasMensajes({ onToast }: Props) {
         />
       )}
 
-      {/* Modal usar */}
       {modalUsar && (
         <ModalUsarPlantilla
           plantilla={modalUsar}

@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { useRouter } from 'next/router'
 import { useDescuentosFiltros } from '../hooks/useDescuentosFiltros'
 import { ESTADO_DESCUENTO_LABELS, TIPO_DESCUENTO_LABELS, ESTADO_CUPON_LABELS, TIPO_CUPON_LABELS } from '../types'
 
@@ -17,9 +18,10 @@ const selectStyle: React.CSSProperties = {
 }
 
 export function DescuentosFiltros() {
-  const { tab, estado, tipo, busqueda, setEstado, setTipo, setBusqueda } = useDescuentosFiltros()
+  const { query } = useRouter()
+  const { estado, tipo, busqueda, setEstado, setTipo, setBusqueda } = useDescuentosFiltros()
 
-  const esDescuentos = tab === 'descuentos'
+  const esDescuentos = (query.seccion as string) !== 'cupones'
 
   const opcionesEstado = esDescuentos
     ? [
@@ -47,7 +49,6 @@ export function DescuentosFiltros() {
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        marginBottom: 16,
         flexWrap: 'wrap',
       }}
     >

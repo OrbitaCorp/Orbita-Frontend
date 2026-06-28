@@ -21,9 +21,25 @@ export function DescuentosDetalle({ id, onVolver, onEditar, onVerMetricas }: Pro
   const { data: logs = [] } = useAuditoria(id, 'descuento')
 
   if (isLoading) {
+    const sk = (h: number, w?: string | number) => ({
+      height: h, width: w ?? '100%',
+      background: 'var(--color-surface-alt)', borderRadius: 8,
+    })
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <p style={{ color: 'var(--color-muted)', fontSize: 14 }}>Cargando…</p>
+      <div>
+        <div style={sk(14, 100)} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start', marginTop: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ ...sk(110), borderRadius: 12 }} />
+            <div style={{ ...sk(200), borderRadius: 12 }} />
+            <div style={{ ...sk(140), borderRadius: 12 }} />
+            <div style={{ ...sk(100), borderRadius: 12 }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ ...sk(160), borderRadius: 12 }} />
+            <div style={{ ...sk(180), borderRadius: 12 }} />
+          </div>
+        </div>
       </div>
     )
   }

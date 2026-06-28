@@ -1,22 +1,48 @@
+import { BarChart2, Plus } from 'lucide-react'
 import { Paginacion } from '../../_shared/components'
 import { DescuentosFiltros } from './components/DescuentosFiltros'
 import { DescuentosTabla } from './components/DescuentosTabla'
 import { useDescuentos } from './hooks/useDescuentos'
 import { useDescuentosFiltros } from './hooks/useDescuentosFiltros'
 
+const btnSecundario: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  height: 36, padding: '0 14px', borderRadius: 8,
+  fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+  background: 'var(--color-bg)', color: 'var(--color-body)', border: '1px solid var(--color-border)',
+}
+
+const btnPrimario: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  height: 36, padding: '0 14px', borderRadius: 8,
+  fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+  background: 'var(--color-primary)', color: '#fff', border: 'none',
+}
+
 interface Props {
   onVerDetalle: (id: string) => void
   onEditar: (id: string) => void
   onVerMetricas: () => void
+  onCrear: () => void
 }
 
-export function DescuentosListado({ onVerDetalle, onEditar, onVerMetricas }: Props) {
+export function DescuentosListado({ onVerDetalle, onEditar, onVerMetricas, onCrear }: Props) {
   const filtros = useDescuentosFiltros()
   const { data, isLoading } = useDescuentos(filtros.descuentosFiltros)
 
   return (
     <div>
-      <DescuentosFiltros />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+        <DescuentosFiltros />
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button style={btnSecundario} onClick={onVerMetricas}>
+            <BarChart2 size={16} /> Métricas
+          </button>
+          <button style={btnPrimario} onClick={onCrear}>
+            <Plus size={16} /> Crear descuento
+          </button>
+        </div>
+      </div>
       <DescuentosTabla
         datos={data?.data ?? []}
         isLoading={isLoading}

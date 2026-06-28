@@ -1,3 +1,7 @@
+// Sidebar del panel admin — diseño del prototipo "Panel Admin 34":
+// logo orbital, botón "Publicar tienda", buscador con resultados en vivo y
+// módulos expandibles con badges, dots de alerta y sub-secciones.
+
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { LayoutDashboard, ShoppingBag, Users, Package, CreditCard, MessageSquare, Tag, Settings, Search, Globe, ChevronDown, Check, Scissors, UtensilsCrossed, Briefcase, Store } from 'lucide-react'
@@ -7,6 +11,7 @@ import { MOCK_PEDIDOS } from '@/modules/ventas/panel/pedidos/mock/pedidos.mock'
 import { MOCK_CLIENTES } from '@/modules/ventas/panel/clientes/mock/clientes.mock'
 import { PRODUCTOS_DB } from '@/modules/ventas/panel/catalogo/mock/catalogo.mock'
 import { fmtMoney } from '@/lib/utils'
+import { useCajaStore } from '@/modules/ventas/panel/pos/stores/useCajaStore'
 
 type IconType = ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>
 interface Sub { label: string; seccion: string; vista?: string }
@@ -51,11 +56,8 @@ const MODULOS: Modulo[] = [
     },
     {
         id: 'pos', label: 'POS', Icon: CreditCard, seccion: 'pos',
-        subs: [
-            { label: 'Cobro rápido', seccion: 'pos' },
-            { label: 'Historial cajas', seccion: 'pos', vista: 'historial' },
-            { label: 'Cerrar caja', seccion: 'pos', vista: 'cierre' },
-        ],
+        // subs se inyectan dinámicamente según estado de caja (ver posSubs abajo)
+        subs: [],
     },
     {
         id: 'mensajes', label: 'Mensajes', Icon: MessageSquare, seccion: 'mensajes', badge: 3, alert: true,
@@ -67,10 +69,9 @@ const MODULOS: Modulo[] = [
     {
         id: 'descuentos', label: 'Descuentos', Icon: Tag, seccion: 'descuentos',
         subs: [
-            { label: 'Lista cupones', seccion: 'descuentos' },
-            { label: 'Nuevo cupón', seccion: 'descuentos', vista: 'nuevo' },
-            { label: 'Promos auto', seccion: 'descuentos', vista: 'promos' },
-            { label: 'Rendimiento', seccion: 'descuentos', vista: 'rendimiento' },
+            { label: 'Descuentos',  seccion: 'descuentos' },
+            { label: 'Cupones',     seccion: 'cupones' },
+            { label: 'Rendimiento', seccion: 'descuentos', vista: 'metricas' },
         ],
     },
     {
@@ -86,14 +87,14 @@ const MODULOS: Modulo[] = [
 
 const SECCION_MODULO: Record<string, string> = {
     dashboard: 'dashboard', pedidos: 'pedidos', clientes: 'clientes',
-    catalogo: 'productos', categorias: 'productos', codigos: 'productos',
-    pos: 'pos', mensajes: 'mensajes', descuentos: 'descuentos', configuracion: 'config',
+    catalogo: 'productos', categorias: 'productos', inventario: 'productos', reportes: 'productos', codigos: 'productos',
+    pos: 'pos', mensajes: 'mensajes', descuentos: 'descuentos', cupones: 'descuentos', configuracion: 'config',
 }
 
 interface Props { isOpen: boolean; onClose: () => void }
 
 export default function Sidebar({ isOpen, onClose }: Props) {
-    const router = useRouter()
+    const router     = useRouter()
     const negocioId  = (router.query.negocioId  as string) ?? 'rama-tienda'
     const seccion    = (router.query.seccion     as string) ?? 'dashboard'
     const vista      = (router.query.vista       as string) ?? ''
@@ -101,17 +102,34 @@ export default function Sidebar({ isOpen, onClose }: Props) {
     const moduloActivo = seccion === 'reportes'
         ? (vista === 'clientes' ? 'clientes' : 'productos')
         : SECCION_MODULO[seccion] ?? 'dashboard'
+
     const [abierto,   setAbierto]   = useState(moduloActivo)
     const [busqueda,  setBusqueda]  = useState('')
     const [publicada, setPublicada] = useState(false)
     const [rubroId,   setRubroId]   = useState('tienda')
     const [rubroOpen, setRubroOpen] = useState(false)
 
-    const rubroActual = RUBROS.find(r => r.id === rubroId)!
-
+    // Sincronizar módulo abierto al navegar
     useEffect(() => { setAbierto(moduloActivo) }, [moduloActivo])
 
-    // Cierra sidebar en mobile al navegar
+    const rubroActual = RUBROS.find(r => r.id === rubroId)!
+
+    const { estado: cajaEstado, sesion: cajaSesion } = useCajaStore()
+    const cajaAbierta = cajaEstado === 'abierta' && !!cajaSesion
+
+    // Sub-ítems del POS dinámicos según estado de caja
+    const posSubs: Sub[] = cajaAbierta
+        ? [
+            { label: 'Cobro rápido',   seccion: 'pos' },
+            { label: 'Reporte',         seccion: 'pos', vista: 'reporte' },
+            { label: 'Cerrar caja',     seccion: 'pos', vista: 'cierre' },
+            { label: 'Historial cajas', seccion: 'pos', vista: 'historial' },
+          ]
+        : [
+            { label: 'Abrir caja',      seccion: 'pos', vista: 'apertura' },
+            { label: 'Historial cajas', seccion: 'pos', vista: 'historial' },
+          ]
+
     const ir = (sec: string, v?: string) => {
         const query: Record<string, string> = { negocioId, moduloPadre: 'ventas', seccion: sec }
         if (v) query.vista = v
@@ -129,7 +147,12 @@ export default function Sidebar({ isOpen, onClose }: Props) {
         }
     }, [busqueda])
 
-    const subActiva = (s: Sub) => seccion === s.seccion && (vista || '') === (s.vista || '')
+    const subActiva = (m: Modulo, s: Sub) => {
+        if (seccion !== s.seccion) return false
+        if (s.vista) return (vista || '') === s.vista
+        const siblingsWithVista = (m.subs ?? []).filter(sub => sub.seccion === s.seccion && sub.vista)
+        return !siblingsWithVista.some(sub => (vista || '') === sub.vista)
+    }
 
     return (
         <>
@@ -262,6 +285,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
                     {MODULOS.map(m => {
                         const activo = moduloActivo === m.id
                         const open   = abierto === m.id
+                        const subs   = m.id === 'pos' ? posSubs : (m.subs ?? [])
                         return (
                             <div key={m.id}>
                                 <button
@@ -277,10 +301,10 @@ export default function Sidebar({ isOpen, onClose }: Props) {
                                     {m.badge && <span className="grid place-items-center text-[10px] font-bold" style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9999, fontFamily: '"Geist Mono", monospace', background: activo ? 'var(--color-primary)' : 'var(--color-surface-alt)', color: activo ? '#fff' : 'var(--color-muted)' }}>{m.badge}</span>}
                                 </button>
 
-                                {open && m.subs && (
+                                {open && subs.length > 0 && (
                                     <div className="flex flex-col gap-px mt-0.5" style={{ paddingLeft: 20 }}>
-                                        {m.subs.map(s => {
-                                            const sa = subActiva(s)
+                                        {subs.map(s => {
+                                            const sa = subActiva(m, s)
                                             return (
                                                 <button
                                                     key={s.label}

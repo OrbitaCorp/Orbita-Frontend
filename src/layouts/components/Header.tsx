@@ -12,9 +12,30 @@ const seccionLabels: Record<string, string> = {
     pos: 'POS',
     inventario: 'Inventario',
     descuentos: 'Descuentos',
+    cupones: 'Cupones',
     mensajes: 'Mensajes',
     configuracion: 'Configuración',
 }
+
+const DESCUENTOS_VISTA_LABELS: Record<string, string> = {
+    crear: 'Crear descuento',
+    editar: 'Editar descuento',
+    detalle: 'Detalle',
+    metricas: 'Rendimiento',
+}
+
+const CUPONES_VISTA_LABELS: Record<string, string> = {
+    crear: 'Crear cupón',
+    editar: 'Editar cupón',
+}
+
+const POS_VISTA_LABELS: Record<string, string> = {
+    reporte: 'Reporte',
+    cierre: 'Cerrar caja',
+    historial: 'Historial cajas',
+}
+
+type BcItem = { label: string; onClick?: () => void }
 
 interface Notif { id: string; nivel: 'danger' | 'warning'; titulo: string; desc: string; tiempo: string }
 const NOTIFS: Notif[] = [
@@ -28,10 +49,12 @@ interface Props { onMenuClick: () => void }
 
 export default function Header({ onMenuClick }: Props) {
     const { isDark, toggle } = useDarkMode()
-    const { query } = useRouter()
+    const router = useRouter()
+    const { query } = router
+    const negocioId   = (query.negocioId   as string) ?? 'rama-tienda'
+    const moduloPadre = (query.moduloPadre as string) ?? 'ventas'
     const seccion     = (query.seccion     as string) ?? ''
-    const moduloPadre = (query.moduloPadre as string) ?? 'Gestión'
-    const titulo      = seccionLabels[seccion] ?? seccion
+    const vista       = (query.vista       as string) ?? ''
 
     const [userMenuAbierto, setUserMenuAbierto] = useState(false)
     const [notifOpen,       setNotifOpen]       = useState(false)
@@ -48,6 +71,61 @@ export default function Header({ onMenuClick }: Props) {
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    const irA = (sec: string, v?: string) => {
+        const q: Record<string, string> = { negocioId, moduloPadre, seccion: sec }
+        if (v) q.vista = v
+        router.push({ pathname: '/admin/[negocioId]/[moduloPadre]/[seccion]', query: q })
+    }
+
+    const buildBreadcrumb = (): BcItem[] => {
+        if (seccion === 'pos') {
+            const subLabel = POS_VISTA_LABELS[vista]
+            if (subLabel) {
+                return [
+                    { label: 'POS', onClick: () => irA('pos') },
+                    { label: subLabel },
+                ]
+            }
+            return [{ label: 'POS' }]
+        }
+        if (seccion === 'mensajes') {
+            if (vista === 'plantillas') {
+                return [
+                    { label: 'Mensajes', onClick: () => irA('mensajes') },
+                    { label: 'Plantillas' },
+                ]
+            }
+            return [{ label: 'Mensajes' }]
+        }
+        if (seccion === 'descuentos') {
+            const subLabel = DESCUENTOS_VISTA_LABELS[vista]
+            if (subLabel) {
+                return [
+                    { label: 'Descuentos', onClick: () => irA('descuentos') },
+                    { label: subLabel },
+                ]
+            }
+            return [{ label: 'Descuentos' }]
+        }
+        if (seccion === 'cupones') {
+            const subLabel = CUPONES_VISTA_LABELS[vista]
+            if (subLabel) {
+                return [
+                    { label: 'Descuentos', onClick: () => irA('descuentos') },
+                    { label: 'Cupones', onClick: () => irA('cupones') },
+                    { label: subLabel },
+                ]
+            }
+            return [
+                { label: 'Descuentos', onClick: () => irA('descuentos') },
+                { label: 'Cupones' },
+            ]
+        }
+        return [{ label: seccionLabels[seccion] ?? seccion }]
+    }
+
+    const bcItems = buildBreadcrumb()
 
     return (
         <>
@@ -82,11 +160,26 @@ export default function Header({ onMenuClick }: Props) {
                     <Menu size={18} strokeWidth={1.8} />
                 </button>
 
-                {/* Breadcrumb */}
+                {/* Breadcrumb dinámico */}
                 <div className="flex items-center gap-2 text-sm" style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ color: 'var(--color-muted)', whiteSpace: 'nowrap' }} className="capitalize">{moduloPadre}</span>
-                    <span style={{ color: 'var(--color-muted)' }}>›</span>
-                    <span className="font-medium" style={{ color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titulo}</span>
+                    {bcItems.map((item, i) => (
+                        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ color: 'var(--color-muted)' }}>›</span>
+                            {item.onClick ? (
+                                <button
+                                    onClick={item.onClick}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 14, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text)' }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-muted)' }}
+                                >
+                                    {item.label}
+                                </button>
+                            ) : (
+                                <span className="font-medium" style={{ color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                            )}
+                        </span>
+                    ))}
                 </div>
 
                 {/* Acciones */}

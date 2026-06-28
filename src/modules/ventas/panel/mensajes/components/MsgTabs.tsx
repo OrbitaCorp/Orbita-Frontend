@@ -16,7 +16,7 @@ const TABS: { id: VistaMensaje; label: string }[] = [
 export function MsgTabs({ activo, ir }: MsgTabsProps) {
     const efectivo = activo === 'chat' ? 'bandeja' : activo
     return (
-        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
             {TABS.map(tb => {
                 const a = efectivo === tb.id
                 return (

@@ -18,18 +18,49 @@ export default function App({ Component, pageProps }: AppProps) {
     // Carga inicial: ocultar el loader después de que React hidrata
     const timer = setTimeout(() => setLoading(false), 500)
 
-    const onStart    = () => setLoading(true)
-    const onFinish   = () => setLoading(false)
+    // PageLoader solo aparece la PRIMERA vez que se visita cada módulo (pathname distinto).
+    // Visitas subsiguientes son instantáneas (ya en cache).
+    // Cambios de query (sub-módulos, ?vista=...) nunca disparan el loader.
+    // Usa un contador para manejar redirects encadenados (ej: POS → ?vista=apertura).
+    let minTimer: ReturnType<typeof setTimeout> | null = null
+    const visitedPaths = new Set<string>([window.location.pathname])
+    let counter = 0
+
+    const onStart = (url: string) => {
+      const nextPath = url.split('?')[0]
+      const curPath = window.location.pathname
+      if (nextPath !== curPath && !visitedPaths.has(nextPath)) {
+        counter++
+        if (minTimer) { clearTimeout(minTimer); minTimer = null }
+        setLoading(true)
+      }
+    }
+    const onFinish = (url: string) => {
+      visitedPaths.add(url.split('?')[0])
+      if (counter > 0) {
+        counter--
+        if (counter === 0) {
+          if (minTimer) clearTimeout(minTimer)
+          minTimer = setTimeout(() => setLoading(false), 300)
+        }
+      }
+    }
+    const onError = () => {
+      counter = 0
+      if (minTimer) clearTimeout(minTimer)
+      setLoading(false)
+    }
 
     router.events.on('routeChangeStart',    onStart)
     router.events.on('routeChangeComplete', onFinish)
-    router.events.on('routeChangeError',    onFinish)
+    router.events.on('routeChangeError',    onError)
 
     return () => {
       clearTimeout(timer)
+      if (minTimer) clearTimeout(minTimer)
       router.events.off('routeChangeStart',    onStart)
       router.events.off('routeChangeComplete', onFinish)
-      router.events.off('routeChangeError',    onFinish)
+      router.events.off('routeChangeError',    onError)
     }
   }, [router.events])
 
