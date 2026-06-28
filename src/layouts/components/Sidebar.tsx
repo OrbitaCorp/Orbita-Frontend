@@ -86,7 +86,7 @@ const MODULOS: Modulo[] = [
 
 const SECCION_MODULO: Record<string, string> = {
     dashboard: 'dashboard', pedidos: 'pedidos', clientes: 'clientes',
-    catalogo: 'productos', categorias: 'productos', inventario: 'productos', reportes: 'productos',
+    catalogo: 'productos', categorias: 'productos', inventario: 'productos',
     pos: 'pos', mensajes: 'mensajes', descuentos: 'descuentos', configuracion: 'config',
 }
 
@@ -98,7 +98,9 @@ export default function Sidebar({ isOpen, onClose }: Props) {
     const seccion    = (router.query.seccion     as string) ?? 'dashboard'
     const vista      = (router.query.vista       as string) ?? ''
 
-    const moduloActivo = SECCION_MODULO[seccion] ?? 'dashboard'
+    const moduloActivo = seccion === 'reportes'
+        ? (vista === 'clientes' ? 'clientes' : 'productos')
+        : SECCION_MODULO[seccion] ?? 'dashboard'
     const [abierto,   setAbierto]   = useState(moduloActivo)
     const [busqueda,  setBusqueda]  = useState('')
     const [publicada, setPublicada] = useState(false)
