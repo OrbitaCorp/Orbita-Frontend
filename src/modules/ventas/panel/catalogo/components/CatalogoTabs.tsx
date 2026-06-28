@@ -3,13 +3,12 @@
 
 import { useRouter } from 'next/router'
 
-export type TabCatalogo = 'lista' | 'crear' | 'categorias' | 'inventario' | 'reportes' | 'codigos'
+export type TabCatalogo = 'lista' | 'crear' | 'categorias' | 'reportes' | 'codigos'
 
 const TABS: { id: TabCatalogo; label: string }[] = [
     { id: 'lista',      label: 'Lista de productos'   },
     { id: 'crear',      label: 'Crear producto'        },
     { id: 'categorias', label: 'Categorías'            },
-    { id: 'inventario', label: 'Inventario'            },
     { id: 'reportes',   label: 'Reportes de productos' },
     { id: 'codigos',    label: 'Códigos de barras'     },
 ]
@@ -23,7 +22,6 @@ export function CatalogoTabs({ activo }: { activo: TabCatalogo }) {
         if (tab === 'lista')        router.push({ query: { ...base, seccion: 'catalogo' } })
         else if (tab === 'crear')   router.push({ query: { ...base, seccion: 'catalogo', vista: 'nuevo' } })
         else if (tab === 'categorias') router.push({ query: { ...base, seccion: 'categorias' } })
-        else if (tab === 'inventario') router.push({ query: { ...base, seccion: 'inventario' } })
         else if (tab === 'reportes')   router.push({ query: { ...base, seccion: 'reportes', vista: 'productos' } })
         else if (tab === 'codigos')    router.push({ query: { ...base, seccion: 'codigos' } })
     }

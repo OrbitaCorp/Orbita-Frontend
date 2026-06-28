@@ -45,7 +45,6 @@ const MODULOS: Modulo[] = [
             { label: 'Lista de productos', seccion: 'catalogo' },
             { label: 'Crear producto', seccion: 'catalogo', vista: 'nuevo' },
             { label: 'Categorías', seccion: 'categorias' },
-            { label: 'Inventario', seccion: 'inventario' },
             { label: 'Reporte de productos', seccion: 'reportes', vista: 'productos' },
             { label: 'Códigos de barras', seccion: 'codigos' },
         ],
@@ -87,7 +86,7 @@ const MODULOS: Modulo[] = [
 
 const SECCION_MODULO: Record<string, string> = {
     dashboard: 'dashboard', pedidos: 'pedidos', clientes: 'clientes',
-    catalogo: 'productos', categorias: 'productos', inventario: 'productos', codigos: 'productos',
+    catalogo: 'productos', categorias: 'productos', codigos: 'productos',
     pos: 'pos', mensajes: 'mensajes', descuentos: 'descuentos', configuracion: 'config',
 }
 
