@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Shuffle } from 'lucide-react'
 import { SectionCard, FormField, LabelRow } from './components/FormField'
+import { LinkCompartibleSection } from './components/LinkCompartibleSection'
 import { TipoCuponSelector } from './components/TipoCuponSelector'
 import { AlcanceSelector } from './components/AlcanceSelector'
 import { CategoriaLista } from './components/CategoriaLista'
@@ -33,9 +34,12 @@ export function CuponesCrear({ id, onVolver }: Props) {
   const [usosMaxPorCliente, setUsosMaxPorCliente] = useState('')
   const [ilimitadoTotal, setIlimitadoTotal] = useState(true)
   const [ilimitadoPorCliente, setIlimitadoPorCliente] = useState(true)
+  const [privado, setPrivado] = useState(false)
   const [fechaInicio, setFechaInicio] = useState(() => new Date().toISOString().split('T')[0])
   const [fechaExpiracion, setFechaExpiracion] = useState('')
   const [sinVencimiento, setSinVencimiento] = useState(false)
+  const [linkActivo, setLinkActivo] = useState(false)
+  const [linkRedirect, setLinkRedirect] = useState<string | null>(null)
   const [errores, setErrores] = useState<Record<string, string>>({})
 
   const { data: existing, isLoading } = useCupon(id)
@@ -57,9 +61,12 @@ export function CuponesCrear({ id, onVolver }: Props) {
     setUsosMaxTotal(String(existing.usosMaxTotal ?? ''))
     setIlimitadoPorCliente(!existing.usosMaxPorCliente)
     setUsosMaxPorCliente(String(existing.usosMaxPorCliente ?? ''))
+    setPrivado(existing.privado)
     setFechaInicio(existing.fechaInicio.split('T')[0])
     setSinVencimiento(!existing.fechaExpiracion)
     setFechaExpiracion(existing.fechaExpiracion?.split('T')[0] ?? '')
+    setLinkActivo(existing.link_activo)
+    setLinkRedirect(existing.link_redirect)
   }, [existing])
 
   const validar = () => {
@@ -90,6 +97,9 @@ export function CuponesCrear({ id, onVolver }: Props) {
       fechaInicio,
       fechaExpiracion: sinVencimiento ? null : fechaExpiracion,
       activo: true,
+      privado,
+      link_activo: linkActivo,
+      link_redirect: linkRedirect,
     }
     if (id) {
       await editarMutation.mutateAsync({ id, data: payload })
@@ -197,6 +207,8 @@ export function CuponesCrear({ id, onVolver }: Props) {
                   Solo visible para administradores. No se muestra al cliente.
                 </p>
               </div>
+              <LabelRow label="Cupón privado" right={<Toggle checked={privado} onChange={setPrivado} />} />
+              {privado && <p style={{ margin: '-8px 0 0', fontSize: 12, color: 'var(--color-muted)' }}>Solo canjeable si el cliente conoce el código. No aparece en la tienda.</p>}
             </div>
           </SectionCard>
 
@@ -264,6 +276,8 @@ export function CuponesCrear({ id, onVolver }: Props) {
               </div>
             </div>
           </SectionCard>
+
+          {id && <LinkCompartibleSection codigo={codigo} linkActivo={linkActivo} onToggleActivo={setLinkActivo} linkRedirect={linkRedirect} onRedirectChange={setLinkRedirect} />}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingBottom: 40 }}>
             <button type="button" onClick={onVolver} style={{ height: 40, padding: '0 20px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-body)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancelar</button>

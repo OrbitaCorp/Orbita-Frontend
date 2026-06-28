@@ -194,7 +194,7 @@ export function DescuentosCrear({ id, onVolver }: Props) {
           )}
 
           <SectionCard title="Vigencia y condiciones">
-            <VigenciaForm fechaInicio={state.fechaInicio} fechaFin={state.fechaFin} sinVencimiento={state.sinVencimiento} diasVigencia={state.diasVigencia} todoElDia={state.todoElDia} horaInicio={state.horaInicio} horaFin={state.horaFin} limiteUsosTotal={state.limiteUsosTotal} ilimitadoUsos={state.ilimitadoUsos} onChange={(field, value) => dispatch({ type: 'SET', key: field as keyof DescuentoFormState, value })} errores={state.errores} />
+            <VigenciaForm fechaInicio={state.fechaInicio} fechaFin={state.fechaFin} sinVencimiento={state.sinVencimiento} diasVigencia={state.diasVigencia} todosDias={state.todosDias} todoElDia={state.todoElDia} horaInicio={state.horaInicio} horaFin={state.horaFin} limiteUsosTotal={state.limiteUsosTotal} ilimitadoUsos={state.ilimitadoUsos} onChange={(field, value) => dispatch({ type: 'SET', key: field as keyof DescuentoFormState, value })} errores={state.errores} />
           </SectionCard>
 
           <SectionCard title="Modo de aplicación">

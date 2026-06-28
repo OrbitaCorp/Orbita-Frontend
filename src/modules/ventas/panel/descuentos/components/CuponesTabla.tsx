@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Copy, BarChart2, Trash2, Clipboard, Ticket } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Copy, BarChart2, Trash2, Clipboard, Ticket, Link2 } from 'lucide-react'
 import { ToggleConfirmacion, MenuContextual } from '../../../_shared/components'
 import type { ItemMenuContextual } from '../../../_shared/components'
 import { BadgeEstado } from './BadgeEstado'
 import { BadgeTipo } from './BadgeTipo'
+import { LinkCompartibleModal } from './LinkCompartibleModal'
 import { useToggleCupon } from '../hooks/useToggleCupon'
 import { useEliminarCupon } from '../hooks/useEliminarCupon'
 import { useDuplicarCupon } from '../hooks/useDuplicarCupon'
@@ -71,6 +72,7 @@ function FilaCupon({ cupon, onEditar, onVerMetricas }: {
 }) {
   const [hover, setHover] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [showLinkModal, setShowLinkModal] = useState(false)
   const toggle = useToggleCupon()
   const eliminar = useEliminarCupon()
   const duplicar = useDuplicarCupon()
@@ -85,12 +87,15 @@ function FilaCupon({ cupon, onEditar, onVerMetricas }: {
 
   const items: ItemMenuContextual[] = [
     { label: 'Duplicar', Icono: Copy, onClick: () => duplicar.mutate(cupon.id) },
+    { label: 'Link compartible', Icono: Link2, onClick: () => setShowLinkModal(true) },
     { label: 'Ver métricas', Icono: BarChart2, onClick: onVerMetricas },
     { label: 'Eliminar', Icono: Trash2, destructivo: true, separadorAntes: true, onClick: () => eliminar.mutate(cupon.id) },
     { label: copiado ? 'Copiado' : 'Copiar código', Icono: Clipboard, onClick: copiarCodigo },
   ]
 
   return (
+    <>
+    {showLinkModal && <LinkCompartibleModal cupon={cupon} onClose={() => setShowLinkModal(false)} />}
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -103,8 +108,9 @@ function FilaCupon({ cupon, onEditar, onVerMetricas }: {
         transition: 'background 100ms ease',
       }}
     >
-      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', letterSpacing: '0.01em', ...MONO }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-text)', letterSpacing: '0.01em', ...MONO }}>
         {cupon.codigo}
+        {cupon.link_activo && <Link2 size={11} color="var(--color-primary)" style={{ flexShrink: 0 }} />}
       </span>
       <span style={{ fontSize: 13, color: 'var(--color-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {cupon.nombre}
@@ -146,6 +152,7 @@ function FilaCupon({ cupon, onEditar, onVerMetricas }: {
         <MenuContextual items={items} />
       </div>
     </div>
+    </>
   )
 }
 

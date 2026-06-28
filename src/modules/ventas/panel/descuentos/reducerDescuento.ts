@@ -36,6 +36,7 @@ export interface DescuentoFormState {
   fechaFin: string
   sinVencimiento: boolean
   diasVigencia: number[]
+  todosDias: boolean
   todoElDia: boolean
   horaInicio: string
   horaFin: string
@@ -89,6 +90,7 @@ export const initialDescuentoState: DescuentoFormState = {
   fechaFin: '',
   sinVencimiento: false,
   diasVigencia: [],
+  todosDias: true,
   todoElDia: true,
   horaInicio: '00:00',
   horaFin: '23:59',

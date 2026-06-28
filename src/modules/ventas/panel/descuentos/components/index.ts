@@ -33,6 +33,9 @@ export { DetalleVigencia } from './DetalleVigencia'
 export { HistorialCambios } from './HistorialCambios'
 export { DetalleAcciones } from './DetalleAcciones'
 export { DetalleRendimiento } from './DetalleRendimiento'
+// Links compartibles
+export { LinkCompartibleModal } from './LinkCompartibleModal'
+export { LinkCompartibleSection } from './LinkCompartibleSection'
 // Fase 5 — Métricas
 export { MetricasKPIs } from './MetricasKPIs'
 export { MetricasGrafico } from './MetricasGrafico'

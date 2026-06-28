@@ -32,9 +32,14 @@ export interface Cupon {
   fechaInicio: string // ISO 8601
   fechaExpiracion: string | null // null = sin vencimiento
   activo: boolean
+  privado: boolean // true = solo canjeable si el cliente conoce el código; no aparece en la tienda
   // Campos derivados por el backend para el listado
   estado: EstadoCupon
   alcanceResumen: string
+  // Link compartible
+  link_activo: boolean
+  link_redirect: string | null
+  link_creado_at: string | null
   // Metadata
   creadoPor: string
   createdAt: string

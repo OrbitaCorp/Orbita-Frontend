@@ -16,6 +16,7 @@ interface Props {
   fechaFin: string
   sinVencimiento: boolean
   diasVigencia: number[]
+  todosDias: boolean
   todoElDia: boolean
   horaInicio: string
   horaFin: string
@@ -27,7 +28,7 @@ interface Props {
 
 export function VigenciaForm({
   fechaInicio, fechaFin, sinVencimiento,
-  diasVigencia, todoElDia, horaInicio, horaFin,
+  diasVigencia, todosDias, todoElDia, horaInicio, horaFin,
   limiteUsosTotal, ilimitadoUsos,
   onChange, errores = {},
 }: Props) {
@@ -55,10 +56,7 @@ export function VigenciaForm({
             right={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Sin vencimiento</span>
-                <Toggle
-                  checked={sinVencimiento}
-                  onChange={(v) => onChange('sinVencimiento', v)}
-                />
+                <Toggle checked={sinVencimiento} onChange={(v) => onChange('sinVencimiento', v)} />
               </div>
             }
           />
@@ -74,28 +72,38 @@ export function VigenciaForm({
 
       {/* Días de la semana */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--color-body)' }}>
-            Días de la semana
-          </p>
-          {diasVigencia.length === 0 && (
-            <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Todos los días</span>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <LabelRow
+          label="Días de la semana"
+          right={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Todos los días</span>
+              <Toggle
+                checked={todosDias}
+                onChange={(v) => {
+                  onChange('todosDias', v)
+                  if (v) onChange('diasVigencia', [])
+                }}
+              />
+            </div>
+          }
+        />
+        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
           {DIAS.map(({ idx, label }) => {
-            const activo = diasVigencia.includes(idx)
+            const activo = !todosDias && diasVigencia.includes(idx)
             return (
               <button
                 key={idx}
                 type="button"
+                disabled={todosDias}
                 onClick={() => toggleDia(idx)}
                 style={{
                   width: 38, height: 38, borderRadius: '50%', border: 'none',
                   background: activo ? 'var(--color-primary)' : 'var(--color-surface-alt)',
                   color: activo ? '#fff' : 'var(--color-muted)',
-                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  transition: 'background 150ms ease, color 150ms ease',
+                  fontSize: 12, fontWeight: 600,
+                  cursor: todosDias ? 'not-allowed' : 'pointer',
+                  opacity: todosDias ? 0.45 : 1,
+                  transition: 'background 150ms ease, color 150ms ease, opacity 150ms ease',
                 }}
               >
                 {label}
@@ -112,31 +120,28 @@ export function VigenciaForm({
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Todo el día</span>
-              <Toggle
-                checked={todoElDia}
-                onChange={(v) => onChange('todoElDia', v)}
-              />
+              <Toggle checked={todoElDia} onChange={(v) => onChange('todoElDia', v)} />
             </div>
           }
         />
-        {!todoElDia && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 6 }}>
-            <FormField
-              label="Desde"
-              type="time"
-              value={horaInicio}
-              onChange={(e) => onChange('horaInicio', e.target.value)}
-              error={errores.horaInicio}
-            />
-            <FormField
-              label="Hasta"
-              type="time"
-              value={horaFin}
-              onChange={(e) => onChange('horaFin', e.target.value)}
-              error={errores.horaFin}
-            />
-          </div>
-        )}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 6 }}>
+          <FormField
+            label="Desde"
+            type="time"
+            value={horaInicio}
+            onChange={(e) => onChange('horaInicio', e.target.value)}
+            disabled={todoElDia}
+            error={errores.horaInicio}
+          />
+          <FormField
+            label="Hasta"
+            type="time"
+            value={horaFin}
+            onChange={(e) => onChange('horaFin', e.target.value)}
+            disabled={todoElDia}
+            error={errores.horaFin}
+          />
+        </div>
       </div>
 
       {/* Límite de usos */}
@@ -146,10 +151,7 @@ export function VigenciaForm({
           right={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Ilimitado</span>
-              <Toggle
-                checked={ilimitadoUsos}
-                onChange={(v) => onChange('ilimitadoUsos', v)}
-              />
+              <Toggle checked={ilimitadoUsos} onChange={(v) => onChange('ilimitadoUsos', v)} />
             </div>
           }
         />
