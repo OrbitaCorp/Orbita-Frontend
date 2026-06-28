@@ -1,7 +1,8 @@
 // src/modules/ventas/panel/reportes/Dashboard.tsx — Vista 01
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Banknote, ShoppingBag, BarChart3, Users, Globe, Bell, X, Check, Maximize2 } from 'lucide-react'
+import { Banknote, ShoppingBag, BarChart3, Users, Globe, Bell, X, Check, Maximize2, CalendarDays, ChevronDown } from 'lucide-react'
+import { DateRangePicker, fmtChip } from './components/DateRangePicker'
 import { Card } from '@/design-system/components/Card'
 import { Button } from '@/design-system/components/Button'
 import { Avatar } from '@/design-system/components/Avatar'
@@ -35,12 +36,25 @@ export default function Dashboard() {
     const [publicada, setPublicada] = useState(false)
     const [expand, setExpand] = useState<null | 'ventas' | 'top'>(null)
     const [toast, setToast] = useState<string | null>(null)
+    const [calendarOpen, setCalendarOpen] = useState(false)
+    const [customRange, setCustomRange] = useState<{ start: Date; end: Date | null } | null>(null)
+    const calendarRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         if (!toast) return
         const t = setTimeout(() => setToast(null), 3000)
         return () => clearTimeout(t)
     }, [toast])
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+                setCalendarOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
+    }, [])
 
     const goSeccion = (seccion: string, extra?: Record<string, string>) => {
         const { negocioId, moduloPadre } = router.query
@@ -75,12 +89,51 @@ export default function Dashboard() {
                     </h1>
                     <div style={{ fontSize: 14, color: 'var(--color-muted)', marginTop: 4, textTransform: 'capitalize' }}>{fechaLarga()}</div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/* Segmented: Hoy / Semana / Mes */}
                     <div style={{ display: 'inline-flex', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 3 }}>
                         {PERIODOS.map((p, i) => (
-                            <button key={p} onClick={() => setPeriodo(i)} style={{ height: 30, padding: '0 12px', borderRadius: 6, border: 'none', background: i === periodo ? 'var(--color-bg)' : 'transparent', color: i === periodo ? 'var(--color-text)' : 'var(--color-muted)', fontSize: 13, fontWeight: i === periodo ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: i === periodo ? '0 1px 2px rgba(0,0,0,0.06)' : 'none' }}>{p}</button>
+                            <button key={p} onClick={() => { setPeriodo(i); setCalendarOpen(false) }} style={{ height: 30, padding: '0 12px', borderRadius: 6, border: 'none', background: i === periodo ? 'var(--color-bg)' : 'transparent', color: i === periodo ? 'var(--color-text)' : 'var(--color-muted)', fontSize: 13, fontWeight: i === periodo ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: i === periodo ? '0 1px 2px rgba(0,0,0,0.06)' : 'none' }}>{p}</button>
                         ))}
                     </div>
+
+                    {/* Personalizado con calendario */}
+                    <div style={{ position: 'relative' }} ref={calendarRef}>
+                        <button
+                            onClick={() => { setPeriodo(-1); setCalendarOpen(o => !o) }}
+                            style={{
+                                height: 36, padding: '0 12px', borderRadius: 8,
+                                border: `1px solid ${periodo === -1 ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                                background: periodo === -1 ? 'var(--color-primary-bg)' : 'var(--color-surface)',
+                                color: periodo === -1 ? 'var(--color-primary)' : 'var(--color-muted)',
+                                fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+                                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <CalendarDays size={14} />
+                            {customRange && periodo === -1
+                                ? `${fmtChip(customRange.start)}${customRange.end ? ` – ${fmtChip(customRange.end)}` : ''}`
+                                : 'Personalizado'
+                            }
+                            <ChevronDown size={12} style={{ transform: calendarOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
+                        </button>
+
+                        {calendarOpen && (
+                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 500 }}>
+                                <DateRangePicker
+                                    onApply={(start, end) => {
+                                        setCustomRange({ start, end })
+                                        setPeriodo(-1)
+                                        setCalendarOpen(false)
+                                    }}
+                                    onClose={() => setCalendarOpen(false)}
+                                    initStart={customRange?.start}
+                                    initEnd={customRange?.end ?? null}
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <Button variant={publicada ? 'secondary' : 'outline'} icon={<Globe size={15} />} onClick={publicar} style={publicada ? { color: 'var(--color-success)' } : undefined}>
                         {publicada ? '✓ Tienda online' : 'Publicar tienda'}
                     </Button>
