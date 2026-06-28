@@ -23,7 +23,9 @@ export function CatalogoTabs({ activo }: { activo: TabCatalogo }) {
     }
 
     return (
-        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 20, overflowX: 'auto' }}>
+        <>
+        <style>{`.mod-tabs{-ms-overflow-style:none;scrollbar-width:none}.mod-tabs::-webkit-scrollbar{display:none}`}</style>
+        <div className="mod-tabs" style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 20, overflowX: 'auto' }}>
             {TABS.map(tb => {
                 const a = activo === tb.id
                 return (
@@ -43,6 +45,7 @@ export function CatalogoTabs({ activo }: { activo: TabCatalogo }) {
                 )
             })}
         </div>
+        </>
     )
 }
 

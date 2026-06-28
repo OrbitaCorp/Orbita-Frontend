@@ -28,7 +28,9 @@ interface PedidoTabsProps {
 
 export function PedidoTabs({ activo, ir }: PedidoTabsProps) {
     return (
-        <div style={{
+        <>
+        <style>{`.mod-tabs{-ms-overflow-style:none;scrollbar-width:none}.mod-tabs::-webkit-scrollbar{display:none}`}</style>
+        <div className="mod-tabs" style={{
             display:      'flex',
             gap:          4,
             borderBottom: '1px solid var(--color-border)',
@@ -64,5 +66,6 @@ export function PedidoTabs({ activo, ir }: PedidoTabsProps) {
                 )
             })}
         </div>
+        </>
     )
 }
