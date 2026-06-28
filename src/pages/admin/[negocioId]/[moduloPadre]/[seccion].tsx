@@ -22,6 +22,7 @@ const componentMap: Record<string, Record<string, ComponentType>> = {
         configuracion:  dynamic(() => import('@/modules/ventas/panel/configuracion/ConfigGeneral'), { ssr: false }),
         pos:            dynamic(() => import('@/modules/ventas/panel/pos/POSShell').then(m => ({ default: m.POSShell })), { ssr: false }),
         inventario:     dynamic(() => import('@/modules/ventas/panel/inventario/StockGeneral'), { ssr: false }),
+        codigos:        dynamic(() => import('@/modules/ventas/panel/catalogo/CodigosBarras'), { ssr: false }),
         descuentos:     dynamic(() => import('@/modules/ventas/panel/descuentos/DescuentosShell').then(m => ({ default: m.DescuentosShell })), { ssr: false }),
         mensajes:       dynamic(() => import('@/modules/ventas/panel/mensajes/Bandeja').then(m => ({ default: m.MensajesHub })), { ssr: false }),
     },

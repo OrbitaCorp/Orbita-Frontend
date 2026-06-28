@@ -1,31 +1,37 @@
-// Tabs del módulo catálogo. Navegan entre dos secciones del componentMap:
-// `catalogo` (Lista P1 / Crear P2 vía ?vista=nuevo) y `categorias` (P3).
+// Tabs del módulo catálogo. Navegan entre todas las secciones del módulo de productos.
+// Tabs: Lista · Crear · Categorías · Inventario · Reportes · Códigos
 
 import { useRouter } from 'next/router'
 
-export type TabCatalogo = 'lista' | 'crear' | 'categorias'
+export type TabCatalogo = 'lista' | 'crear' | 'categorias' | 'inventario' | 'reportes' | 'codigos'
 
 const TABS: { id: TabCatalogo; label: string }[] = [
-    { id: 'lista',      label: 'Lista de productos' },
-    { id: 'crear',      label: 'Crear producto'     },
-    { id: 'categorias', label: 'Categorías'         },
+    { id: 'lista',      label: 'Lista de productos'   },
+    { id: 'crear',      label: 'Crear producto'        },
+    { id: 'categorias', label: 'Categorías'            },
+    { id: 'inventario', label: 'Inventario'            },
+    { id: 'reportes',   label: 'Reportes de productos' },
+    { id: 'codigos',    label: 'Códigos de barras'     },
 ]
 
 export function CatalogoTabs({ activo }: { activo: TabCatalogo }) {
     const router = useRouter()
     const { negocioId, moduloPadre } = router.query
+    const base = { negocioId: negocioId as string, moduloPadre: moduloPadre as string }
 
     const go = (tab: TabCatalogo) => {
-        const base = { negocioId: negocioId as string, moduloPadre: moduloPadre as string }
         if (tab === 'lista')        router.push({ query: { ...base, seccion: 'catalogo' } })
         else if (tab === 'crear')   router.push({ query: { ...base, seccion: 'catalogo', vista: 'nuevo' } })
-        else                        router.push({ query: { ...base, seccion: 'categorias' } })
+        else if (tab === 'categorias') router.push({ query: { ...base, seccion: 'categorias' } })
+        else if (tab === 'inventario') router.push({ query: { ...base, seccion: 'inventario' } })
+        else if (tab === 'reportes')   router.push({ query: { ...base, seccion: 'reportes', vista: 'productos' } })
+        else if (tab === 'codigos')    router.push({ query: { ...base, seccion: 'codigos' } })
     }
 
     return (
         <>
-        <style>{`.mod-tabs{-ms-overflow-style:none;scrollbar-width:none}.mod-tabs::-webkit-scrollbar{display:none}`}</style>
-        <div className="mod-tabs" style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 20, overflowX: 'auto' }}>
+        <style>{`.cat-tabs{-ms-overflow-style:none;scrollbar-width:none}.cat-tabs::-webkit-scrollbar{display:none}`}</style>
+        <div className="cat-tabs" style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--color-border)', marginBottom: 20, overflowX: 'auto' }}>
             {TABS.map(tb => {
                 const a = activo === tb.id
                 return (

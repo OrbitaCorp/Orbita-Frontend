@@ -1,15 +1,8 @@
-﻿// src/modules/ventas/panel/catalogo/ProductoLista.tsx — Vista P1 + hub del módulo
-//
-// Punto de entrada del módulo `catalogo` (registrado en el componentMap admin).
-// Hub: lista de productos (P1) o wizard de alta (P2) según `router.query.vista`.
-// Las "Categorías" (P3) viven en otra sección (`categorias`) — ver CatalogoTabs.
-//
-//   /admin/[negocioId]/ventas/catalogo              → lista (P1)
-//   …/catalogo?vista=nuevo                          → ProductoNuevo (P2)
+// src/modules/ventas/panel/catalogo/ProductoLista.tsx — Vista P1 + hub del módulo
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Plus, Search, Eye, Edit2, MoreVertical, Copy, Trash2, Package, Globe, AlertCircle } from 'lucide-react'
+import { Plus, Search, Eye, Edit2, MoreVertical, Copy, Trash2, Package, Globe, AlertCircle, Barcode } from 'lucide-react'
 import { Card } from '@/design-system/components/Card'
 import { Button } from '@/design-system/components/Button'
 import { Modal } from '@/design-system/components/Modal'
@@ -23,7 +16,85 @@ import ProductoNuevo from './ProductoNuevo'
 import { PRODUCTOS_DB, CATEGORIAS_DB } from './mock/catalogo.mock'
 import type { Producto } from './types/catalogo.types'
 
-const COLS = '56px 1.5fr 110px 110px 80px 90px 110px 80px'
+const COLS = '56px 1.5fr 110px 110px 80px 90px 110px 100px'
+
+// ─── Barcode SVG ─────────────────────────────────────────────────────────────
+
+function BarcodeVisual({ value, width = 220, height = 72 }: { value: string; width?: number; height?: number }) {
+    const str = value || '0000000000000'
+    const bars: { w: number; black: boolean }[] = []
+    bars.push({ w: 2, black: true }, { w: 1, black: false }, { w: 2, black: true })
+    str.split('').forEach((ch, i) => {
+        const code = ch.charCodeAt(0)
+        for (let b = 0; b < 4; b++) {
+            const hash = ((code * (b + 3) + i * 7) % 3) + 1
+            bars.push({ w: hash, black: b % 2 === 0 })
+        }
+        bars.push({ w: 1, black: false })
+    })
+    bars.push({ w: 2, black: true }, { w: 1, black: false }, { w: 2, black: true })
+    const totalW = bars.reduce((s, b) => s + b.w, 0)
+    const scale = (width - 8) / totalW
+    let x = 4
+    const rects: { x: number; w: number }[] = []
+    bars.forEach(bar => {
+        if (bar.black) rects.push({ x, w: bar.w * scale })
+        x += bar.w * scale
+    })
+    return (
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
+            {rects.map((r, i) => (
+                <rect key={i} x={r.x} y={0} width={Math.max(1, r.w)} height={height - 18} fill="var(--color-text)" />
+            ))}
+            <text x={width / 2} y={height - 2} textAnchor="middle" fontSize={10} fill="var(--color-muted)" fontFamily='"Geist Mono", monospace' letterSpacing={2}>{str}</text>
+        </svg>
+    )
+}
+
+// ─── Card mobile ─────────────────────────────────────────────────────────────
+
+function ProductoCard({ p, onVer, onEditar, onBarcode }: {
+    p: Producto
+    onVer: () => void
+    onEditar: () => void
+    onBarcode: () => void
+}) {
+    const stockCol = p.stock === 0 ? 'var(--color-error)' : p.stock < p.stockMin ? 'var(--color-warning)' : 'var(--color-success)'
+    return (
+        <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <ProductoThumb hue={p.hue} size={44} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>{p.sku}</div>
+                </div>
+                <ProductoEstadoBadge estado={p.estado} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                <div style={{ background: 'var(--color-surface)', borderRadius: 8, padding: '6px 8px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--color-muted)', marginBottom: 2 }}>Precio</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{fmtMoney(p.precio)}</div>
+                </div>
+                <div style={{ background: 'var(--color-surface)', borderRadius: 8, padding: '6px 8px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--color-muted)', marginBottom: 2 }}>Stock</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: stockCol, fontFamily: '"Geist Mono", monospace' }}>{p.stock}</div>
+                </div>
+                <div style={{ background: 'var(--color-surface)', borderRadius: 8, padding: '6px 8px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--color-muted)', marginBottom: 2 }}>Variantes</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{p.variantes.length}</div>
+                </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 10px', borderRadius: 9999, background: 'var(--color-surface-alt)', color: 'var(--color-muted)', fontSize: 11, fontWeight: 600 }}>{p.cat}</span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={onVer}     style={iconBtn}><Eye     size={14} /></button>
+                    <button onClick={onEditar}  style={iconBtn}><Edit2   size={14} /></button>
+                    <button onClick={onBarcode} style={iconBtn}><Barcode size={14} /></button>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 // ─── Lista (P1) ───────────────────────────────────────────────────────────────
 
@@ -33,6 +104,7 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
     const [fest, setFest] = useState('todos')
     const [menu, setMenu] = useState<string | null>(null)
     const [detalle, setDetalle] = useState<Producto | null>(null)
+    const [barcodeModal, setBarcodeModal] = useState<Producto | null>(null)
 
     const rows = useMemo(() => PRODUCTOS_DB.filter(p => {
         if (busq && !p.nombre.toLowerCase().includes(busq.toLowerCase()) && !p.sku.toLowerCase().includes(busq.toLowerCase())) return false
@@ -41,12 +113,32 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
         return true
     }), [busq, fcat, fest])
 
-    const pub = PRODUCTOS_DB.filter(p => p.estado === 'publicado').length
+    const pub  = PRODUCTOS_DB.filter(p => p.estado === 'publicado').length
     const sins = PRODUCTOS_DB.filter(p => p.estado === 'sin_stock').length
-    const bor = PRODUCTOS_DB.filter(p => p.estado === 'borrador').length
+    const bor  = PRODUCTOS_DB.filter(p => p.estado === 'borrador').length
 
     return (
-        <div style={pageWrap}>
+        <div className="prod-page" style={pageWrap}>
+            <style>{`
+                .prod-page       { padding: 24px 32px 64px; }
+                .prod-kpis       { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+                .prod-filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+                .prod-table-wrap { display: block; }
+                .prod-cards-wrap { display: none; }
+                @media (max-width: 768px) {
+                    .prod-page       { padding: 16px 14px 48px !important; }
+                    .prod-kpis       { grid-template-columns: repeat(2,1fr) !important; }
+                    .prod-filter-row { flex-direction: column !important; align-items: stretch !important; }
+                    .prod-filter-row select, .prod-filter-row input { width: 100%; }
+                    .prod-table-wrap { display: none !important; }
+                    .prod-cards-wrap { display: flex !important; flex-direction: column; gap: 10px; }
+                    .prod-header-btn { display: none !important; }
+                }
+                @media (max-width: 460px) {
+                    .prod-kpis { grid-template-columns: 1fr !important; }
+                }
+            `}</style>
+
             <CatalogoTabs activo="lista" />
 
             {/* Header */}
@@ -59,17 +151,17 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
             </div>
 
             {/* KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
-                <StatCard label="Total" value={PRODUCTOS_DB.length} icon={Package} accent="#3B82F6" />
-                <StatCard label="Publicados" value={pub} icon={Globe} accent="#10B981" />
-                <StatCard label="Sin stock" value={sins} icon={AlertCircle} accent="#F59E0B" />
-                <StatCard label="Borradores" value={bor} icon={Edit2} accent="#64748B" />
+            <div className="prod-kpis">
+                <StatCard label="Total"      value={PRODUCTOS_DB.length} icon={Package}     accent="#3B82F6" />
+                <StatCard label="Publicados" value={pub}                 icon={Globe}       accent="#10B981" />
+                <StatCard label="Sin stock"  value={sins}                icon={AlertCircle} accent="#F59E0B" />
+                <StatCard label="Borradores" value={bor}                 icon={Edit2}       accent="#64748B" />
             </div>
 
             {/* Filtros */}
             <Card padding="sm" style={{ padding: 10, marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+                <div className="prod-filter-row">
+                    <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
                         <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)' }} />
                         <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="Buscar por nombre o SKU…" style={{ ...inputBase, width: '100%', height: 36, paddingLeft: 34, paddingRight: 12, fontSize: 13 }} />
                     </div>
@@ -87,8 +179,8 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
                 </div>
             </Card>
 
-            {/* Tabla */}
-            <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
+            {/* ── DESKTOP: tabla ── */}
+            <div className="prod-table-wrap" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 10, padding: '0 16px', height: 44, background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     <span /><span>Producto</span><span>Categoría</span><span style={{ textAlign: 'right' }}>Precio</span><span style={{ textAlign: 'right' }}>Stock</span><span>Variantes</span><span>Estado</span><span style={{ textAlign: 'right' }}>Acc.</span>
                 </div>
@@ -107,8 +199,9 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
                             <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 10px', borderRadius: 9999, background: 'var(--color-primary-bg)', color: 'var(--color-primary)', fontSize: 11, fontWeight: 600, width: 'fit-content' }}>{p.variantes.length} var.</span>
                             <ProductoEstadoBadge estado={p.estado} />
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2, position: 'relative' }}>
-                                <button onClick={() => setDetalle(p)} style={iconBtn}><Eye size={15} /></button>
-                                <button onClick={irNuevo} style={iconBtn}><Edit2 size={15} /></button>
+                                <button onClick={() => setDetalle(p)} style={iconBtn} title="Ver"><Eye size={15} /></button>
+                                <button onClick={irNuevo} style={iconBtn} title="Editar"><Edit2 size={15} /></button>
+                                <button onClick={() => setBarcodeModal(p)} style={iconBtn} title="Ver código de barras"><Barcode size={15} /></button>
                                 <button onClick={() => setMenu(menu === p.id ? null : p.id)} style={iconBtn}><MoreVertical size={15} /></button>
                                 {menu === p.id && (
                                     <>
@@ -126,6 +219,20 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
                     )
                 })}
                 {rows.length === 0 && <div style={{ padding: 48, textAlign: 'center', color: 'var(--color-muted)', fontSize: 13 }}>Sin productos para estos filtros</div>}
+            </div>
+
+            {/* ── MOBILE: cards ── */}
+            <div className="prod-cards-wrap">
+                {rows.length === 0
+                    ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-muted)', fontSize: 13 }}>Sin productos para estos filtros</div>
+                    : rows.map(p => (
+                        <ProductoCard key={p.id} p={p}
+                            onVer={() => setDetalle(p)}
+                            onEditar={irNuevo}
+                            onBarcode={() => setBarcodeModal(p)}
+                        />
+                    ))
+                }
             </div>
 
             {/* Modal detalle */}
@@ -149,6 +256,25 @@ function ListaView({ irNuevo }: { irNuevo: () => void }) {
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 16 }}>{detalle.variantes.map(v => <span key={v} style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 10px', borderRadius: 9999, background: 'var(--color-surface-alt)', color: 'var(--color-muted)', fontSize: 11, fontWeight: 600 }}>{v}</span>)}</div>
                             <Button variant="primary" icon={<Edit2 size={15} />} onClick={() => { setDetalle(null); irNuevo() }}>Editar producto</Button>
                         </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Modal barcode */}
+            <Modal isOpen={barcodeModal !== null} onClose={() => setBarcodeModal(null)} title="Código de barras" maxWidth={360}>
+                {barcodeModal && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <ProductoThumb hue={barcodeModal.hue} size={40} />
+                            <div>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>{barcodeModal.nombre}</div>
+                                <div style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>{barcodeModal.sku}</div>
+                            </div>
+                        </div>
+                        <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', border: '1px solid var(--color-border)' }}>
+                            <BarcodeVisual value={barcodeModal.codigoBarras ?? barcodeModal.sku} width={260} height={80} />
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>{barcodeModal.codigoBarras ?? barcodeModal.sku}</span>
                     </div>
                 )}
             </Modal>

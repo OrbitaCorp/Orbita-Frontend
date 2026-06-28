@@ -293,7 +293,7 @@ export default function ProductoNuevo({ onVolver, onToast }: ProductoNuevoProps)
                     {step > 1 ? <Button variant="outline" icon={<ChevronLeft size={14} />} onClick={() => setStep(step - 1)}>Volver</Button> : <div />}
                     <span style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>Paso {step} de 4</span>
                     {step < 4
-                        ? <Button variant="primary" disabled={!canNext} onClick={next}>Continuar <ChevronRight size={16} strokeWidth={2} /></Button>
+                        ? <Button variant="primary" onClick={next}>Continuar <ChevronRight size={16} strokeWidth={2} /></Button>
                         : (prod.tieneVariantes ? <Button variant="primary" onClick={crear} style={{ background: 'var(--color-success)' }}>Crear producto</Button> : <div />)}
                 </div>
             </Card>

@@ -4,19 +4,20 @@
 export type EstadoProducto = 'publicado' | 'borrador' | 'sin_stock'
 
 export interface Producto {
-    id:        string
-    nombre:    string
-    sku:       string
-    cat:       string
-    precio:    number
-    precioAnt: number | null
-    stock:     number
-    stockMin:  number
-    estado:    EstadoProducto
-    variantes: string[]
-    colores:   string[]
-    imagenes:  number
-    hue:       number
+    id:             string
+    nombre:         string
+    sku:            string
+    cat:            string
+    precio:         number
+    precioAnt:      number | null
+    stock:          number
+    stockMin:       number
+    estado:         EstadoProducto
+    variantes:      string[]
+    colores:        string[]
+    imagenes:       number
+    hue:            number
+    codigoBarras?:  string
 }
 
 // Categoría plana (para selects y filtros).
