@@ -1,22 +1,33 @@
 ﻿// src/modules/ventas/panel/reportes/ReporteClientes.tsx — Vista 13
 
-import { Download, Users, TrendingUp, Banknote } from 'lucide-react'
+import { Download, Users, TrendingUp, Banknote, BarChart2 } from 'lucide-react'
 import { Card } from '@/design-system/components/Card'
 import { Button } from '@/design-system/components/Button'
 import { Avatar } from '@/design-system/components/Avatar'
 import { BarChart, DonutChart } from '@/design-system/components/Chart'
 import { fmtMoney } from '@/lib/utils'
 import { StatCard } from '../_shared/StatCard'
-import { ReporteTabs, type VistaReporte } from './components/ReporteTabs'
+import type { VistaReporte } from './components/ReporteTabs'
 import { SegmentoBadge } from '../clientes/components/SegmentoBadge'
 import { MOCK_CLIENTES } from '../clientes/mock/clientes.mock'
 
-export default function ReporteClientes({ ir }: { ir: (v: VistaReporte) => void }) {
+export default function ReporteClientes({ ir, irLista }: { ir: (v: VistaReporte) => void; irLista: () => void }) {
     const top = [...MOCK_CLIENTES].sort((a, b) => b.gasto - a.gasto).slice(0, 5)
 
     return (
         <div style={pageWrap}>
-            <ReporteTabs activo="clientes" ir={ir} />
+            {/* Tab bar igual al módulo clientes */}
+            <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--color-border)', marginBottom:20 }}>
+                {([['lista', 'Lista', false], ['reporte', 'Reporte clientes', true]] as [string, string, boolean][]).map(([k, l, icon]) => {
+                    const a = k === 'reporte'
+                    return (
+                        <button key={k} onClick={() => k === 'lista' && irLista()} style={{ padding:'10px 14px', border:'none', background:'transparent', color: a ? 'var(--color-text)' : 'var(--color-muted)', fontSize:13.5, fontWeight: a ? 600 : 500, cursor:'pointer', fontFamily:'inherit', borderBottom:`2px solid ${a ? 'var(--color-primary)' : 'transparent'}`, marginBottom:-1, whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}>
+                            {icon && <BarChart2 size={13} />}
+                            {l}
+                        </button>
+                    )
+                })}
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
                 <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: 0 }}>Reporte de clientes</h1>

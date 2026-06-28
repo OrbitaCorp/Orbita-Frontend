@@ -113,10 +113,15 @@ export default function ReporteVentas() {
         router.push({ query: q })
     }
 
+    const irClientes = () => {
+        const { negocioId, moduloPadre } = router.query
+        router.push({ pathname: `/admin/${negocioId as string}/${moduloPadre as string}/clientes` })
+    }
+
     const sub = vista as VistaReporte | undefined
     let content
     if (sub === 'productos')       content = <ReporteProductos ir={ir} />
-    else if (sub === 'clientes')   content = <ReporteClientes ir={ir} />
+    else if (sub === 'clientes')   content = <ReporteClientes ir={ir} irLista={irClientes} />
     else if (sub === 'inventario') content = <ReporteInventario ir={ir} />
     else                           content = <VentasView ir={ir} onToast={setToast} />
 
