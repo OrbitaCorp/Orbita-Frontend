@@ -9,7 +9,7 @@ import { Button } from '@/design-system/components/Button'
 import { fmtMoney } from '@/lib/utils'
 import type { Pedido } from '../types/pedidos.types'
 
-const COLS = '36px 90px 1.3fr 1.5fr 100px 120px 130px 130px 96px'
+const COLS = '36px 90px 1.3fr 1.6fr 112px 120px 148px 140px 96px'
 
 function fechaCorta(iso: string): string {
     const d = new Date(iso)
@@ -63,7 +63,7 @@ export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: Pedido
             )}
 
             {/* Encabezado */}
-            <div style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', padding: '0 16px', height: 44, background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: COLS, columnGap: 16, alignItems: 'center', padding: '0 16px', height: 44, background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 <input
                     type="checkbox"
                     checked={sel.size === rows.length && rows.length > 0}
@@ -84,7 +84,7 @@ export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: Pedido
                         onMouseEnter={() => setHovered(p.id)}
                         onMouseLeave={() => setHovered(null)}
                         style={{
-                            display: 'grid', gridTemplateColumns: COLS, alignItems: 'center',
+                            display: 'grid', gridTemplateColumns: COLS, columnGap: 16, alignItems: 'center',
                             padding: '0 16px', height: 52,
                             borderBottom: i < rows.length - 1 ? '1px solid var(--color-border)' : 'none',
                             background: s ? 'var(--color-primary-bg)' : hovered === p.id ? 'var(--color-surface)' : 'transparent',
@@ -106,7 +106,7 @@ export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: Pedido
                                 <div style={{ fontSize: 11, color: 'var(--color-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</div>
                             </div>
                         </div>
-                        <span style={{ fontSize: 12, color: 'var(--color-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>
+                        <span style={{ fontSize: 12, color: 'var(--color-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {p.productos.map(x => `${x.cantidad}× ${x.nombre}`).join(' · ')}
                         </span>
                         {canalChip(p.canal)}
