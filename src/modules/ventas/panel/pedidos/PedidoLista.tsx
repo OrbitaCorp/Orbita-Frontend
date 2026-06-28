@@ -70,7 +70,16 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
     }, [base, tab, busqueda])
 
     return (
-        <div style={pageWrap}>
+        <div className="ped-page" style={pageWrap}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .ped-page       { padding: 16px 14px 48px !important; }
+                    .ped-header-btn { display: none !important; }
+                    .ped-filter-row { flex-direction: column !important; align-items: stretch !important; }
+                    .ped-search     { max-width: 100% !important; }
+                }
+            `}</style>
+
             <PedidoTabs activo="lista" ir={ir} />
 
             {/* Header */}
@@ -81,7 +90,7 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 10px', borderRadius: 9999, background: 'var(--color-warning-bg)', color: 'var(--color-warning)', fontSize: 12, fontWeight: 600 }}>4 sin atender</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <Button variant="outline" icon={<Download size={15} />}>Exportar</Button>
+                    <span className="ped-header-btn"><Button variant="outline" icon={<Download size={15} />}>Exportar</Button></span>
                     <Button variant="primary" icon={<Plus size={16} />} onClick={() => ir('nuevo')}>Nuevo pedido</Button>
                 </div>
             </div>
@@ -100,7 +109,7 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
                         )
                     })}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', flexWrap: 'wrap' }}>
+                <div className="ped-filter-row" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', flexWrap: 'wrap' }}>
                     <button style={{ height: 36, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13, fontWeight: 500, color: 'var(--color-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
                         <Clock size={15} /> Hoy, 17 may <ChevronDown size={13} style={{ opacity: 0.6 }} />
                     </button>
@@ -114,7 +123,7 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
                             )
                         })}
                     </div>
-                    <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
+                    <div className="ped-search" style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
                         <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)' }} />
                         <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar por # o cliente…" style={{ width: '100%', boxSizing: 'border-box', height: 36, paddingLeft: 34, paddingRight: 12, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13, color: 'var(--color-text)', fontFamily: 'inherit', outline: 'none' }} />
                     </div>
