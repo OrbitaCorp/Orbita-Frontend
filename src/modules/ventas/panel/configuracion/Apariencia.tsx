@@ -57,7 +57,16 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 420px', gap: 28, alignItems: 'start' }}>
+            <style>{`
+                .ap-split { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 28px; align-items: start; }
+                .ap-preview { position: sticky; top: 24px; }
+                @media (max-width: 1100px) {
+                    .ap-split { grid-template-columns: 1fr; }
+                    .ap-preview { position: static; }
+                    .ap-preview > div { height: 70vh !important; }
+                }
+            `}</style>
+            <div className="ap-split">
                 {/* Controles */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -181,6 +190,18 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
                                 },
                             ]} />
                         </div>
+                        <FieldLabel help="Elegí qué enlaces de navegación se muestran en el header. En el estilo Minimal no se muestra navegación.">Elementos del header</FieldLabel>
+                        <div style={{ marginBottom: 18, border: '1px solid var(--color-border)', borderRadius: 8, padding: '2px 12px' }}>
+                            {ap.headerLinks.map((lnk, i) => (
+                                <div key={lnk.id} style={{ borderBottom: i < ap.headerLinks.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                                    <ToggleRow
+                                        label={lnk.label}
+                                        on={lnk.on}
+                                        onChange={v => set('headerLinks', ap.headerLinks.map((x, j) => j === i ? { ...x, on: v } : x))}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                         <FieldLabel>Grilla de productos</FieldLabel>
                         <div style={{ marginBottom: 18 }}>
                             <VisualPick value={ap.layoutGrid} onChange={v => set('layoutGrid', v as LayoutGridT)} options={[
@@ -220,7 +241,7 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
                 </div>
 
                 {/* Preview sticky */}
-                <div style={{ position: 'sticky', top: 24 }}>
+                <div className="ap-preview">
                     <StorePreview ap={ap} />
                 </div>
             </div>
@@ -405,4 +426,4 @@ function SlideItem({ slide, index, defaultOpen, onChange, onRemove }: {
     )
 }
 
-const pageWrap: React.CSSProperties = { padding: '24px 32px 64px', maxWidth: 1280, width: '100%', margin: '0 auto', boxSizing: 'border-box' }
+const pageWrap: React.CSSProperties = { padding: '24px 32px 64px', maxWidth: 1760, width: '100%', margin: '0 auto', boxSizing: 'border-box' }

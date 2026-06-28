@@ -16,6 +16,12 @@ export interface HeroSlide {
     cta:       string
 }
 
+export interface HeaderLink {
+    id:    string
+    label: string
+    on:    boolean
+}
+
 export interface Apariencia {
     nombreTienda: string
     tagline:      string
@@ -31,6 +37,7 @@ export interface Apariencia {
     fuenteBody:    string
     escalaFuente:  EscalaFuente
     layoutHeader: LayoutHeader
+    headerLinks:  HeaderLink[]
     layoutGrid:   LayoutGrid
     radioCards:   RadioCards
     mostrarRating:      boolean
@@ -57,7 +64,15 @@ export const AP_DEFAULTS: Apariencia = {
     ],
     colorPrimario: '#3B82F6', colorSecundario: '#0F172A', colorAccent: '#8B5CF6', colorFondo: '#F8FAFC', modoColor: 'claro',
     fuenteHeading: 'Geist', fuenteBody: 'Geist', escalaFuente: 'md',
-    layoutHeader: 'full', layoutGrid: '4col', radioCards: 'md',
+    layoutHeader: 'full',
+    headerLinks: [
+        { id: 'catalogo',    label: 'Catálogo',     on: true  },
+        { id: 'categorias',  label: 'Categorías',   on: false },
+        { id: 'ofertas',     label: 'Ofertas',      on: true  },
+        { id: 'novedades',   label: 'Novedades',    on: true  },
+        { id: 'masVendidos', label: 'Más vendidos', on: true  },
+    ],
+    layoutGrid: '4col', radioCards: 'md',
     mostrarRating: true, mostrarBadgeNuevo: true, mostrarBadgeOferta: true, mostrarStockBajo: true,
     mostrarWhatsapp: true, mostrarBuscador: true, mostrarCategorias: true, mostrarFooter: true,
     textoCTA: 'Agregar al carrito', textoEnvio: 'Envíos coordinados por WhatsApp', textoWhatsapp: '💬 Escribinos',
