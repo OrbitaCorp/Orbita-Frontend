@@ -17,3 +17,10 @@ export function thumbGradient(hue: number): string {
     oklch(0.84 0.06 ${hue}) 0px 28px,
     oklch(0.80 0.06 ${hue}) 28px 56px)`
 }
+
+// Alternate gradient — opposite angle + lighter, simulates a second product angle
+export function thumbGradientAlt(hue: number): string {
+  return `repeating-linear-gradient(-45deg,
+    oklch(0.89 0.08 ${hue}) 0px 32px,
+    oklch(0.83 0.06 ${hue}) 32px 64px)`
+}

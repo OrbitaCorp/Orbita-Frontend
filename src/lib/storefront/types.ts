@@ -6,6 +6,7 @@ export type Producto = {
   precioAnt: number | null
   badge:     string | null
   hue:       number
+  hue2?:     number   // segunda imagen para efecto hover
   rating:    number
   stock:     boolean
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowRight, ShoppingCart } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { ProdImage } from './Thumb'
-import { fmt, descuento } from '@/lib/storefront/utils'
+import { fmt, thumbGradientAlt } from '@/lib/storefront/utils'
 import type { Producto } from '@/lib/storefront/types'
 
 type Props = {
@@ -25,7 +25,6 @@ export function ProductCard({ producto, height = 240, rank, stockCount, onAdd }:
   const router = useRouter()
   const { slug } = router.query as { slug: string }
   const [hov, setHov] = useState(false)
-  const desc = producto.precioAnt ? descuento(producto.precio, producto.precioAnt) : 0
 
   return (
     <div
@@ -43,6 +42,16 @@ export function ProductCard({ producto, height = 240, rank, stockCount, onAdd }:
     >
       {/* ── Imagen ── */}
       <ProdImage hue={producto.hue} height={height} radius={0}>
+
+        {/* Segunda imagen (hover) */}
+        {producto.hue2 !== undefined && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 1,
+            background: thumbGradientAlt(producto.hue2),
+            opacity: hov ? 1 : 0,
+            transition: 'opacity 420ms ease',
+          }} />
+        )}
 
         {/* Rank overlay */}
         {rank !== undefined && (
@@ -148,14 +157,6 @@ export function ProductCard({ producto, height = 240, rank, stockCount, onAdd }:
               fontFamily: '"Geist Mono", monospace',
             }}>
               {fmt(producto.precioAnt)}
-            </span>
-          )}
-          {desc > 0 && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, color: '#DC2626',
-              fontFamily: '"Geist Mono", monospace', marginLeft: 'auto',
-            }}>
-              −{desc}%
             </span>
           )}
         </div>
