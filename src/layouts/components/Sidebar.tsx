@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
-import { LayoutDashboard, ShoppingBag, Users, Package, CreditCard, MessageSquare, Tag, Settings, Search, Globe } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Users, Package, CreditCard, MessageSquare, Tag, Settings, Search, Globe, ChevronDown, Check, Scissors, UtensilsCrossed, Briefcase, Store } from 'lucide-react'
 import type { ComponentType } from 'react'
 
 import { MOCK_PEDIDOS } from '@/modules/ventas/panel/pedidos/mock/pedidos.mock'
@@ -15,6 +15,13 @@ import { fmtMoney } from '@/lib/utils'
 type IconType = ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>
 interface Sub { label: string; seccion: string; vista?: string }
 interface Modulo { id: string; label: string; Icon: IconType; seccion: string; badge?: number; alert?: boolean; subs?: Sub[] }
+
+const RUBROS = [
+    { id: 'tienda',     label: 'Tienda',      desc: 'E-commerce y retail',     Icon: Store,             color: '#2563EB', bg: 'rgba(37,99,235,0.10)'  },
+    { id: 'peluqueria', label: 'Peluquería',  desc: 'Turnos y servicios',      Icon: Scissors,          color: '#7C3AED', bg: 'rgba(124,58,237,0.10)' },
+    { id: 'gastro',     label: 'Gastronomía', desc: 'Mesas y delivery',        Icon: UtensilsCrossed,   color: '#DC2626', bg: 'rgba(220,38,38,0.10)'  },
+    { id: 'servicios',  label: 'Servicios',   desc: 'Agendas y presupuestos',  Icon: Briefcase,         color: '#059669', bg: 'rgba(5,150,105,0.10)'  },
+]
 
 const MODULOS: Modulo[] = [
     { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard, seccion: 'dashboard' },
@@ -95,9 +102,13 @@ export default function Sidebar() {
     const vista = (router.query.vista as string) ?? ''
 
     const moduloActivo = SECCION_MODULO[seccion] ?? 'dashboard'
-    const [abierto, setAbierto] = useState(moduloActivo)
-    const [busqueda, setBusqueda] = useState('')
-    const [publicada, setPublicada] = useState(false)
+    const [abierto,    setAbierto]    = useState(moduloActivo)
+    const [busqueda,   setBusqueda]   = useState('')
+    const [publicada,  setPublicada]  = useState(false)
+    const [rubroId,    setRubroId]    = useState('tienda')
+    const [rubroOpen,  setRubroOpen]  = useState(false)
+
+    const rubroActual = RUBROS.find(r => r.id === rubroId)!
 
     useEffect(() => { setAbierto(moduloActivo) }, [moduloActivo])
 
@@ -148,6 +159,83 @@ export default function Sidebar() {
             >
                 /tienda/{negocioId} ↗
             </a>
+
+            {/* ── Selector de rubro ── */}
+            <div style={{ margin: '10px 12px 4px', position: 'relative' }}>
+                <button
+                    onClick={() => setRubroOpen(o => !o)}
+                    style={{
+                        width: '100%', height: 36, padding: '0 10px',
+                        borderRadius: 8, cursor: 'pointer',
+                        border: `1px solid ${rubroOpen ? rubroActual.color + '55' : 'var(--color-border)'}`,
+                        background: rubroOpen ? rubroActual.bg : 'var(--color-surface)',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        transition: 'all 180ms',
+                    }}
+                >
+                    <div style={{
+                        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                        background: rubroActual.bg, border: `1px solid ${rubroActual.color}33`,
+                        display: 'grid', placeItems: 'center',
+                    }}>
+                        <rubroActual.Icon size={12} strokeWidth={2} color={rubroActual.color} />
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.2 }}>{rubroActual.label}</div>
+                        <div style={{ fontSize: 9, color: 'var(--color-subtle)', lineHeight: 1.2 }}>{rubroActual.desc}</div>
+                    </div>
+                    <ChevronDown
+                        size={12} strokeWidth={2} color="var(--color-muted)"
+                        style={{ transition: 'transform 200ms', transform: rubroOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
+                    />
+                </button>
+
+                {rubroOpen && (
+                    <div style={{
+                        position: 'absolute', left: 0, right: 0, top: 'calc(100% + 4px)',
+                        zIndex: 60, borderRadius: 10, overflow: 'hidden',
+                        background: 'var(--color-bg)',
+                        border: '1px solid var(--color-border)',
+                        boxShadow: '0 8px 28px rgba(0,0,0,0.15)',
+                    }}>
+                        {RUBROS.map((r, idx) => {
+                            const sel = r.id === rubroId
+                            return (
+                                <button
+                                    key={r.id}
+                                    onClick={() => { setRubroId(r.id); setRubroOpen(false) }}
+                                    style={{
+                                        width: '100%', padding: '9px 10px',
+                                        display: 'flex', alignItems: 'center', gap: 9,
+                                        border: 'none',
+                                        borderBottom: idx < RUBROS.length - 1 ? '1px solid var(--color-border)' : 'none',
+                                        cursor: 'pointer',
+                                        background: sel ? r.bg : 'transparent',
+                                        transition: 'background 120ms',
+                                    }}
+                                    onMouseEnter={e => { if (!sel) e.currentTarget.style.background = 'var(--color-surface)' }}
+                                    onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'transparent' }}
+                                >
+                                    <div style={{
+                                        width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                                        background: r.bg, border: `1px solid ${r.color}33`,
+                                        display: 'grid', placeItems: 'center',
+                                    }}>
+                                        <r.Icon size={14} strokeWidth={1.8} color={r.color} />
+                                    </div>
+                                    <div style={{ flex: 1, textAlign: 'left' }}>
+                                        <div style={{ fontSize: 12, fontWeight: sel ? 700 : 500, color: sel ? r.color : 'var(--color-text)', lineHeight: 1.2 }}>
+                                            {r.label}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: 'var(--color-subtle)', lineHeight: 1.3 }}>{r.desc}</div>
+                                    </div>
+                                    {sel && <Check size={13} strokeWidth={2.5} color={r.color} />}
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
 
             {/* Buscador */}
             <div className="relative mx-3 mt-2 mb-1">
