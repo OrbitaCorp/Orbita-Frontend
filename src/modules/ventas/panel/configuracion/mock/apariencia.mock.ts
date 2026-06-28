@@ -2,22 +2,30 @@
 // Estado de apariencia pública de la tienda + helpers de fuentes.
 // TODO: persistir contra el backend cuando esté listo.
 
-export type ModoColor = 'claro' | 'oscuro' | 'sistema'
+export type ModoColor    = 'claro' | 'oscuro' | 'sistema'
 export type EscalaFuente = 'sm' | 'md' | 'lg'
-export type LayoutHeader = 'standard' | 'centered' | 'minimal'
-export type LayoutGrid = '3col' | '4col' | 'list'
-export type RadioCards = 'none' | 'sm' | 'md' | 'lg' | 'full'
+export type LayoutHeader = 'standard' | 'full' | 'minimal' | 'centered'
+export type LayoutGrid   = '3col' | '4col' | 'list'
+export type RadioCards   = 'none' | 'sm' | 'md' | 'lg'
+
+export interface HeroSlide {
+    id:        string
+    titulo:    string
+    subtitulo: string
+    img:       string | null
+    cta:       string
+}
 
 export interface Apariencia {
     nombreTienda: string
     tagline:      string
-    logo:         string | null   // dataURL
+    logo:         string | null
     favicon:      string | null
-    bannerHero:   string | null
+    sliders:      HeroSlide[]
     colorPrimario:   string
     colorSecundario: string
     colorAccent:     string
-    colorFondo:      string       // hex o 'custom'
+    colorFondo:      string
     modoColor:       ModoColor
     fuenteHeading: string
     fuenteBody:    string
@@ -36,19 +44,23 @@ export interface Apariencia {
     textoCTA:      string
     textoEnvio:    string
     textoWhatsapp: string
-    cssCustom:     string
 }
 
 export const AP_DEFAULTS: Apariencia = {
     nombreTienda: 'Rama Indumentaria',
     tagline: 'Indumentaria contemporánea diseñada en Argentina.',
-    logo: null, favicon: null, bannerHero: null,
+    logo: null, favicon: null,
+    sliders: [
+        { id: 's1', titulo: 'Camperas que\nabrigan con estilo',  subtitulo: 'Hasta 25% off en abrigos seleccionados.',         img: null, cta: 'Ver camperas'  },
+        { id: 's2', titulo: 'Recién llegados,\nlistos para vos', subtitulo: 'Las últimas piezas de la temporada.',              img: null, cta: 'Ver novedades' },
+        { id: 's3', titulo: 'Ofertas flash',                     subtitulo: 'Precios especiales por tiempo limitado.',          img: null, cta: 'Ver ofertas'   },
+    ],
     colorPrimario: '#3B82F6', colorSecundario: '#0F172A', colorAccent: '#8B5CF6', colorFondo: '#F8FAFC', modoColor: 'claro',
     fuenteHeading: 'Geist', fuenteBody: 'Geist', escalaFuente: 'md',
-    layoutHeader: 'standard', layoutGrid: '4col', radioCards: 'md',
+    layoutHeader: 'full', layoutGrid: '4col', radioCards: 'md',
     mostrarRating: true, mostrarBadgeNuevo: true, mostrarBadgeOferta: true, mostrarStockBajo: true,
     mostrarWhatsapp: true, mostrarBuscador: true, mostrarCategorias: true, mostrarFooter: true,
-    textoCTA: 'Agregar al carrito', textoEnvio: 'Envíos coordinados por WhatsApp', textoWhatsapp: '💬 Escribinos', cssCustom: '',
+    textoCTA: 'Agregar al carrito', textoEnvio: 'Envíos coordinados por WhatsApp', textoWhatsapp: '💬 Escribinos',
 }
 
 export const PRESET_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#0F172A', '#6B7280']

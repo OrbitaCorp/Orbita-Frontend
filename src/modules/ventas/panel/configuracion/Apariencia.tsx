@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
-import { Palette, Type, LayoutGrid, Eye, Droplets, Sun, Moon, Monitor, Settings, ExternalLink, AlertTriangle, Plus, Check, ChevronDown, X } from 'lucide-react'
+import { Palette, Type, LayoutGrid, Eye, Droplets, Sun, Moon, Monitor, ExternalLink, Plus, Check, ChevronDown, X, Trash2 } from 'lucide-react'
 import { Button } from '@/design-system/components/Button'
 
 import { ConfigTabs, type VistaConfig } from './components/ConfigTabs'
@@ -13,7 +13,8 @@ import { StorePreview } from './components/apariencia/StorePreview'
 import {
     AP_DEFAULTS, PRESET_COLORS, RADII, FONT_DESCRIPCIONES, GOOGLE_FONTS,
     loadFont, fontStack,
-    type Apariencia as Ap, type ModoColor, type EscalaFuente, type LayoutHeader, type LayoutGrid as LayoutGridT, type RadioCards,
+    type Apariencia as Ap, type ModoColor, type EscalaFuente, type LayoutHeader,
+    type LayoutGrid as LayoutGridT, type RadioCards, type HeroSlide,
 } from './mock/apariencia.mock'
 
 type IconT = ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>
@@ -70,8 +71,25 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
                         <div style={{ marginBottom: 14 }}><FieldLabel>Nombre de la tienda</FieldLabel><Inp value={ap.nombreTienda} onChange={v => set('nombreTienda', v)} /></div>
                         <div><FieldLabel>Tagline</FieldLabel><Inp value={ap.tagline} onChange={v => set('tagline', v)} maxLength={80} suffix={<span style={{ fontSize: 11, color: 'var(--color-subtle)', fontFamily: '"Geist Mono", monospace' }}>{ap.tagline.length}/80</span>} /></div>
                         <Divider />
-                        <FieldLabel help="Página de inicio · Recomendado 1440×600px">Imagen principal del hero</FieldLabel>
-                        <ImgUploader value={ap.bannerHero} onChange={v => set('bannerHero', v)} shape="square" size={120} formats="JPG, PNG · máx 4MB" />
+                        <FieldLabel help="Carrusel de la página de inicio. Cada slide puede tener imagen, título y llamada a la acción.">Sliders del hero</FieldLabel>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 4 }}>
+                            {ap.sliders.map((s, i) => (
+                                <SlideItem
+                                    key={s.id}
+                                    slide={s}
+                                    index={i}
+                                    defaultOpen={i === 0}
+                                    onChange={updated => set('sliders', ap.sliders.map((sl, j) => j === i ? updated : sl))}
+                                    onRemove={() => set('sliders', ap.sliders.filter((_, j) => j !== i))}
+                                />
+                            ))}
+                            <button
+                                onClick={() => set('sliders', [...ap.sliders, { id: 's' + Date.now(), titulo: 'Nuevo slide', subtitulo: '', img: null, cta: 'Ver catálogo' }])}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40, borderRadius: 8, border: '1.5px dashed var(--color-border-strong)', background: 'transparent', color: 'var(--color-muted)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                            >
+                                <Plus size={14} strokeWidth={2} /> Agregar slide
+                            </button>
+                        </div>
                     </SecCard>
 
                     <SecCard title="Paleta de colores" icon={Droplets}>
@@ -122,11 +140,45 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
 
                     <SecCard title="Diseño y layout" icon={LayoutGrid}>
                         <FieldLabel>Estilo de header</FieldLabel>
+                        <div style={{ fontSize: 12, color: 'var(--color-muted)', marginBottom: 10, marginTop: -4 }}>Define qué elementos y navegación muestra el encabezado de tu tienda.</div>
                         <div style={{ marginBottom: 18 }}>
                             <VisualPick value={ap.layoutHeader} onChange={v => set('layoutHeader', v as LayoutHeader)} options={[
-                                { id: 'standard', label: 'Estándar', svg: hline(<g><rect x="6" y="14" width="10" height="6" rx="1" fill="var(--color-primary)" /><rect x="24" y="15" width="12" height="3" rx="1.5" fill="var(--color-muted)" /><rect x="46" y="14" width="8" height="6" rx="1" fill="var(--color-border)" /></g>) },
-                                { id: 'centered', label: 'Centrado', svg: hline(<g><rect x="22" y="8" width="16" height="6" rx="1" fill="var(--color-primary)" /><rect x="14" y="20" width="32" height="3" rx="1.5" fill="var(--color-muted)" /></g>) },
-                                { id: 'minimal', label: 'Mínimal', svg: hline(<g><rect x="6" y="14" width="10" height="6" rx="1" fill="var(--color-primary)" /><rect x="44" y="14" width="10" height="6" rx="1" fill="var(--color-border)" /></g>) },
+                                {
+                                    id: 'full', label: 'Completo',
+                                    svg: hline(<g>
+                                        <rect x="4" y="13" width="6" height="8" rx="1.5" fill="var(--color-primary)" />
+                                        <rect x="13" y="15" width="8" height="4" rx="1.5" fill="var(--color-muted)" />
+                                        <rect x="23" y="15" width="7" height="4" rx="1.5" fill="var(--color-muted)" />
+                                        <rect x="32" y="15" width="7" height="4" rx="1.5" fill="var(--color-muted)" />
+                                        <circle cx="48" cy="17" r="3.5" fill="var(--color-border)" />
+                                        <circle cx="55" cy="17" r="3.5" fill="var(--color-border)" />
+                                    </g>),
+                                },
+                                {
+                                    id: 'standard', label: 'Estándar',
+                                    svg: hline(<g>
+                                        <rect x="4" y="13" width="8" height="8" rx="1.5" fill="var(--color-primary)" />
+                                        <rect x="16" y="15" width="14" height="4" rx="1.5" fill="var(--color-muted)" />
+                                        <circle cx="46" cy="17" r="3.5" fill="var(--color-border)" />
+                                        <circle cx="54" cy="17" r="3.5" fill="var(--color-border)" />
+                                    </g>),
+                                },
+                                {
+                                    id: 'centered', label: 'Centrado',
+                                    svg: hline(<g>
+                                        <rect x="22" y="7" width="16" height="7" rx="1.5" fill="var(--color-primary)" />
+                                        <rect x="10" y="20" width="12" height="4" rx="1.5" fill="var(--color-muted)" />
+                                        <rect x="25" y="20" width="10" height="4" rx="1.5" fill="var(--color-muted)" />
+                                        <rect x="38" y="20" width="12" height="4" rx="1.5" fill="var(--color-muted)" />
+                                    </g>),
+                                },
+                                {
+                                    id: 'minimal', label: 'Minimal',
+                                    svg: hline(<g>
+                                        <rect x="4" y="13" width="8" height="8" rx="1.5" fill="var(--color-primary)" />
+                                        <rect x="46" y="13" width="10" height="8" rx="1.5" fill="var(--color-border)" />
+                                    </g>),
+                                },
                             ]} />
                         </div>
                         <FieldLabel>Grilla de productos</FieldLabel>
@@ -139,7 +191,7 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
                         </div>
                         <FieldLabel>Radio de cards</FieldLabel>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {([['none', 'Sin'], ['sm', 'Sm'], ['md', 'Md'], ['lg', 'Lg'], ['full', 'Pill']] as [RadioCards, string][]).map(([id, l]) => {
+                            {([['none', 'Sin'], ['sm', 'Sm'], ['md', 'Md'], ['lg', 'Lg']] as [RadioCards, string][]).map(([id, l]) => {
                                 const a = ap.radioCards === id
                                 return (
                                     <button key={id} onClick={() => set('radioCards', id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 8, border: `2px solid ${a ? 'var(--color-primary)' : 'var(--color-border)'}`, borderRadius: 8, background: a ? 'var(--color-primary-bg)' : 'var(--color-bg)', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -165,15 +217,6 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
                         <div><FieldLabel>Texto del botón de WhatsApp</FieldLabel><Inp value={ap.textoWhatsapp} onChange={v => set('textoWhatsapp', v)} maxLength={30} /></div>
                     </SecCard>
 
-                    <SecCard title="CSS avanzado" icon={Settings} badge={<span style={{ height: 22, padding: '0 9px', borderRadius: 9999, background: 'var(--color-warning-bg)', color: 'var(--color-warning)', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Avanzado</span>}>
-                        <div style={{ fontSize: 14, color: 'var(--color-muted)', marginBottom: 12 }}>Agregá estilos CSS propios. Solo para desarrolladores.</div>
-                        <textarea value={ap.cssCustom} onChange={e => set('cssCustom', e.target.value)} placeholder="/* Tus estilos personalizados */" rows={6} style={{ width: '100%', boxSizing: 'border-box', height: 160, resize: 'vertical', background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 12, fontFamily: '"Geist Mono", monospace', fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6, outline: 'none' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: 12, background: 'var(--color-warning-bg)', border: '1px solid var(--color-border)', borderRadius: 8 }}>
-                            <AlertTriangle size={16} strokeWidth={1.8} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
-                            <span style={{ flex: 1, fontSize: 12, color: 'var(--color-warning)' }}>Un CSS incorrecto puede romper el diseño de tu tienda.</span>
-                            <button onClick={() => set('cssCustom', '')} style={{ height: 28, padding: '0 10px', borderRadius: 6, background: 'transparent', border: 'none', color: 'var(--color-error)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Resetear CSS</button>
-                        </div>
-                    </SecCard>
                 </div>
 
                 {/* Preview sticky */}
@@ -316,6 +359,46 @@ function FontSelect({ value, onChange, opts }: { value: string; onChange: (v: st
                             </button>
                         )
                     })}
+                </div>
+            )}
+        </div>
+    )
+}
+
+// ─── SlideItem — componente de edición de un slide del hero ─────────────────
+
+const SLIDE_GRADS = [
+    'linear-gradient(135deg,#0F172A,#1D4ED8)',
+    'linear-gradient(135deg,#1E1B4B,#7C3AED)',
+    'linear-gradient(135deg,#052E2B,#10B981)',
+]
+
+function SlideItem({ slide, index, defaultOpen, onChange, onRemove }: {
+    slide: HeroSlide; index: number; defaultOpen?: boolean
+    onChange: (s: HeroSlide) => void; onRemove: () => void
+}) {
+    const [open, setOpen] = useState(!!defaultOpen)
+
+    return (
+        <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+            {/* Header colapsable */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--color-surface)', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
+                <span style={{ width: 40, height: 28, borderRadius: 6, background: SLIDE_GRADS[index % SLIDE_GRADS.length], flexShrink: 0, ...(slide.img ? { backgroundImage: `url(${slide.img})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}) }} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Slide {index + 1}: {slide.titulo || 'Sin título'}</span>
+                <ChevronDown size={14} style={{ color: 'var(--color-muted)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 180ms', flexShrink: 0 }} />
+                <button onClick={e => { e.stopPropagation(); onRemove() }} title="Eliminar slide"
+                    style={{ width: 22, height: 22, borderRadius: 5, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                    <Trash2 size={12} strokeWidth={1.8} />
+                </button>
+            </div>
+            {/* Contenido */}
+            {open && (
+                <div style={{ padding: '14px' }}>
+                    <FieldLabel help="Imagen de fondo del slide (1440×600px recomendado)">Imagen del slide</FieldLabel>
+                    <ImgUploader value={slide.img} onChange={v => onChange({ ...slide, img: v })} shape="square" size={80} formats="JPG, PNG · máx 4MB" />
+                    <div style={{ marginTop: 12 }}><FieldLabel>Título</FieldLabel><Inp value={slide.titulo} onChange={v => onChange({ ...slide, titulo: v })} /></div>
+                    <div style={{ marginTop: 10 }}><FieldLabel>Subtítulo</FieldLabel><Inp value={slide.subtitulo} onChange={v => onChange({ ...slide, subtitulo: v })} /></div>
+                    <div style={{ marginTop: 10 }}><FieldLabel>Texto del botón CTA</FieldLabel><Inp value={slide.cta} onChange={v => onChange({ ...slide, cta: v })} maxLength={30} /></div>
                 </div>
             )}
         </div>
