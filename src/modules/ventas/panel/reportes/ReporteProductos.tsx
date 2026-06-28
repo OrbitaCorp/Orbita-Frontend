@@ -6,7 +6,8 @@ import { Card } from '@/design-system/components/Card'
 import { Button } from '@/design-system/components/Button'
 import { Modal } from '@/design-system/components/Modal'
 import { StatCard } from '../_shared/StatCard'
-import { ReporteTabs, type VistaReporte } from './components/ReporteTabs'
+import type { VistaReporte } from './components/ReporteTabs'
+import { CatalogoTabs } from '../catalogo/components/CatalogoTabs'
 import { TopProductos } from './components/TopProductos'
 import { ProductoThumb } from '../pedidos/components/ProductoThumb'
 import { TOP_PRODUCTOS } from './mock/reportes.mock'
@@ -18,7 +19,7 @@ export default function ReporteProductos({ ir }: { ir: (v: VistaReporte) => void
 
     return (
         <div style={pageWrap}>
-            <ReporteTabs activo="productos" ir={ir} />
+            <CatalogoTabs activo="reportes" />
 
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
                 <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: 0 }}>Reporte de productos</h1>
