@@ -16,8 +16,8 @@ interface LineChartProps {
 
 export function LineChart({ data, labels, color = 'var(--color-primary)', height = 140, max, formatValue }: LineChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const w       = 280;
-  const pad     = { l: 30, r: 8, t: 10, b: 22 };
+  const w       = 600;
+  const pad     = { l: 36, r: 12, t: 10, b: 24 };
   const innerW  = w - pad.l - pad.r;
   const innerH  = height - pad.t - pad.b;
   const maxVal  = max ?? Math.max(...data);
@@ -38,7 +38,7 @@ export function LineChart({ data, labels, color = 'var(--color-primary)', height
 
   return (
     <div style={{ position: 'relative' }}>
-      <svg viewBox={`0 0 ${w} ${height}`} width="100%" height={height} style={{ display: 'block' }}
+      <svg viewBox={`0 0 ${w} ${height}`} width="100%" height={height} preserveAspectRatio="none" style={{ display: 'block' }}
         onMouseLeave={() => setHovered(null)}>
         <defs>
           <linearGradient id="lc-fill" x1="0" y1="0" x2="0" y2="1">
