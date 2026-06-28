@@ -8,15 +8,13 @@ import { Button } from '@/design-system/components/Button'
 import { Avatar } from '@/design-system/components/Avatar'
 import { fmtMoney } from '@/lib/utils'
 
-import { SegmentoBadge } from './components/SegmentoBadge'
 import { EmailMasivoModal } from './components/EmailMasivoModal'
 import ClienteDetalle from './ClienteDetalle'
 import { MOCK_CLIENTES } from './mock/clientes.mock'
 import { MOCK_PEDIDOS } from '../pedidos/mock/pedidos.mock'
 import { ModalEmail, type ClienteEmail } from '../pedidos/components/ModalEmail'
-import type { Segmento } from './types/clientes.types'
 
-const COLS = '24px 1.4fr 90px 110px 110px 110px 110px 70px'
+const COLS = '24px 1.4fr 90px 110px 110px 110px 70px'
 
 function relTime(iso: string): string {
     const d = new Date(iso), now = new Date('2026-05-17')
@@ -26,14 +24,6 @@ function relTime(iso: string): string {
     if (days < 30) return `Hace ${days} días`
     return `Hace ${Math.floor(days / 30)} mes`
 }
-
-const SEGMENTOS: { id: Segmento | 'todos'; label: string }[] = [
-    { id: 'todos',      label: 'Todos'     },
-    { id: 'vip',        label: 'VIP'       },
-    { id: 'recurrente', label: 'Recurrente'},
-    { id: 'nuevo',      label: 'Nuevo'     },
-    { id: 'inactivo',   label: 'Inactivo'  },
-]
 
 // ─── Card mobile ─────────────────────────────────────────────────────────────
 
@@ -49,15 +39,15 @@ function ClienteCard({ c, onVer, onEmail }: {
             onMouseEnter={() => setHov(true)}
             onMouseLeave={() => setHov(false)}
             style={{
-                background:   hov ? 'var(--color-surface)' : 'var(--color-bg)',
-                border:       '1px solid var(--color-border)',
-                borderRadius: 12,
-                padding:      '14px 14px 12px',
-                cursor:       'pointer',
-                transition:   'background 150ms',
-                display:      'flex',
-                flexDirection:'column',
-                gap:          8,
+                background:    hov ? 'var(--color-surface)' : 'var(--color-bg)',
+                border:        '1px solid var(--color-border)',
+                borderRadius:  12,
+                padding:       '14px 14px 12px',
+                cursor:        'pointer',
+                transition:    'background 150ms',
+                display:       'flex',
+                flexDirection: 'column',
+                gap:           8,
             }}
         >
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -66,14 +56,13 @@ function ClienteCard({ c, onVer, onEmail }: {
                     <div style={{ fontSize:13, fontWeight:600, color:'var(--color-text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.nombre}</div>
                     <div style={{ fontSize:11, color:'var(--color-subtle)', fontFamily:'"Geist Mono", monospace', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.email}</div>
                 </div>
-                <SegmentoBadge segmento={c.segmento} size="sm" />
             </div>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
                 {[
                     ['Pedidos', String(c.pedidos)],
                     ['Gastado', fmtMoney(c.gasto)],
-                    ['Ticket', fmtMoney(c.ticket)],
+                    ['Ticket',  fmtMoney(c.ticket)],
                 ].map(([k, v]) => (
                     <div key={k} style={{ background:'var(--color-surface)', borderRadius:8, padding:'6px 8px' }}>
                         <div style={{ fontSize:10, color:'var(--color-muted)', marginBottom:2 }}>{k}</div>
@@ -102,20 +91,16 @@ function ListaView({
     irDetalle: (id: string) => void
     irReporte: () => void
 }) {
-    const [seg,          setSeg]          = useState<Segmento | 'todos'>('todos')
-    const [busqueda,     setBusqueda]     = useState('')
-    const [exp,          setExp]          = useState<string | null>(null)
-    const [emailMasivo,  setEmailMasivo]  = useState(false)
-    const [email,        setEmail]        = useState<ClienteEmail | null>(null)
+    const [busqueda,    setBusqueda]    = useState('')
+    const [exp,         setExp]         = useState<string | null>(null)
+    const [emailMasivo, setEmailMasivo] = useState(false)
+    const [email,       setEmail]       = useState<ClienteEmail | null>(null)
 
     const rows = useMemo(() => {
-        let r = seg === 'todos' ? MOCK_CLIENTES : MOCK_CLIENTES.filter(c => c.segmento === seg)
-        if (busqueda.trim()) {
-            const q = busqueda.trim().toLowerCase()
-            r = r.filter(c => c.nombre.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
-        }
-        return r
-    }, [seg, busqueda])
+        if (!busqueda.trim()) return MOCK_CLIENTES
+        const q = busqueda.trim().toLowerCase()
+        return MOCK_CLIENTES.filter(c => c.nombre.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+    }, [busqueda])
 
     return (
         <div className="cli-page" style={pageWrap}>
@@ -160,41 +145,21 @@ function ListaView({
                 </div>
             </div>
 
-            {/* Filtros siempre visibles */}
-            <div style={{ background:'var(--color-bg)', border:'1px solid var(--color-border)', borderRadius:12, padding:'10px 12px', marginBottom:16, display:'flex', flexDirection:'column', gap:10 }}>
-                {/* Búsqueda */}
-                <div style={{ position:'relative' }}>
-                    <Search size={14} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--color-muted)', pointerEvents:'none' }} />
-                    <input
-                        value={busqueda}
-                        onChange={e => setBusqueda(e.target.value)}
-                        placeholder="Buscar por nombre o email…"
-                        style={{ width:'100%', boxSizing:'border-box', height:36, paddingLeft:32, paddingRight:12, background:'var(--color-surface)', border:'1px solid var(--color-border)', borderRadius:8, fontSize:13, color:'var(--color-text)', fontFamily:'inherit', outline:'none' }}
-                    />
-                </div>
-                {/* Segmento */}
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
-                    <span style={{ fontSize:11, fontWeight:600, color:'var(--color-muted)', textTransform:'uppercase', letterSpacing:'0.04em' }}>Segmento</span>
-                    {SEGMENTOS.map(({ id, label }) => {
-                        const a = seg === id
-                        return (
-                            <button key={id} onClick={() => setSeg(id)} style={{ height:28, padding:'0 12px', borderRadius:9999, border:'none', background: a ? 'var(--color-primary-bg)' : 'var(--color-surface-alt)', color: a ? 'var(--color-primary)' : 'var(--color-muted)', fontSize:12, fontWeight: a ? 600 : 500, cursor:'pointer', fontFamily:'inherit' }}>
-                                {label}
-                            </button>
-                        )
-                    })}
-                    {(busqueda || seg !== 'todos') && (
-                        <button onClick={() => { setSeg('todos'); setBusqueda('') }} style={{ height:28, padding:'0 10px', borderRadius:9999, border:'1px solid var(--color-border)', background:'transparent', color:'var(--color-muted)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-                            Limpiar
-                        </button>
-                    )}
-                </div>
+            {/* Búsqueda */}
+            <div style={{ position:'relative', marginBottom:16 }}>
+                <Search size={14} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--color-muted)', pointerEvents:'none' }} />
+                <input
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    placeholder="Buscar por nombre o email…"
+                    style={{ width:'100%', boxSizing:'border-box', height:38, paddingLeft:32, paddingRight:12, background:'var(--color-bg)', border:'1px solid var(--color-border)', borderRadius:10, fontSize:13, color:'var(--color-text)', fontFamily:'inherit', outline:'none' }}
+                />
             </div>
 
             {/* ── DESKTOP: tabla ── */}
             <div className="cli-table-wrap" style={{ background:'var(--color-bg)', border:'1px solid var(--color-border)', borderRadius:12, overflow:'hidden' }}>
                 <div style={{ display:'grid', gridTemplateColumns:COLS, alignItems:'center', gap:10, padding:'0 16px', height:44, background:'var(--color-surface)', borderBottom:'1px solid var(--color-border)', fontSize:11, fontWeight:600, color:'var(--color-muted)', textTransform:'uppercase', letterSpacing:'0.04em' }}>
-                    <span /><span>Cliente</span><span style={{ textAlign:'right' }}>Pedidos</span><span style={{ textAlign:'right' }}>Gastado</span><span style={{ textAlign:'right' }}>Ticket</span><span>Última</span><span>Segmento</span><span style={{ textAlign:'right' }}>Acc.</span>
+                    <span /><span>Cliente</span><span style={{ textAlign:'right' }}>Pedidos</span><span style={{ textAlign:'right' }}>Gastado</span><span style={{ textAlign:'right' }}>Ticket</span><span>Última</span><span style={{ textAlign:'right' }}>Acc.</span>
                 </div>
                 {rows.length === 0 ? (
                     <div style={{ padding:'32px 16px', textAlign:'center', fontSize:13, color:'var(--color-muted)' }}>Sin resultados</div>
@@ -215,7 +180,6 @@ function ListaView({
                                 <span style={{ fontSize:13, fontWeight:600, color:'var(--color-text)', fontFamily:'"Geist Mono", monospace', textAlign:'right' }}>{fmtMoney(c.gasto)}</span>
                                 <span style={{ fontSize:12, color:'var(--color-muted)', fontFamily:'"Geist Mono", monospace', textAlign:'right' }}>{fmtMoney(c.ticket)}</span>
                                 <span style={{ fontSize:12, color:'var(--color-muted)' }}>{relTime(c.ultima)}</span>
-                                <span><SegmentoBadge segmento={c.segmento} size="sm" /></span>
                                 <div style={{ display:'flex', justifyContent:'flex-end', gap:2 }} onClick={e => e.stopPropagation()}>
                                     <button onClick={() => irDetalle(c.id)} style={iconBtn}><Eye size={15} /></button>
                                     <button onClick={() => setEmail({ nombre: c.nombre, email: c.email })} style={iconBtn}><Mail size={15} /></button>
