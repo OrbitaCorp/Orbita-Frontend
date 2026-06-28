@@ -72,11 +72,16 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
     return (
         <div className="ped-page" style={pageWrap}>
             <style>{`
+                .ped-tabs-row { -ms-overflow-style: none; scrollbar-width: none; }
+                .ped-tabs-row::-webkit-scrollbar { display: none; }
                 @media (max-width: 768px) {
                     .ped-page       { padding: 16px 14px 48px !important; }
                     .ped-header-btn { display: none !important; }
-                    .ped-filter-row { flex-direction: column !important; align-items: stretch !important; }
-                    .ped-search     { max-width: 100% !important; }
+                    .ped-filter-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+                    .ped-search     { max-width: 100% !important; flex: none !important; }
+                    .ped-canal-wrap { width: 100% !important; justify-content: stretch; }
+                    .ped-canal-wrap button { flex: 1 !important; }
+                    .ped-date-btn   { width: 100% !important; justify-content: center !important; }
                 }
             `}</style>
 
@@ -97,7 +102,7 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
 
             {/* Filtros */}
             <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 2, padding: '6px 8px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto' }}>
+                <div className="ped-tabs-row" style={{ display: 'flex', gap: 2, padding: '6px 8px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto' }}>
                     {ESTADO_TABS.map(({ id, label, dot }) => {
                         const a = tab === id
                         return (
@@ -110,10 +115,10 @@ function ListaView({ ir }: { ir: (v: VistaPedido, id?: string) => void }) {
                     })}
                 </div>
                 <div className="ped-filter-row" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', flexWrap: 'wrap' }}>
-                    <button style={{ height: 36, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13, fontWeight: 500, color: 'var(--color-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button className="ped-date-btn" style={{ height: 36, padding: '0 12px', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13, fontWeight: 500, color: 'var(--color-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
                         <Clock size={15} /> Hoy, 17 may <ChevronDown size={13} style={{ opacity: 0.6 }} />
                     </button>
-                    <div style={{ display: 'flex', background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 2, height: 36 }}>
+                    <div className="ped-canal-wrap" style={{ display: 'flex', background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 2, height: 36 }}>
                         {([['todos', 'Todos', null], ['online', 'Online', Globe], ['presencial', 'Presencial', Store]] as ['todos' | 'online' | 'presencial', string, typeof Globe | null][]).map(([id, l, Icon]) => {
                             const a = canal === id
                             return (

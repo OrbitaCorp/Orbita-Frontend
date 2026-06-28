@@ -21,11 +21,22 @@ export default function PedidoHistorial({ ir }: PedidoHistorialProps) {
     const [email, setEmail] = useState<ClienteEmail | null>(null)
 
     return (
-        <div style={pageWrap}>
+        <div className="hist-page" style={pageWrap}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .hist-page   { padding: 16px 14px 48px !important; }
+                    .hist-header { flex-direction: column; align-items: flex-start !important; }
+                    .hist-kpis   { grid-template-columns: repeat(2,1fr) !important; }
+                }
+                @media (max-width: 460px) {
+                    .hist-kpis   { grid-template-columns: 1fr !important; }
+                }
+            `}</style>
+
             <PedidoTabs activo="historial" ir={ir} />
 
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+            <div className="hist-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
                 <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: 0 }}>Historial de pedidos</h1>
                 <div style={{ display: 'flex', gap: 8 }}>
                     <Button variant="outline" icon={<Download size={15} />}>CSV</Button>
@@ -34,7 +45,7 @@ export default function PedidoHistorial({ ir }: PedidoHistorialProps) {
             </div>
 
             {/* KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
+            <div className="hist-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
                 <KpiCard label="Ventas mes" value={3480400} delta={14.8} prefix="$" accent="#3B82F6" icon={Banknote} loading={false} />
                 <KpiCard label="Pedidos mes" value={142} delta={11.2} accent="#10B981" icon={ShoppingBag} loading={false} />
                 <KpiCard label="Ticket prom" value={24510} delta={6.0} prefix="$" accent="#8B5CF6" icon={BarChart3} loading={false} />
@@ -60,4 +71,4 @@ export default function PedidoHistorial({ ir }: PedidoHistorialProps) {
     )
 }
 
-const pageWrap: React.CSSProperties = { padding: '24px 32px 64px', maxWidth: 1280, width: '100%', margin: '0 auto', boxSizing: 'border-box' }
+const pageWrap: React.CSSProperties = { padding: '24px 32px 64px', maxWidth: 1280, width: '100%', margin: '0 auto', boxSizing: 'border-box', minWidth: 0 }

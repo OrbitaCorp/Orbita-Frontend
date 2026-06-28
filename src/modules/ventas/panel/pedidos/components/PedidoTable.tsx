@@ -111,10 +111,7 @@ export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: Pedido
                 .ped-cards-wrap { display: none; }
                 @media (max-width: 768px) {
                     .ped-table-wrap { display: none !important; }
-                    .ped-cards-wrap { display: grid !important; }
-                }
-                @media (max-width: 400px) {
-                    .ped-cards-wrap { grid-template-columns: 1fr !important; }
+                    .ped-cards-wrap { display: grid !important; grid-template-columns: 1fr !important; }
                 }
             `}</style>
 
