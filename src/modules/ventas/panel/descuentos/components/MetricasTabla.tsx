@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, Search, X } from 'lucide-react'
 import { BadgeEstado } from './BadgeEstado'
 import type { RendimientoItem, OrdenColumnaRendimiento, OrdenDireccion, EstadoDescuento } from '../types'
 
@@ -63,6 +63,7 @@ export function MetricasTabla({ items, onRowClick }: Props) {
   const [orden, setOrden] = useState<OrdenColumnaRendimiento>('usos')
   const [dir, setDir] = useState<OrdenDireccion>('desc')
   const [pagina, setPagina] = useState(1)
+  const [busqueda, setBusqueda] = useState('')
 
   function handleSort(col: OrdenColumnaRendimiento) {
     if (col === orden) {
@@ -74,7 +75,17 @@ export function MetricasTabla({ items, onRowClick }: Props) {
     setPagina(1)
   }
 
-  const sorted = [...items].sort((a, b) => {
+  function handleBusqueda(v: string) {
+    setBusqueda(v)
+    setPagina(1)
+  }
+
+  const q = busqueda.trim().toLowerCase()
+  const filtrados = q
+    ? items.filter((i) => i.nombre.toLowerCase().includes(q) || i.tipoLabel.toLowerCase().includes(q))
+    : items
+
+  const sorted = [...filtrados].sort((a, b) => {
     const va = a[orden] as number
     const vb = b[orden] as number
     return dir === 'asc' ? va - vb : vb - va
@@ -87,7 +98,30 @@ export function MetricasTabla({ items, onRowClick }: Props) {
 
   return (
     <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden' }}>
-      {/* Encabezado */}
+      {/* Buscador */}
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+        <div style={{ position: 'relative', maxWidth: 320 }}>
+          <Search size={13} color="var(--color-muted)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+          <input
+            value={busqueda}
+            onChange={(e) => handleBusqueda(e.target.value)}
+            placeholder="Buscar por nombre o tipo…"
+            style={{
+              width: '100%', height: 32, paddingLeft: 30, paddingRight: busqueda ? 28 : 10,
+              borderRadius: 8, border: '1px solid var(--color-border)',
+              background: 'var(--color-bg)', color: 'var(--color-text)',
+              fontSize: 13, outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+          {busqueda && (
+            <button onClick={() => handleBusqueda('')} type="button" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <X size={13} color="var(--color-muted)" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Encabezado columnas */}
       <div style={{ display: 'grid', gridTemplateColumns: COLS, borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
         <Th label="Nombre" col="nombre" {...thProps} />
         <Th label="Tipo" {...thProps} />
@@ -97,6 +131,13 @@ export function MetricasTabla({ items, onRowClick }: Props) {
         <Th label="Rev. c/desc" col="revenueConDesc" {...thProps} />
         <Th label="Ticket prom." col="ticketPromedio" {...thProps} />
       </div>
+
+      {/* Estado vacío */}
+      {paginados.length === 0 && (
+        <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 13, color: 'var(--color-muted)' }}>
+          Sin resultados para "<strong>{busqueda}</strong>"
+        </div>
+      )}
 
       {/* Filas */}
       {paginados.map((item) => (
@@ -143,7 +184,7 @@ export function MetricasTabla({ items, onRowClick }: Props) {
           }}
         >
           <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-            {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, sorted.length)} de {sorted.length}
+            {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, filtrados.length)} de {filtrados.length}{q ? ` (filtrado de ${items.length})` : ''}
           </span>
           <div style={{ display: 'flex', gap: 4 }}>
             <PagBtn onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1} label="← Ant." />
