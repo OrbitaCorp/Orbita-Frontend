@@ -1,8 +1,9 @@
-﻿// src/modules/ventas/panel/pedidos/PedidoDetalle.tsx — Vista 03
+// src/modules/ventas/panel/pedidos/PedidoDetalle.tsx — Vista 03
 // Detalle de un pedido: productos, línea de tiempo de estado, notas y cliente.
 
 import { useState } from 'react'
-import { ChevronRight, Printer, Mail, Check } from 'lucide-react'
+import { useRouter } from 'next/router'
+import { ChevronRight, Printer, Mail, Check, ChevronDown } from 'lucide-react'
 import { Card } from '@/design-system/components/Card'
 import { Badge } from '@/design-system/components/Badge'
 import { Button } from '@/design-system/components/Button'
@@ -17,16 +18,42 @@ import type { EstadoPedido } from './types/pedidos.types'
 
 const ORDEN: EstadoPedido[] = ['pendiente', 'confirmado', 'preparacion', 'enviado', 'entregado']
 
+const NEXT_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
+    pendiente:   'confirmado',
+    confirmado:  'preparacion',
+    preparacion: 'enviado',
+    enviado:     'entregado',
+}
+
+const ACCION_LABEL: Partial<Record<EstadoPedido, string>> = {
+    pendiente:   'Confirmar pedido',
+    confirmado:  'Iniciar preparación',
+    preparacion: 'Marcar como enviado',
+    enviado:     'Marcar como entregado',
+}
+
+const ESTADO_COLOR: Record<EstadoPedido, string> = {
+    pendiente:   '#F59E0B',
+    confirmado:  '#10B981',
+    preparacion: '#8B5CF6',
+    enviado:     '#3B82F6',
+    entregado:   '#94A3B8',
+    cancelado:   '#EF4444',
+}
+
 interface PedidoDetalleProps {
     id: string
     ir: (vista: VistaPedido, id?: string) => void
 }
 
 export default function PedidoDetalle({ id, ir }: PedidoDetalleProps) {
-    const pedido = MOCK_PEDIDOS.find(p => p.id === id) ?? MOCK_PEDIDOS[0]
-    const [modal, setModal] = useState<null | 'comprobante' | 'email'>(null)
+    const router   = useRouter()
+    const pedido   = MOCK_PEDIDOS.find(p => p.id === id) ?? MOCK_PEDIDOS[0]
+    const [modal,        setModal]        = useState<null | 'comprobante' | 'email'>(null)
+    const [estadoActual, setEstadoActual] = useState<EstadoPedido>(pedido.estado)
+    const [estadoMenu,   setEstadoMenu]   = useState(false)
 
-    const idxActual = pedido.estado === 'cancelado' ? -1 : ORDEN.indexOf(pedido.estado)
+    const idxActual = estadoActual === 'cancelado' ? -1 : ORDEN.indexOf(estadoActual)
     const pasos: { label: string; done: boolean }[] = [
         { label: 'Pedido recibido', done: true },
         { label: 'Confirmado',      done: idxActual >= 1 },
@@ -35,8 +62,28 @@ export default function PedidoDetalle({ id, ir }: PedidoDetalleProps) {
         { label: 'Entregado',       done: idxActual >= 4 },
     ]
 
+    const avanzar  = () => { const n = NEXT_ESTADO[estadoActual]; if (n) setEstadoActual(n) }
+    const cancelar = () => { setEstadoActual('cancelado'); setEstadoMenu(false) }
+    const setEstado = (e: EstadoPedido) => { setEstadoActual(e); setEstadoMenu(false) }
+
+    const negocioId = router.query.negocioId as string
+
+    const accionLabel = ACCION_LABEL[estadoActual]
+    const puedeAvanzar = estadoActual !== 'cancelado' && estadoActual !== 'entregado'
+
     return (
         <div style={pageWrap}>
+            <style>{`
+                .det-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+                .det-grid   { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 16px; align-items: start; }
+                .det-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+                @media (max-width: 768px) {
+                    .det-grid  { grid-template-columns: 1fr !important; }
+                    .det-actions { width: 100%; }
+                    .det-actions button, .det-actions > * { flex: 1; }
+                }
+            `}</style>
+
             <PedidoTabs activo="detalle" ir={ir} />
 
             {/* Breadcrumb */}
@@ -47,20 +94,80 @@ export default function PedidoDetalle({ id, ir }: PedidoDetalleProps) {
             </div>
 
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+            <div className="det-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <h1 style={{ fontSize: 26, fontWeight: 700, fontFamily: '"Geist Mono", monospace', color: 'var(--color-text)', margin: 0 }}>#{pedido.id}</h1>
-                    <Badge status={pedido.estado} />
+                    <Badge status={estadoActual} />
                     <span style={{ fontSize: 14, color: 'var(--color-muted)' }}>{pedido.cliente}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+
+                <div className="det-actions">
                     <Button variant="outline" icon={<Printer size={15} />} onClick={() => setModal('comprobante')}>Imprimir</Button>
                     <Button variant="outline" icon={<Mail size={15} />} onClick={() => setModal('email')}>Email</Button>
-                    <Button variant="primary">Confirmar pedido</Button>
+
+                    {/* Estado quick-change */}
+                    <div style={{ position: 'relative', display: 'inline-flex' }}>
+                        {puedeAvanzar && (
+                            <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-primary)' }}>
+                                <button
+                                    onClick={avanzar}
+                                    style={{ height: 36, padding: '0 14px', background: 'var(--color-primary)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                                >
+                                    {accionLabel}
+                                </button>
+                                <button
+                                    onClick={() => setEstadoMenu(o => !o)}
+                                    style={{ height: 36, width: 32, background: 'var(--color-primary)', color: '#fff', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                    aria-label="Más opciones de estado"
+                                >
+                                    <ChevronDown size={14} />
+                                </button>
+                            </div>
+                        )}
+                        {estadoActual === 'entregado' && (
+                            <span style={{ height: 36, padding: '0 14px', display: 'inline-flex', alignItems: 'center', background: 'var(--color-success-bg)', color: 'var(--color-success)', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+                                ✓ Entregado
+                            </span>
+                        )}
+                        {estadoActual === 'cancelado' && (
+                            <span style={{ height: 36, padding: '0 14px', display: 'inline-flex', alignItems: 'center', background: 'var(--color-error-bg)', color: 'var(--color-error)', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+                                Cancelado
+                            </span>
+                        )}
+
+                        {/* Dropdown de estados */}
+                        {estadoMenu && (
+                            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(15,23,42,0.12)', minWidth: 200, overflow: 'hidden' }}
+                                onMouseLeave={() => setEstadoMenu(false)}
+                            >
+                                <div style={{ padding: '6px 0' }}>
+                                    {ORDEN.map(e => (
+                                        <button key={e} onClick={() => setEstado(e)}
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', border: 'none', background: estadoActual === e ? 'var(--color-surface-alt)' : 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: 'var(--color-text)', textAlign: 'left' }}
+                                        >
+                                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: ESTADO_COLOR[e], flexShrink: 0 }} />
+                                            <span style={{ flex: 1, fontWeight: estadoActual === e ? 600 : 400 }}>
+                                                {e === 'pendiente' ? 'Pendiente' : e === 'confirmado' ? 'Confirmado' : e === 'preparacion' ? 'En preparación' : e === 'enviado' ? 'Enviado' : 'Entregado'}
+                                            </span>
+                                            {estadoActual === e && <Check size={13} style={{ color: 'var(--color-primary)' }} />}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div style={{ borderTop: '1px solid var(--color-border)', padding: '6px 0' }}>
+                                    <button onClick={cancelar}
+                                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: 'var(--color-error)', textAlign: 'left' }}
+                                    >
+                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: ESTADO_COLOR.cancelado, flexShrink: 0 }} />
+                                        Cancelar pedido
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 16, alignItems: 'start' }}>
+            <div className="det-grid">
 
                 {/* Columna principal */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -83,18 +190,23 @@ export default function PedidoDetalle({ id, ir }: PedidoDetalleProps) {
                     </Card>
 
                     <Card>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 16 }}>Estado del pedido</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>Estado del pedido</div>
+                            {estadoActual === 'cancelado' && (
+                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-error)', background: 'var(--color-error-bg)', padding: '3px 10px', borderRadius: 9999 }}>Cancelado</span>
+                            )}
+                        </div>
                         {pasos.map((paso, i) => (
                             <div key={i} style={{ display: 'flex', gap: 12 }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: paso.done ? 'var(--color-primary)' : 'var(--color-surface-alt)', color: paso.done ? '#fff' : 'var(--color-muted)', display: 'grid', placeItems: 'center' }}>
-                                        {paso.done ? <Check size={13} strokeWidth={2.6} /> : <span style={{ fontSize: 11, fontWeight: 700 }}>{i + 1}</span>}
+                                    <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: paso.done && estadoActual !== 'cancelado' ? 'var(--color-primary)' : 'var(--color-surface-alt)', color: paso.done && estadoActual !== 'cancelado' ? '#fff' : 'var(--color-muted)', display: 'grid', placeItems: 'center' }}>
+                                        {paso.done && estadoActual !== 'cancelado' ? <Check size={13} strokeWidth={2.6} /> : <span style={{ fontSize: 11, fontWeight: 700 }}>{i + 1}</span>}
                                     </div>
-                                    {i < pasos.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 24, background: paso.done ? 'var(--color-primary)' : 'var(--color-border)', marginTop: 2 }} />}
+                                    {i < pasos.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 24, background: paso.done && estadoActual !== 'cancelado' ? 'var(--color-primary)' : 'var(--color-border)', marginTop: 2 }} />}
                                 </div>
                                 <div style={{ paddingBottom: i < pasos.length - 1 ? 16 : 0 }}>
-                                    <div style={{ fontSize: 13, fontWeight: paso.done ? 600 : 500, color: paso.done ? 'var(--color-text)' : 'var(--color-muted)' }}>{paso.label}</div>
-                                    {paso.done && <div style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', marginTop: 2 }}>17 may · 1{4 + i}:0{i}</div>}
+                                    <div style={{ fontSize: 13, fontWeight: paso.done ? 600 : 500, color: paso.done && estadoActual !== 'cancelado' ? 'var(--color-text)' : 'var(--color-muted)' }}>{paso.label}</div>
+                                    {paso.done && estadoActual !== 'cancelado' && <div style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', marginTop: 2 }}>17 may · 1{4 + i}:0{i}</div>}
                                 </div>
                             </div>
                         ))}
@@ -117,7 +229,13 @@ export default function PedidoDetalle({ id, ir }: PedidoDetalleProps) {
                                 <div style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>{pedido.email}</div>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm" style={{ width: '100%', justifyContent: 'center' }}>Ver perfil completo →</Button>
+                        <Button
+                            variant="outline" size="sm"
+                            style={{ width: '100%', justifyContent: 'center' }}
+                            onClick={() => router.push(`/admin/${negocioId}/ventas/clientes?vista=detalle&id=${pedido.clienteId}`)}
+                        >
+                            Ver perfil completo →
+                        </Button>
                     </Card>
                     <Card>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 12 }}>Datos del pedido</div>

@@ -21,14 +21,15 @@ export interface LineaPedido {
 }
 
 export interface Pedido {
-    id:        string
-    cliente:   string
-    email:     string
-    productos: LineaPedido[]
-    canal:     CanalVenta
-    monto:     number   // total — suma de cantidad * precio
-    estado:    EstadoPedido
-    fecha:     string   // ISO 8601
+    id:         string
+    clienteId:  string
+    cliente:    string
+    email:      string
+    productos:  LineaPedido[]
+    canal:      CanalVenta
+    monto:      number   // total — suma de cantidad * precio
+    estado:     EstadoPedido
+    fecha:      string   // ISO 8601
 }
 
 // ─── Devoluciones ───────────────────────────────────────────────────────────
