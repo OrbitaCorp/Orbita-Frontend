@@ -1,10 +1,9 @@
 // Barra superior del panel de administración, con breadcrumb dinámico, buscador, acciones y menú de usuario.
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Bell, Moon, Sun, Search, LogOut, User, ChevronDown } from 'lucide-react'
+import { Bell, Moon, Sun, Search, LogOut, User, ChevronDown, AlertCircle, AlertTriangle, X } from 'lucide-react'
 import { useDarkMode } from '@/hooks/useDarkMode'
 
-// Mapa de sección (clave de URL) → label legible para el breadcrumb.
 const seccionLabels: Record<string, string> = {
     dashboard: 'Inicio',
     pedidos: 'Pedidos',
@@ -18,24 +17,32 @@ const seccionLabels: Record<string, string> = {
     configuracion: 'Configuración',
 }
 
+interface Notif { id: string; nivel: 'danger' | 'warning'; titulo: string; desc: string; tiempo: string }
+const NOTIFS: Notif[] = [
+    { id: 'n1', nivel: 'danger',  titulo: '4 pedidos necesitan atención', desc: 'Confirmá pagos y movelos a preparación', tiempo: 'Ahora' },
+    { id: 'n2', nivel: 'danger',  titulo: '2 pedidos sin atender +2hs',    desc: 'Pedidos P-0182 y P-0183 sin respuesta', tiempo: 'Hace 2hs' },
+    { id: 'n3', nivel: 'warning', titulo: '3 productos con stock < 5',      desc: 'Remera oversize, Buzo frisa, Gorra', tiempo: 'Hace 3hs' },
+    { id: 'n4', nivel: 'warning', titulo: '1 pago por confirmar',           desc: 'Transferencia pendiente de validación', tiempo: 'Hace 5hs' },
+]
+
 export default function Header() {
-    {/* para usar el modo oscuro llamo al hook */ }
     const { isDark, toggle } = useDarkMode()
     const { query } = useRouter()
-     {/* Leemos los segmentos de la URL para el breadcrumb:*/ }
-    const seccion = (query.seccion as string) ?? ''
+    const seccion    = (query.seccion    as string) ?? ''
     const moduloPadre = (query.moduloPadre as string) ?? 'Gestión'
-    const titulo = seccionLabels[seccion] ?? seccion
+    const titulo     = seccionLabels[seccion] ?? seccion
 
     const [userMenuAbierto, setUserMenuAbierto] = useState(false)
-    const menuRef = useRef<HTMLDivElement>(null)
+    const [notifOpen, setNotifOpen]             = useState(false)
+    const [notifs, setNotifs]                   = useState<Notif[]>(NOTIFS)
 
-    {/* Cierra el menú si el usuario clickea fuera.*/ }
+    const menuRef  = useRef<HTMLDivElement>(null)
+    const notifRef = useRef<HTMLDivElement>(null)
+
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setUserMenuAbierto(false)
-            }
+            if (menuRef.current  && !menuRef.current.contains(e.target  as Node)) setUserMenuAbierto(false)
+            if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
         }
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -47,7 +54,7 @@ export default function Header() {
             borderBottom: '1px solid var(--color-border)'
         }}>
 
-            {/* Breadcrumb: "ventas › Pedidos" — se actualiza solo al cambiar la URL */}
+            {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm">
                 <span style={{ color: 'var(--color-muted)' }} className="capitalize">{moduloPadre}</span>
                 <span style={{ color: 'var(--color-muted)' }}>›</span>
@@ -59,7 +66,7 @@ export default function Header() {
             {/* Acciones */}
             <div className="flex items-center gap-3">
 
-                {/* Buscador global — sin lógica aún, placeholder funcional */}
+                {/* Buscador global */}
                 <div className="relative">
                     <Search
                         size={16}
@@ -79,32 +86,102 @@ export default function Header() {
                     />
                 </div>
 
-                {/* Toggle dark mode — botón sin lógica aún, conectar a useDarkMode() */}
+                {/* Toggle dark mode */}
                 <button
                     onClick={toggle}
                     aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
                     className="grid place-items-center w-9 h-9 rounded-lg cursor-pointer"
-                    style={{
-                        background: 'transparent',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-body)',
-                    }}
+                    style={{ background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-body)' }}
                 >
-                    {/* Muestra sol en dark mode, luna en light mode */}
-                    {isDark
-                        ? <Sun size={18} strokeWidth={1.5} />
-                        : <Moon size={18} strokeWidth={1.5} />
-                    }
+                    {isDark ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
                 </button>
 
-                 {/* Notificaciones — sin lógica aún */}
-                <button className="grid place-items-center w-9 h-9 rounded-lg cursor-pointer" style={{
-                    background: 'transparent',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-body)'
-                }}>
-                    <Bell size={18} strokeWidth={1.5} />
-                </button>
+                {/* Notificaciones con badge + dropdown */}
+                <div className="relative" ref={notifRef}>
+                    <button
+                        onClick={() => setNotifOpen(o => !o)}
+                        className="grid place-items-center w-9 h-9 rounded-lg cursor-pointer"
+                        style={{
+                            background: notifOpen ? 'var(--color-surface-alt)' : 'transparent',
+                            border: `1px solid ${notifOpen ? 'var(--color-border-strong)' : 'var(--color-border)'}`,
+                            color: 'var(--color-body)',
+                            position: 'relative',
+                        }}
+                    >
+                        <Bell size={18} strokeWidth={1.5} />
+                        {notifs.length > 0 && (
+                            <span style={{
+                                position: 'absolute', top: -4, right: -4,
+                                minWidth: 18, height: 18, borderRadius: 9,
+                                background: 'var(--color-error)', color: '#fff',
+                                fontSize: 10, fontWeight: 700, fontFamily: '"Geist Mono", monospace',
+                                display: 'grid', placeItems: 'center', padding: '0 4px',
+                                border: '2px solid var(--color-bg)',
+                                lineHeight: 1,
+                            }}>
+                                {notifs.length}
+                            </span>
+                        )}
+                    </button>
+
+                    {notifOpen && (
+                        <div style={{
+                            position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                            width: 340, borderRadius: 12, zIndex: 1000,
+                            background: 'var(--color-bg)',
+                            border: '1px solid var(--color-border)',
+                            boxShadow: '0 8px 32px rgba(15,23,42,0.12)',
+                            overflow: 'hidden',
+                        }}>
+                            {/* Header del dropdown */}
+                            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <Bell size={14} style={{ color: 'var(--color-warning)' }} />
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
+                                        {notifs.length > 0 ? `${notifs.length} notificaciones` : 'Sin notificaciones'}
+                                    </span>
+                                </div>
+                                {notifs.length > 0 && (
+                                    <button onClick={() => setNotifs([])} style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        Limpiar todas
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Lista */}
+                            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                                {notifs.length === 0 ? (
+                                    <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: 13, color: 'var(--color-muted)' }}>Todo en orden ✓</div>
+                                    </div>
+                                ) : notifs.map((n, idx) => {
+                                    const Icon = n.nivel === 'danger' ? AlertCircle : AlertTriangle
+                                    const col  = n.nivel === 'danger' ? 'var(--color-error)' : 'var(--color-warning)'
+                                    return (
+                                        <div key={n.id} style={{
+                                            display: 'flex', alignItems: 'flex-start', gap: 10,
+                                            padding: '10px 16px',
+                                            borderBottom: idx < notifs.length - 1 ? '1px solid var(--color-border)' : 'none',
+                                        }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <Icon size={14} style={{ color: col, marginTop: 2, flexShrink: 0 }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.4 }}>{n.titulo}</div>
+                                                <div style={{ fontSize: 11.5, color: 'var(--color-muted)', marginTop: 1 }}>{n.desc}</div>
+                                                <div style={{ fontSize: 10.5, color: 'var(--color-subtle)', marginTop: 3, fontFamily: '"Geist Mono", monospace' }}>{n.tiempo}</div>
+                                            </div>
+                                            <button onClick={() => setNotifs(ns => ns.filter(x => x.id !== n.id))} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                                                <X size={11} strokeWidth={2} />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Usuario con dropdown */}
                 <div className="relative" ref={menuRef}>

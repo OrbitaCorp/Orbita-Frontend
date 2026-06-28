@@ -1,9 +1,4 @@
-﻿// src/modules/ventas/panel/reportes/Dashboard.tsx — Vista 01
-// Pantalla principal del panel: pulso del negocio en tiempo real.
-//
-// Secciones: saludo + período, KPIs, alertas dismissibles, ventas de la semana
-// + Top (productos/categorías/canal), actividad reciente y banner de pendientes.
-
+// src/modules/ventas/panel/reportes/Dashboard.tsx — Vista 01
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { Banknote, ShoppingBag, BarChart3, Users, Globe, Bell, X, Check, Maximize2 } from 'lucide-react'
@@ -21,8 +16,9 @@ import { TopProductos } from './components/TopProductos'
 import { SERIE_VENTAS, TOP_PRODUCTOS } from './mock/reportes.mock'
 import { MOCK_PEDIDOS } from '../pedidos/mock/pedidos.mock'
 
-interface Alerta { id: string; nivel: 'danger' | 'warning'; titulo: string; seccion: string; extra?: Record<string, string> }
+interface Alerta { id: string; nivel: 'danger' | 'warning'; titulo: string; desc?: string; seccion: string; extra?: Record<string, string> }
 const ALERTAS0: Alerta[] = [
+    { id: 'a4', nivel: 'danger',  titulo: '4 pedidos necesitan tu atención', desc: 'Confirmá pagos y movelos a preparación', seccion: 'pedidos', extra: { vista: 'cola' } },
     { id: 'a1', nivel: 'danger',  titulo: '2 pedidos sin atender +2hs', seccion: 'pedidos' },
     { id: 'a2', nivel: 'warning', titulo: '3 productos con stock < 5',   seccion: 'inventario' },
     { id: 'a3', nivel: 'warning', titulo: '1 pago por confirmar',        seccion: 'pedidos' },
@@ -54,7 +50,23 @@ export default function Dashboard() {
     const publicar = () => { setPublicada(true); setToast('¡Tu tienda está online en rama.orbita.shop!') }
 
     return (
-        <div style={pageWrap}>
+        <div className="dash-page" style={pageWrap}>
+            <style>{`
+                @media (max-width: 960px) {
+                    .dash-charts { grid-template-columns: 1fr !important; }
+                }
+                @media (max-width: 760px) {
+                    .dash-page   { padding: 16px 14px 48px !important; }
+                    .dash-kpis   { grid-template-columns: repeat(2,1fr) !important; }
+                    .dash-alerts { grid-template-columns: 1fr !important; }
+                    .dash-act-hide { display: none !important; }
+                    .dash-act-row  { grid-template-columns: 90px 1fr auto !important; gap: 8px !important; }
+                }
+                @media (max-width: 460px) {
+                    .dash-kpis { grid-template-columns: 1fr !important; }
+                }
+            `}</style>
+
             {/* 1. Header */}
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
                 <div>
@@ -76,7 +88,7 @@ export default function Dashboard() {
             </div>
 
             {/* 2. KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
+            <div className="dash-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
                 <StatCard label="Ventas" value={fmtMoney(248900)} icon={Banknote} accent="#3B82F6" delta="+18% vs ayer" deltaPos />
                 <StatCard label="Pedidos" value="12" icon={ShoppingBag} accent="#10B981" sub="4 pendientes" />
                 <StatCard label="Ticket prom" value={fmtMoney(20742)} icon={BarChart3} accent="#8B5CF6" delta="+6% vs ayer" deltaPos />
@@ -92,14 +104,15 @@ export default function Dashboard() {
                         <div style={{ flex: 1 }} />
                         <button onClick={() => setAlertas([])} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Limpiar todas</button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                    <div className="dash-alerts" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px,1fr))', gap: 10 }}>
                         {alertas.map(a => {
                             const col = a.nivel === 'danger' ? 'var(--color-error)' : 'var(--color-warning)'
-                            const bg = a.nivel === 'danger' ? 'var(--color-error-bg)' : 'var(--color-warning-bg)'
+                            const bg  = a.nivel === 'danger' ? 'var(--color-error-bg)' : 'var(--color-warning-bg)'
                             return (
                                 <div key={a.id} style={{ background: bg, borderLeft: `3px solid ${col}`, borderRadius: 8, padding: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.4 }}>{a.titulo}</div>
+                                        {a.desc && <div style={{ fontSize: 11.5, color: 'var(--color-muted)', marginTop: 2, lineHeight: 1.4 }}>{a.desc}</div>}
                                         <button onClick={() => goSeccion(a.seccion, a.extra)} style={{ marginTop: 6, background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Ir →</button>
                                     </div>
                                     <button onClick={() => setAlertas(al => al.filter(x => x.id !== a.id))} style={{ width: 22, height: 22, borderRadius: 5, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}><X size={13} strokeWidth={1.8} /></button>
@@ -117,7 +130,7 @@ export default function Dashboard() {
             )}
 
             {/* 4. Ventas semana + Top */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) minmax(0,1fr)', gap: 16, marginBottom: 16 }}>
+            <div className="dash-charts" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) minmax(0,1fr)', gap: 16, marginBottom: 16 }}>
                 <Card>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                         <div>
@@ -126,7 +139,7 @@ export default function Dashboard() {
                         </div>
                         <button onClick={() => setExpand('ventas')} style={iconBtn}><Maximize2 size={15} /></button>
                     </div>
-                    <LineChart data={SERIE_VENTAS.valores} labels={SERIE_VENTAS.labels} height={200} formatValue={money} />
+                    <LineChart data={SERIE_VENTAS.valores} labels={SERIE_VENTAS.labels} height={280} formatValue={money} />
                 </Card>
                 <Card>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -139,9 +152,9 @@ export default function Dashboard() {
                             return <button key={id} onClick={() => setTopView(id)} style={{ height: 26, padding: '0 10px', borderRadius: 9999, border: 'none', background: a ? 'var(--color-primary-bg)' : 'var(--color-surface-alt)', color: a ? 'var(--color-primary)' : 'var(--color-muted)', fontSize: 12, fontWeight: a ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit' }}>{l}</button>
                         })}
                     </div>
-                    {topView === 'productos' && <TopProductos productos={TOP_PRODUCTOS} />}
+                    {topView === 'productos'  && <TopProductos productos={TOP_PRODUCTOS} />}
                     {topView === 'categorias' && <BarChart color="#8B5CF6" data={[{ label: 'Camperas', value: 32 }, { label: 'Remeras', value: 28 }, { label: 'Pantalones', value: 22 }, { label: 'Buzos', value: 12 }, { label: 'Accesorios', value: 6 }]} />}
-                    {topView === 'canal' && <DonutChart size={140} data={[{ label: 'Online', value: 68, color: '#3B82F6' }, { label: 'Presencial', value: 32, color: '#10B981' }]} />}
+                    {topView === 'canal'      && <DonutChart size={140} data={[{ label: 'Online', value: 68, color: '#3B82F6' }, { label: 'Presencial', value: 32, color: '#10B981' }]} />}
                 </Card>
             </div>
 
@@ -152,37 +165,22 @@ export default function Dashboard() {
                     <button onClick={() => goSeccion('pedidos')} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Ver todos →</button>
                 </div>
                 {MOCK_PEDIDOS.slice(0, 5).map((p, i) => (
-                    <div key={p.id} onClick={() => goSeccion('pedidos', { vista: 'detalle', id: p.id })} style={{ display: 'grid', gridTemplateColumns: '90px 1fr auto 130px 70px', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < 4 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+                    <div key={p.id} className="dash-act-row" onClick={() => goSeccion('pedidos', { vista: 'detalle', id: p.id })} style={{ display: 'grid', gridTemplateColumns: '90px 1fr auto 130px 70px', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < 4 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
                         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', fontFamily: '"Geist Mono", monospace' }}>#{p.id}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                             <Avatar name={p.cliente} size={24} />
                             <span style={{ fontSize: 13, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.cliente}</span>
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{fmtMoney(p.monto)}</span>
-                        <Badge status={p.estado} size="sm" />
-                        <span style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', textAlign: 'right' }}>{new Date(p.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="dash-act-hide"><Badge status={p.estado} size="sm" /></span>
+                        <span className="dash-act-hide" style={{ fontSize: 11, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', textAlign: 'right' }}>{new Date(p.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                 ))}
             </Card>
 
-            {/* 6. Banner pendientes */}
-            <div style={{ background: 'linear-gradient(135deg,#2563EB,#3B82F6)', borderRadius: 14, padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', color: '#fff' }}>
-                <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(255,255,255,0.16)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 26, fontWeight: 800, fontFamily: '"Geist Mono", monospace' }}>4</span>
-                </div>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>4 pedidos necesitan tu atención</div>
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>Confirmá pagos y movelos a preparación.</div>
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => goSeccion('pedidos')} style={{ height: 40, padding: '0 16px', borderRadius: 8, background: '#fff', color: '#1D4ED8', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Ver pedidos</button>
-                    <button onClick={() => goSeccion('pedidos', { vista: 'cola' })} style={{ height: 40, padding: '0 14px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Ir a cola</button>
-                </div>
-            </div>
-
             {/* Modales de expandir */}
             <Modal isOpen={expand === 'ventas'} onClose={() => setExpand(null)} title="Ventas de la semana" maxWidth={760}>
-                <LineChart data={SERIE_VENTAS.valores} labels={SERIE_VENTAS.labels} height={320} formatValue={money} />
+                <LineChart data={SERIE_VENTAS.valores} labels={SERIE_VENTAS.labels} height={340} formatValue={money} />
             </Modal>
             <Modal isOpen={expand === 'top'} onClose={() => setExpand(null)} title="Top productos" maxWidth={760}>
                 <TopProductos productos={TOP_PRODUCTOS} />
