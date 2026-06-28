@@ -178,7 +178,7 @@ export default function PedidoLista() {
 
     const sub = vista as VistaPedido | undefined
     let content
-    if (sub === 'detalle')          content = <PedidoDetalle id={id as string} ir={ir} />
+    if (sub === 'detalle')          content = <PedidoDetalle key={id as string} id={id as string} ir={ir} />
     else if (sub === 'nuevo')       content = <PedidoNuevo ir={ir} onToast={setToast} />
     else if (sub === 'historial')   content = <PedidoHistorial ir={ir} />
     else if (sub === 'cola')        content = <ColaPreparacion ir={ir} onToast={setToast} />
