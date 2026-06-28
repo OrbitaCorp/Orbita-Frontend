@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { ShoppingBag, Search, User, Menu, X, ArrowRight, ShoppingCart } from 'lucide-react'
+import { ShoppingBag, Search, User, Menu, X, ArrowRight, ShoppingCart, Minus, Plus, Trash2 } from 'lucide-react'
 import { Thumb } from './Thumb'
 import { fmt } from '@/lib/storefront/utils'
 import type { TiendaConfig, ItemCarrito } from '@/lib/storefront/types'
@@ -23,8 +23,18 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
   const { slug } = router.query as { slug: string }
   const base = `/tienda/${slug}`
 
-  const cartCount    = carrito.reduce((s, i) => s + i.qty, 0)
-  const cartSubtotal = carrito.reduce((s, i) => s + i.precio * i.qty, 0)
+  const [items, setItems] = useState(carrito)
+
+  const cartCount    = items.reduce((s, i) => s + i.qty, 0)
+  const cartSubtotal = items.reduce((s, i) => s + i.precio * i.qty, 0)
+
+  function updateQty(idx: number, delta: number) {
+    setItems(prev => {
+      const newQty = prev[idx].qty + delta
+      if (newQty <= 0) return prev.filter((_, i) => i !== idx)
+      return prev.map((it, i) => i === idx ? { ...it, qty: newQty } : it)
+    })
+  }
 
   const [menuOpen,   setMenuOpen]   = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -290,7 +300,7 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
             </div>
 
             {/* Ítems */}
-            {carrito.length === 0 ? (
+            {items.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32 }}>
                 <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--color-surface)', display: 'grid', placeItems: 'center' }}>
                   <ShoppingCart size={32} strokeWidth={1.2} color="var(--color-muted)" />
@@ -308,12 +318,12 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
               </div>
             ) : (
               <div className="sf-cart-items" style={{ flex: 1, padding: '4px 20px' }}>
-                {carrito.map((it, i) => (
+                {items.map((it, i) => (
                   <div
                     key={i}
                     style={{
                       display: 'flex', gap: 12, padding: '14px 0', alignItems: 'flex-start',
-                      borderBottom: i < carrito.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      borderBottom: i < items.length - 1 ? '1px solid var(--color-border)' : 'none',
                     }}
                   >
                     <Thumb hue={it.hue} size={64} radius={8} style={{ flexShrink: 0 }} />
@@ -321,15 +331,29 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
                         {it.nombre}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 8 }}>{it.variante}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 10 }}>{it.variante}</div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center',
-                          border: '1px solid var(--color-border)', borderRadius: 6, height: 28,
-                        }}>
-                          <span style={{ width: 28, textAlign: 'center', fontSize: 12, fontWeight: 500, color: 'var(--color-muted)' }}>×</span>
-                          <span style={{ width: 22, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>{it.qty}</span>
+
+                        {/* Stepper cantidad */}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 8, height: 32, overflow: 'hidden' }}>
+                          <button
+                            onClick={() => updateQty(i, -1)}
+                            style={{ width: 32, height: 32, background: 'none', border: 'none', cursor: 'pointer', color: it.qty === 1 ? '#EF4444' : 'var(--color-muted)', display: 'grid', placeItems: 'center', transition: 'color 150ms' }}
+                          >
+                            {it.qty === 1 ? <Trash2 size={12} strokeWidth={2} /> : <Minus size={12} strokeWidth={2} />}
+                          </button>
+                          <span style={{ minWidth: 24, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>
+                            {it.qty}
+                          </span>
+                          <button
+                            onClick={() => updateQty(i, +1)}
+                            style={{ width: 32, height: 32, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)', display: 'grid', placeItems: 'center', transition: 'color 150ms' }}
+                          >
+                            <Plus size={12} strokeWidth={2} />
+                          </button>
                         </div>
+
+                        {/* Precio */}
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>
                             {fmt(it.precio * it.qty)}
@@ -340,6 +364,7 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
                             </div>
                           )}
                         </div>
+
                       </div>
                     </div>
                   </div>
@@ -348,7 +373,7 @@ export function StorefrontHeader({ tienda, carrito, logged }: Props) {
             )}
 
             {/* Footer — solo si hay ítems */}
-            {carrito.length > 0 && (
+            {items.length > 0 && (
               <div style={{
                 padding: '16px 20px 24px',
                 borderTop: '1px solid var(--color-border)',
