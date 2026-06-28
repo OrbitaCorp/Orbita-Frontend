@@ -64,7 +64,7 @@ export const AP_DEFAULTS: Apariencia = {
 }
 
 export const PRESET_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#0F172A', '#6B7280']
-export const RADII: Record<RadioCards, number> = { none: 0, sm: 6, md: 12, lg: 18, full: 9999 }
+export const RADII: Record<RadioCards, number> = { none: 0, sm: 6, md: 12, lg: 18 }
 
 // ─── Google Fonts ─────────────────────────────────────────────────────────────
 
