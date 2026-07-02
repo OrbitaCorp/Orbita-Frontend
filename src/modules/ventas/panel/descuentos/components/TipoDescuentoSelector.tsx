@@ -30,7 +30,7 @@ interface Props {
 
 function CardGrid({ cards, tipo, onChange }: { cards: TipoCard[]; tipo: TipoDescuento | null; onChange: (t: TipoDescuento) => void }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+    <div className="tds-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
       {cards.map((card) => {
         const activo = tipo === card.tipo
         return (
@@ -72,6 +72,7 @@ export function TipoDescuentoSelector({ tipo, onChange, error }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <style>{`@media (max-width: 768px) { .tds-grid { grid-template-columns: repeat(2, 1fr) !important; } }`}</style>
       <CardGrid cards={CARDS_BASICOS} tipo={tipo} onChange={onChange} />
 
       <button
@@ -89,7 +90,7 @@ export function TipoDescuentoSelector({ tipo, onChange, error }: Props) {
       </button>
 
       {expandido && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div className="tds-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {CARDS_AVANZADOS.map((card) => {
             const activo = tipo === card.tipo
             return (

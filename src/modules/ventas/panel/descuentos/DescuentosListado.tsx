@@ -32,9 +32,17 @@ export function DescuentosListado({ onVerDetalle, onEditar, onVerMetricas, onCre
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+      <style>{`
+        .dl-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+        .dl-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        @media (max-width: 768px) {
+          .dl-bar { flex-direction: column; align-items: stretch; }
+          .dl-actions > button { flex: 1; justify-content: center; }
+        }
+      `}</style>
+      <div className="dl-bar">
         <DescuentosFiltros />
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div className="dl-actions">
           <button style={btnSecundario} onClick={onVerMetricas}>
             <BarChart2 size={16} /> Métricas
           </button>

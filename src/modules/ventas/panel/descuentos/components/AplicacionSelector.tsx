@@ -32,7 +32,7 @@ interface Props {
 export function AplicacionSelector({ aplicacion, onChange, error }: Props) {
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="dcto-g2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {CARDS.map(({ valor, Icono, nombre, desc }) => {
           const activo = aplicacion === valor
           return (

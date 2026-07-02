@@ -41,8 +41,9 @@ export function VigenciaForm({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <style>{`@media (max-width: 768px) { .vf-g2 { grid-template-columns: 1fr !important; } }`}</style>
       {/* Fechas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="vf-g2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField
           label="Fecha de inicio"
           type="date"
@@ -124,7 +125,7 @@ export function VigenciaForm({
             </div>
           }
         />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 6 }}>
+        <div className="vf-g2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 6 }}>
           <FormField
             label="Desde"
             type="time"

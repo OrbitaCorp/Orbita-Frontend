@@ -5,6 +5,7 @@ import type { ItemMenuContextual } from '../../../_shared/components'
 import { BadgeEstado } from './BadgeEstado'
 import { BadgeTipo } from './BadgeTipo'
 import { LinkCompartibleModal } from './LinkCompartibleModal'
+import { CuponCardMobile } from './CuponCardMobile'
 import { useToggleCupon } from '../hooks/useToggleCupon'
 import { useEliminarCupon } from '../hooks/useEliminarCupon'
 import { useDuplicarCupon } from '../hooks/useDuplicarCupon'
@@ -25,7 +26,7 @@ const fmtFecha = (iso: string | null) => {
 const fmtValor = (c: Cupon) =>
   c.tipoDescuento === 'porcentaje'
     ? `${c.valor}%`
-    : `$ ${c.valor.toLocaleString('es-AR')}`
+    : `$ ${c.valor.toLocaleString('es-AR')}`
 
 interface Props {
   datos: Cupon[]
@@ -167,25 +168,43 @@ export function CuponesTabla({ datos, isLoading, ordenColumna, ordenDireccion, o
     )
   }
 
+  const emptyState = (
+    <div style={{ padding: '56px 16px', textAlign: 'center' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--color-surface-alt)', color: 'var(--color-muted)', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
+        <Ticket size={26} />
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>No hay cupones</div>
+      <div style={{ fontSize: 14, color: 'var(--color-muted)' }}>Intentá cambiar los filtros o creá tu primer cupón.</div>
+    </div>
+  )
+
   return (
-    <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8, padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
-        {HEADS.map((h) => <Th key={h} label={h} ordenColumna={ordenColumna} ordenDireccion={ordenDireccion} onOrdenar={onOrdenar} />)}
+    <>
+      <style>{`
+        .cup-table-wrap { display: block; }
+        .cup-cards-wrap { display: none; }
+        @media (max-width: 768px) {
+          .cup-table-wrap { display: none !important; }
+          .cup-cards-wrap { display: flex !important; flex-direction: column; gap: 8px; padding: 8px; }
+        }
+      `}</style>
+
+      <div className="cup-table-wrap">
+        <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8, padding: '0 16px', height: 42, alignItems: 'center', background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
+            {HEADS.map((h) => <Th key={h} label={h} ordenColumna={ordenColumna} ordenDireccion={ordenDireccion} onOrdenar={onOrdenar} />)}
+          </div>
+          {datos.length === 0 ? emptyState : datos.map((c) => (
+            <FilaCupon key={c.id} cupon={c} onEditar={onEditar} onVerMetricas={onVerMetricas} />
+          ))}
+        </div>
       </div>
 
-      {datos.length === 0 ? (
-        <div style={{ padding: '56px 16px', textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--color-surface-alt)', color: 'var(--color-muted)', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
-            <Ticket size={26} />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>No hay cupones</div>
-          <div style={{ fontSize: 14, color: 'var(--color-muted)' }}>Intentá cambiar los filtros o creá tu primer cupón.</div>
-        </div>
-      ) : (
-        datos.map((c) => (
-          <FilaCupon key={c.id} cupon={c} onEditar={onEditar} onVerMetricas={onVerMetricas} />
-        ))
-      )}
-    </div>
+      <div className="cup-cards-wrap">
+        {datos.length === 0 ? emptyState : datos.map((c) => (
+          <CuponCardMobile key={c.id} cupon={c} onEditar={onEditar} onVerMetricas={onVerMetricas} />
+        ))}
+      </div>
+    </>
   )
 }

@@ -27,8 +27,9 @@ export function DescuentosDetalle({ id, onVolver, onEditar, onVerMetricas }: Pro
     })
     return (
       <div>
+        <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } }`}</style>
         <div style={sk(14, 100)} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start', marginTop: 20 }}>
+        <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start', marginTop: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ ...sk(110), borderRadius: 12 }} />
             <div style={{ ...sk(200), borderRadius: 12 }} />
@@ -54,6 +55,7 @@ export function DescuentosDetalle({ id, onVolver, onEditar, onVerMetricas }: Pro
 
   return (
     <div>
+      <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } }`}</style>
       {/* Breadcrumb de volver */}
       <button
         type="button"
@@ -76,6 +78,7 @@ export function DescuentosDetalle({ id, onVolver, onEditar, onVerMetricas }: Pro
       </button>
 
       <div
+        className="dcto-2col"
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 340px',
@@ -94,6 +97,7 @@ export function DescuentosDetalle({ id, onVolver, onEditar, onVerMetricas }: Pro
 
         {/* Columna derecha sticky */}
         <div
+          className="dcto-side"
           style={{
             display: 'flex',
             flexDirection: 'column',

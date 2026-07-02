@@ -26,7 +26,7 @@ export function AlcanceSelector({ alcance, onChange, opciones, error }: Props) {
   const cards = opciones ? CARDS.filter((c) => opciones.includes(c.valor)) : CARDS
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 10 }}>
+      <div className="dcto-g2" style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 10 }}>
         {cards.map(({ valor, Icono, nombre, desc }) => {
           const activo = alcance === valor
           return (

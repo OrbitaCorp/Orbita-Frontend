@@ -45,6 +45,7 @@ export function DescuentosFiltros() {
 
   return (
     <div
+      className="df-root"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -52,6 +53,7 @@ export function DescuentosFiltros() {
         flexWrap: 'wrap',
       }}
     >
+      <style>{`@media (max-width: 768px) { .df-root { width: 100%; } .df-search { flex: 1 1 100%; } .df-search input { width: 100% !important; } }`}</style>
       {/* Estado */}
       <div style={{ position: 'relative' }}>
         <select
@@ -105,7 +107,7 @@ export function DescuentosFiltros() {
       </div>
 
       {/* Búsqueda */}
-      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <div className="df-search" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
         <span
           style={{
             position: 'absolute',

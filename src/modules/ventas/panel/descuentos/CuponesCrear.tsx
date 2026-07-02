@@ -129,8 +129,9 @@ export function CuponesCrear({ id, onVolver }: Props) {
   if (isLoading && id) {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
+        <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } }`}</style>
         {header}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
+        <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[190, 240, 130, 130].map((h, i) => (
               <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
@@ -147,8 +148,9 @@ export function CuponesCrear({ id, onVolver }: Props) {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
+      <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } .dcto-g2 { grid-template-columns: 1fr !important; } }`}</style>
       {header}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+      <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <SectionCard title="Información básica" subtitle="Definí el código y nombre del cupón.">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -268,7 +270,7 @@ export function CuponesCrear({ id, onVolver }: Props) {
           </SectionCard>
 
           <SectionCard title="Vigencia">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="dcto-g2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FormField label="Fecha de inicio" type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} error={errores.fechaInicio} />
               <div>
                 <LabelRow label="Fecha de expiración" right={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Sin vencimiento</span><Toggle checked={sinVencimiento} onChange={setSinVencimiento} /></div>} />
@@ -287,7 +289,7 @@ export function CuponesCrear({ id, onVolver }: Props) {
           </div>
         </div>
 
-        <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="dcto-side" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <PreviewCupon codigo={codigo} nombre={nombre} tipo={tipo} valor={valor} alcance={alcance} montoMinimo={montoMinimo} />
           <ResumenSidebar nombre={nombre} tipo={null} aplicacion="manual" fechaInicio={fechaInicio} fechaFin={fechaExpiracion} sinVencimiento={sinVencimiento} diasVigencia={[]} ilimitadoUsos={ilimitadoTotal} limiteUsosTotal={usosMaxTotal} />
         </div>
