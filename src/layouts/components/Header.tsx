@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Bell, Moon, Sun, Search, LogOut, User, ChevronDown, AlertCircle, AlertTriangle, X, Menu } from 'lucide-react'
+import { Bell, Moon, Sun, Search, LogOut, User, ChevronDown, AlertCircle, AlertTriangle, X, Menu, ArrowLeft } from 'lucide-react'
 import { useDarkMode } from '@/hooks/useDarkMode'
+import { nombreConversacion } from '@/modules/ventas/panel/mensajes/mock/mensajes.mock'
 
 const seccionLabels: Record<string, string> = {
     dashboard: 'Inicio',
@@ -90,6 +91,15 @@ export default function Header({ onMenuClick }: Props) {
             return [{ label: 'POS' }]
         }
         if (seccion === 'mensajes') {
+            // Conversación abierta: "← <nombre del cliente>", la flecha vuelve a la lista.
+            const conv = query.conv as string | undefined
+            const nombreConv = conv ? nombreConversacion(conv) : undefined
+            if (nombreConv) {
+                return [
+                    { label: 'Mensajes', onClick: () => irA('mensajes') },
+                    { label: nombreConv },
+                ]
+            }
             if (vista === 'plantillas') {
                 return [
                     { label: 'Mensajes', onClick: () => irA('mensajes') },
@@ -126,6 +136,8 @@ export default function Header({ onMenuClick }: Props) {
     }
 
     const bcItems = buildBreadcrumb()
+    const bcActual = bcItems[bcItems.length - 1]
+    const bcPadre  = bcItems.length > 1 ? bcItems[bcItems.length - 2] : null
 
     return (
         <>
@@ -133,10 +145,15 @@ export default function Header({ onMenuClick }: Props) {
                 .admin-menu-btn    { display: none; }
                 .admin-search-wrap { display: flex; }
                 .admin-user-name   { display: block; }
+                .admin-bc-full     { display: flex; }
+                .admin-bc-mobile   { display: none; }
                 @media (max-width: 768px) {
                     .admin-menu-btn    { display: flex !important; }
                     .admin-search-wrap { display: none !important; }
                     .admin-user-name   { display: none !important; }
+                    .admin-bc-full     { display: none !important; }
+                    .admin-bc-mobile   { display: flex !important; }
+                    .dcto-page-head    { display: none !important; }
                 }
             `}</style>
 
@@ -160,8 +177,8 @@ export default function Header({ onMenuClick }: Props) {
                     <Menu size={18} strokeWidth={1.8} />
                 </button>
 
-                {/* Breadcrumb dinámico */}
-                <div className="flex items-center gap-2 text-sm" style={{ flex: 1, minWidth: 0 }}>
+                {/* Breadcrumb completo — solo desktop */}
+                <div className="admin-bc-full items-center gap-2 text-sm" style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ color: 'var(--color-muted)', whiteSpace: 'nowrap' }} className="capitalize">{moduloPadre}</span>
                     {bcItems.map((item, i) => (
                         <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -180,6 +197,22 @@ export default function Header({ onMenuClick }: Props) {
                             )}
                         </span>
                     ))}
+                </div>
+
+                {/* Header simplificado — solo mobile: flecha de volver + título de la vista actual */}
+                <div className="admin-bc-mobile items-center" style={{ flex: 1, minWidth: 0, gap: 10 }}>
+                    {bcPadre?.onClick && (
+                        <button
+                            onClick={bcPadre.onClick}
+                            aria-label="Volver"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-body)', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                            <ArrowLeft size={17} strokeWidth={1.8} />
+                        </button>
+                    )}
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {bcActual.label}
+                    </span>
                 </div>
 
                 {/* Acciones */}

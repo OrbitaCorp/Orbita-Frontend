@@ -108,6 +108,8 @@ export function reducerDescuento(
 ): DescuentoFormState {
   switch (action.type) {
     case 'SET':
+      // Al setear el mapa de errores completo, guardarlo tal cual (no auto-limpiar).
+      if (action.key === 'errores') return { ...state, errores: action.value as Record<string, string> }
       return { ...state, [action.key]: action.value, errores: { ...state.errores, [action.key as string]: '' } }
 
     case 'SET_TIPO':

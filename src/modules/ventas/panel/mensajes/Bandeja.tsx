@@ -60,16 +60,18 @@ function BandejaSkeleton() {
 // ─── Vista Bandeja (split panel) ─────────────────────────────────────────────
 
 interface BandejaProps {
+  convId:   string | null
+  onAbrir:  (id: string) => void
+  onCerrar: () => void
   ir:       (v: VistaMensaje) => void
   onToast:  (m: string) => void
   onPerfil: () => void
 }
 
-function BandejaMensajes({ ir, onToast, onPerfil }: BandejaProps) {
+function BandejaMensajes({ convId, onAbrir, onCerrar, ir, onToast, onPerfil }: BandejaProps) {
   const [loading, setLoading] = useState(true)
   const [conversaciones, setConversaciones] = useState<Conversacion[]>(CONVERSACIONES)
   const [plantillas] = useState<Plantilla[]>(PLANTILLAS)
-  const [activaId, setActivaId] = useState<string | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 700)
@@ -78,27 +80,43 @@ function BandejaMensajes({ ir, onToast, onPerfil }: BandejaProps) {
 
   if (loading) return <BandejaSkeleton />
 
-  const activaCV = conversaciones.find((cv) => cv.id === activaId) ?? null
+  const activaCV = conversaciones.find((cv) => cv.id === convId) ?? null
 
+  // Abrir una conversación = navegación real (cambia la URL vía ?conv=<id>).
   const handleSelect = (id: string) => {
-    setActivaId(id)
     setConversaciones((prev) => prev.map((cv) => (cv.id === id ? { ...cv, unread: false } : cv)))
+    onAbrir(id)
   }
 
   const handleArchivar = (id: string) => {
     const cv = conversaciones.find((c) => c.id === id)
     setConversaciones((prev) => prev.map((c) => (c.id === id ? { ...c, archivado: !c.archivado } : c)))
-    if (activaId === id) setActivaId(null)
+    if (convId === id) onCerrar()
     onToast(cv?.archivado ? 'Conversación desarchivada' : 'Conversación archivada')
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 138px)', minHeight: 480, border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden', background: 'var(--color-bg)' }}>
-      <div style={{ width: 296, flexShrink: 0 }}>
-        <BandejaLista conversaciones={conversaciones} activaId={activaId} onSelect={handleSelect} onArchivar={handleArchivar} />
+    <>
+      {/* Mobile: Estado 1 (lista) y Estado 2 (chat) son excluyentes; ambos quedan montados
+          para conservar filtro y scroll de la lista al volver. Desktop: split sin cambios. */}
+      <style>{`
+        .msg-list { width: 296px; flex-shrink: 0; }
+        .msg-chat { display: flex; flex: 1; min-width: 0; }
+        @media (max-width: 768px) {
+          .msg-list { width: 100% !important; }
+          .msg-split.has-conv .msg-list { display: none !important; }
+          .msg-split:not(.has-conv) .msg-chat { display: none !important; }
+        }
+      `}</style>
+      <div className={`msg-split ${activaCV ? 'has-conv' : ''}`} style={{ display: 'flex', height: 'calc(100vh - 138px)', minHeight: 480, border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden', background: 'var(--color-bg)' }}>
+        <div className="msg-list">
+          <BandejaLista conversaciones={conversaciones} activaId={convId} onSelect={handleSelect} onArchivar={handleArchivar} />
+        </div>
+        <div className="msg-chat">
+          <ChatPanel cv={activaCV} onToast={onToast} onPerfil={onPerfil} onArchivar={handleArchivar} plantillas={plantillas} onIrAPlantillas={() => ir('plantillas')} />
+        </div>
       </div>
-      <ChatPanel cv={activaCV} onToast={onToast} onPerfil={onPerfil} onArchivar={handleArchivar} plantillas={plantillas} onIrAPlantillas={() => ir('plantillas')} />
-    </div>
+    </>
   )
 }
 
@@ -107,6 +125,7 @@ function BandejaMensajes({ ir, onToast, onPerfil }: BandejaProps) {
 export function MensajesHub() {
   const router  = useRouter()
   const { vista } = router.query
+  const convId = (router.query.conv as string) ?? null
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
@@ -116,10 +135,16 @@ export function MensajesHub() {
   }, [toast])
 
   const ir = (v: VistaMensaje) => {
-    const { vista: _v, ...rest } = router.query
+    const { vista: _v, conv: _c, ...rest } = router.query
     const q: Record<string, string | string[] | undefined> = { ...rest }
     if (v !== 'bandeja') q.vista = v
     router.push({ query: q })
+  }
+
+  const abrirConv = (id: string) => router.push({ query: { ...router.query, conv: id } })
+  const cerrarConv = () => {
+    const { conv: _c, ...rest } = router.query
+    router.push({ query: rest })
   }
 
   const irPerfil = () => {
@@ -130,10 +155,11 @@ export function MensajesHub() {
   const esPlantillas = vista === 'plantillas'
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1280, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+    <div className="msg-hub" style={{ padding: '24px 32px', maxWidth: 1280, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <style>{`@media (max-width: 768px) { .msg-hub { padding: 16px !important; } }`}</style>
       {esPlantillas
         ? <PlantillasInline onToast={setToast} />
-        : <BandejaMensajes ir={ir} onToast={setToast} onPerfil={irPerfil} />
+        : <BandejaMensajes convId={convId} onAbrir={abrirConv} onCerrar={cerrarConv} ir={ir} onToast={setToast} onPerfil={irPerfil} />
       }
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9000, background: 'var(--color-text)', color: '#fff', padding: '10px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 16px rgba(0,0,0,.2)', whiteSpace: 'nowrap' }}>

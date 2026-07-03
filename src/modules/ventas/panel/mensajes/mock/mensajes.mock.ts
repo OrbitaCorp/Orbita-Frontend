@@ -12,6 +12,12 @@ export interface Conversacion {
   pedido:    string | null
 }
 
+// Resuelve el nombre del cliente de una conversación por id.
+// Usado por el header global para mostrar "← <nombre>" en la vista de chat mobile.
+export function nombreConversacion(id: string): string | undefined {
+  return CONVERSACIONES.find((cv) => cv.id === id)?.cliente
+}
+
 export const CONVERSACIONES: Conversacion[] = [
   { id: 'cv1', cliente: 'María Fernández',  email: 'maria.f@gmail.com',      preview: 'Perfecto, gracias! ¿Cuándo llegaría?',      tiempo: '14:26', unread: true,  archivado: false, pedido: '1284' },
   { id: 'cv2', cliente: 'Joaquín Pérez',    email: 'joaq.perez@hotmail.com', preview: 'Quería consultar por talles disponibles',   tiempo: '13:10', unread: true,  archivado: false, pedido: '1283' },

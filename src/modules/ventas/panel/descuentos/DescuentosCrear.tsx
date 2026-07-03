@@ -15,6 +15,7 @@ import { VigenciaForm } from './components/VigenciaForm'
 import { AplicacionSelector } from './components/AplicacionSelector'
 import { PreviewPOS } from './components/PreviewPOS'
 import { ResumenSidebar } from './components/ResumenSidebar'
+import { AccionesGuardado } from './components/AccionesGuardado'
 import { useDescuento } from './hooks/useDescuento'
 import { useCrearDescuento } from './hooks/useCrearDescuento'
 import { useEditarDescuento } from './hooks/useEditarDescuento'
@@ -108,7 +109,7 @@ export function DescuentosCrear({ id, onVolver }: Props) {
   const t = state.tipo
 
   const header = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+    <div className="dcto-page-head" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
       <button
         type="button"
         onClick={onVolver}
@@ -125,7 +126,7 @@ export function DescuentosCrear({ id, onVolver }: Props) {
   if (isLoading && id) {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
-        <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } }`}</style>
+        <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-form-side { display: none !important; } }`}</style>
         {header}
         <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -133,7 +134,7 @@ export function DescuentosCrear({ id, onVolver }: Props) {
               <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
             ))}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="dcto-form-side" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ height: 190, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
             <div style={{ height: 170, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
           </div>
@@ -144,7 +145,7 @@ export function DescuentosCrear({ id, onVolver }: Props) {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
-      <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } .dcto-g2 { grid-template-columns: 1fr !important; } }`}</style>
+      <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-form-side { display: none !important; } .dcto-g2 { grid-template-columns: 1fr !important; } }`}</style>
       {header}
       <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
         {/* Columna principal */}
@@ -203,18 +204,23 @@ export function DescuentosCrear({ id, onVolver }: Props) {
             <AplicacionSelector aplicacion={state.aplicacion} onChange={d('aplicacion') as (a: Aplicacion) => void} />
           </SectionCard>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingBottom: 40 }}>
-            <button type="button" onClick={onVolver} style={{ height: 40, padding: '0 20px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-body)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-              Cancelar
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={isSaving} style={{ height: 40, padding: '0 24px', borderRadius: 8, border: 'none', background: isSaving ? 'var(--color-border)' : 'var(--color-primary)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer' }}>
-              {isSaving ? 'Guardando…' : id ? 'Guardar cambios' : 'Crear descuento'}
-            </button>
-          </div>
+          <AccionesGuardado
+            labelConfirmar={id ? 'Guardar cambios' : 'Crear descuento'}
+            cargando={isSaving}
+            validar={() => { const e = validarDescuentoForm(state); dispatch({ type: 'SET', key: 'errores', value: e }); return !Object.keys(e).length }}
+            onSubmit={handleSubmit}
+            onCancelar={onVolver}
+            preview={
+              <>
+                <PreviewPOS nombre={state.nombre} tipo={state.tipo} aplicacion={state.aplicacion} valor={state.valor} llevaCantidad={state.llevaCantidad} pagaCantidad={state.pagaCantidad} montoMinimo={state.montoMinimo} />
+                <ResumenSidebar nombre={state.nombre} tipo={state.tipo} aplicacion={state.aplicacion} fechaInicio={state.fechaInicio} fechaFin={state.fechaFin} sinVencimiento={state.sinVencimiento} diasVigencia={state.diasVigencia} ilimitadoUsos={state.ilimitadoUsos} limiteUsosTotal={state.limiteUsosTotal} />
+              </>
+            }
+          />
         </div>
 
         {/* Sidebar sticky */}
-        <div className="dcto-side" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="dcto-form-side" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <PreviewPOS nombre={state.nombre} tipo={state.tipo} aplicacion={state.aplicacion} valor={state.valor} llevaCantidad={state.llevaCantidad} pagaCantidad={state.pagaCantidad} montoMinimo={state.montoMinimo} />
           <ResumenSidebar nombre={state.nombre} tipo={state.tipo} aplicacion={state.aplicacion} fechaInicio={state.fechaInicio} fechaFin={state.fechaFin} sinVencimiento={state.sinVencimiento} diasVigencia={state.diasVigencia} ilimitadoUsos={state.ilimitadoUsos} limiteUsosTotal={state.limiteUsosTotal} />
         </div>

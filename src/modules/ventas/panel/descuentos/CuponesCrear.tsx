@@ -7,8 +7,8 @@ import { AlcanceSelector } from './components/AlcanceSelector'
 import { CategoriaLista } from './components/CategoriaLista'
 import { ProductoArbol } from './components/ProductoArbol'
 import { Toggle } from '../../_shared/components/Toggle'
-import { PreviewCupon } from './components/PreviewCupon'
-import { ResumenSidebar } from './components/ResumenSidebar'
+import { CuponResumen } from './components/CuponResumen'
+import { AccionesGuardado } from './components/AccionesGuardado'
 import { useCupon } from './hooks/useCupon'
 import { useCrearCupon } from './hooks/useCrearCupon'
 import { useEditarCupon } from './hooks/useEditarCupon'
@@ -112,7 +112,7 @@ export function CuponesCrear({ id, onVolver }: Props) {
   const isSaving = crearMutation.isPending || editarMutation.isPending
 
   const header = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+    <div className="dcto-page-head" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
       <button
         type="button"
         onClick={onVolver}
@@ -129,7 +129,7 @@ export function CuponesCrear({ id, onVolver }: Props) {
   if (isLoading && id) {
     return (
       <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
-        <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } }`}</style>
+        <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-form-side { display: none !important; } }`}</style>
         {header}
         <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -137,9 +137,8 @@ export function CuponesCrear({ id, onVolver }: Props) {
               <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
             ))}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ height: 190, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
-            <div style={{ height: 170, borderRadius: 12, background: 'var(--color-surface-alt)' }} />
+          <div className="dcto-form-side" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[190, 170].map((h, i) => <div key={i} style={{ height: h, borderRadius: 12, background: 'var(--color-surface-alt)' }} />)}
           </div>
         </div>
       </div>
@@ -148,7 +147,7 @@ export function CuponesCrear({ id, onVolver }: Props) {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 40 }}>
-      <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-side { position: static !important; } .dcto-g2 { grid-template-columns: 1fr !important; } }`}</style>
+      <style>{`@media (max-width: 768px) { .dcto-2col { grid-template-columns: 1fr !important; } .dcto-form-side { display: none !important; } .dcto-g2 { grid-template-columns: 1fr !important; } }`}</style>
       {header}
       <div className="dcto-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -281,17 +280,18 @@ export function CuponesCrear({ id, onVolver }: Props) {
 
           {id && <LinkCompartibleSection codigo={codigo} linkActivo={linkActivo} onToggleActivo={setLinkActivo} linkRedirect={linkRedirect} onRedirectChange={setLinkRedirect} />}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingBottom: 40 }}>
-            <button type="button" onClick={onVolver} style={{ height: 40, padding: '0 20px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-body)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancelar</button>
-            <button type="button" onClick={handleSubmit} disabled={isSaving} style={{ height: 40, padding: '0 24px', borderRadius: 8, border: 'none', background: isSaving ? 'var(--color-border)' : 'var(--color-primary)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer' }}>
-              {isSaving ? 'Guardando…' : id ? 'Guardar cambios' : 'Crear cupón'}
-            </button>
-          </div>
+          <AccionesGuardado
+            labelConfirmar={id ? 'Guardar cambios' : 'Crear cupón'}
+            cargando={isSaving}
+            validar={() => { const e = validar(); setErrores(e); return !Object.keys(e).length }}
+            onSubmit={handleSubmit}
+            onCancelar={onVolver}
+            preview={<CuponResumen codigo={codigo} nombre={nombre} tipo={tipo} valor={valor} alcance={alcance} montoMinimo={montoMinimo} fechaInicio={fechaInicio} fechaExpiracion={fechaExpiracion} sinVencimiento={sinVencimiento} ilimitadoTotal={ilimitadoTotal} usosMaxTotal={usosMaxTotal} mostrarLink={!!id} linkActivo={linkActivo} />}
+          />
         </div>
 
-        <div className="dcto-side" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <PreviewCupon codigo={codigo} nombre={nombre} tipo={tipo} valor={valor} alcance={alcance} montoMinimo={montoMinimo} />
-          <ResumenSidebar nombre={nombre} tipo={null} aplicacion="manual" fechaInicio={fechaInicio} fechaFin={fechaExpiracion} sinVencimiento={sinVencimiento} diasVigencia={[]} ilimitadoUsos={ilimitadoTotal} limiteUsosTotal={usosMaxTotal} />
+        <div className="dcto-form-side" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <CuponResumen codigo={codigo} nombre={nombre} tipo={tipo} valor={valor} alcance={alcance} montoMinimo={montoMinimo} fechaInicio={fechaInicio} fechaExpiracion={fechaExpiracion} sinVencimiento={sinVencimiento} ilimitadoTotal={ilimitadoTotal} usosMaxTotal={usosMaxTotal} />
         </div>
       </div>
     </div>
