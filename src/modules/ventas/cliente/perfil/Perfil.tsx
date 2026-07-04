@@ -3,20 +3,22 @@ import { useRouter } from 'next/router'
 import {
   Package, MapPin, User, Lock, LogOut,
   ChevronRight, Plus, Pencil, CheckCircle2,
-  Eye, EyeOff, ShieldCheck,
+  Eye, EyeOff, ShieldCheck, MessageCircle,
 } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
+import { MensajesCliente } from './components/MensajesCliente'
 import { TIENDA, CARRITO_INICIAL, DIRECCIONES, USUARIO_MOCK, HISTORIAL_MOCK } from '@/lib/storefront/mock'
 import { fmt } from '@/lib/storefront/utils'
 
-type Tab = 'pedidos' | 'direcciones' | 'datos' | 'seguridad'
+type Tab = 'pedidos' | 'mensajes' | 'direcciones' | 'datos' | 'seguridad'
 
 const TABS: { id: Tab; Icon: React.ElementType; label: string }[] = [
-  { id: 'pedidos',     Icon: Package,  label: 'Mis pedidos'      },
-  { id: 'direcciones', Icon: MapPin,   label: 'Mis direcciones'  },
-  { id: 'datos',       Icon: User,     label: 'Datos personales' },
-  { id: 'seguridad',   Icon: Lock,     label: 'Seguridad'        },
+  { id: 'pedidos',     Icon: Package,       label: 'Mis pedidos'      },
+  { id: 'mensajes',    Icon: MessageCircle, label: 'Mensajes'         },
+  { id: 'direcciones', Icon: MapPin,        label: 'Mis direcciones'  },
+  { id: 'datos',       Icon: User,          label: 'Datos personales' },
+  { id: 'seguridad',   Icon: Lock,          label: 'Seguridad'        },
 ]
 
 const ESTADO_STYLE: Record<string, { bg: string; color: string }> = {
@@ -209,6 +211,9 @@ export default function Perfil() {
                 })}
               </div>
             )}
+
+            {/* ══ MENSAJES ══ */}
+            {tab === 'mensajes' && <MensajesCliente />}
 
             {/* ══ DIRECCIONES ══ */}
             {tab === 'direcciones' && (

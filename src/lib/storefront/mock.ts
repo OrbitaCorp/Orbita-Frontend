@@ -71,6 +71,23 @@ export const DESCUENTOS_EXCLUSIVOS: DescuentoExclusivo[] = [
   { codigo: 'influencer20',  nombre: '20% OFF — Descuento especial', descripcion: 'Tu descuento personal. Válido en toda la tienda. No acumulable con otras promociones.',         tipo: 'porcentaje', valor: 20, vencimiento: '15 jul 2026' },
 ]
 
+export interface MensajeCliente {
+  from: 'cliente' | 'tienda'
+  txt:  string
+  hora: string
+}
+
+// Conversación única del cliente con la tienda (no por pedido). El cliente
+// puede mencionar cualquier pedido de su historial dentro del mismo hilo.
+export const MENSAJES_MOCK: MensajeCliente[] = [
+  { from: 'tienda',  txt: 'Hola María! Gracias por tu compra 😊 Cualquier consulta sobre tus pedidos, escribinos por acá.', hora: 'Lun 10:02' },
+  { from: 'cliente', txt: 'Hola! Quería consultar por el pedido #ORB-2847, ¿cuándo estaría llegando?',                     hora: 'Lun 10:15' },
+  { from: 'tienda',  txt: 'Tu pedido #ORB-2847 está en preparación, calculamos que sale mañana. Te aviso apenas tengamos el código de seguimiento.', hora: 'Lun 10:20' },
+  { from: 'cliente', txt: 'Genial, muchas gracias!',                                                                        hora: 'Lun 10:21' },
+  { from: 'cliente', txt: 'Otra consulta: el pedido #ORB-2610 me llegó todo perfecto, quería agradecerles.',                hora: 'Ayer 16:40' },
+  { from: 'tienda',  txt: 'Qué alegría leer esto! Gracias a vos por elegirnos 🙌',                                          hora: 'Ayer 16:50' },
+]
+
 export const PEDIDO_MOCK: Pedido = {
   id:         'ORB-2847',
   fecha:      '17 may 2026 · 14:32',

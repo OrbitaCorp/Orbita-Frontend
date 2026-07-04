@@ -1,0 +1,227 @@
+// Chat del cliente con la tienda — hilo único, no por pedido.
+// El cliente puede mencionar (#ORB-XXXX) cualquier pedido de su historial
+// dentro de la misma conversación.
+
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
+import { MessageCircle, Package, Send } from 'lucide-react'
+import { TIENDA, HISTORIAL_MOCK, MENSAJES_MOCK } from '@/lib/storefront/mock'
+import type { MensajeCliente } from '@/lib/storefront/mock'
+import { fmt } from '@/lib/storefront/utils'
+
+const MONO = '"Geist Mono", "Fira Code", monospace'
+
+const ESTADO_COLOR: Record<string, { bg: string; color: string }> = {
+  success: { bg: '#DCFCE7', color: '#16A34A' },
+  warning: { bg: '#FEF9C3', color: '#CA8A04' },
+  error:   { bg: '#FEE2E2', color: '#DC2626' },
+  neutral: { bg: 'var(--color-surface)', color: 'var(--color-muted)' },
+}
+
+/** Renderiza texto con chips clickeables para menciones #ORB-XXXX */
+function Burbuja({ txt, me, onGoPedido }: { txt: string; me: boolean; onGoPedido: (id: string) => void }) {
+  const partes = txt.split(/(#[A-Z0-9-]+)/g)
+  return (
+    <>
+      {partes.map((p, i) => {
+        const m = /^#([A-Z0-9-]+)$/.exec(p)
+        if (!m) return <span key={i}>{p}</span>
+        const id = m[1]
+        const existe = HISTORIAL_MOCK.some(h => h.id === id)
+        return (
+          <span
+            key={i}
+            onClick={existe ? () => onGoPedido(id) : undefined}
+            title={existe ? 'Ver pedido' : undefined}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '1px 7px', borderRadius: 9999,
+              background: me ? 'rgba(255,255,255,.22)' : 'var(--color-primary-bg)',
+              color: me ? '#fff' : 'var(--color-primary)',
+              fontSize: 12, fontWeight: 700, fontFamily: MONO,
+              cursor: existe ? 'pointer' : 'default', verticalAlign: 'middle',
+              border: me ? '1px solid rgba(255,255,255,.3)' : '1px solid var(--color-primary)',
+            }}
+          >
+            <Package size={9} />#{id}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
+function PedidoMencionPopover({ query, onSelect, onClose }: { query: string; onSelect: (id: string) => void; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handle(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [onClose])
+
+  const filtrados = HISTORIAL_MOCK.filter(p => query === '' || p.id.toLowerCase().includes(query.toLowerCase()))
+
+  return (
+    <div ref={ref} style={{
+      position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 340, zIndex: 20,
+      background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 10,
+      boxShadow: '0 6px 24px rgba(0,0,0,.14)', overflow: 'hidden',
+    }}>
+      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--color-border)', fontSize: 12, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        Mencionar un pedido
+      </div>
+      <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+        {filtrados.length === 0 ? (
+          <div style={{ padding: '18px 14px', textAlign: 'center', color: 'var(--color-muted)', fontSize: 13 }}>No se encontraron pedidos</div>
+        ) : filtrados.map(p => {
+          const st = ESTADO_COLOR[p.estadoTipo]
+          return (
+            <button
+              key={p.id}
+              onClick={() => { onSelect(p.id); onClose() }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: 'none', borderBottom: '1px solid var(--color-border)', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--color-surface)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Package size={14} color="var(--color-muted)" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', fontFamily: MONO }}>#{p.id}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 1 }}>{p.fecha}</div>
+              </div>
+              <span style={{ flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 999, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>{p.estado}</span>
+              <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: 'var(--color-text)', fontFamily: MONO, minWidth: 64, textAlign: 'right' }}>{fmt(p.total)}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function MensajesCliente() {
+  const router = useRouter()
+  const { slug } = router.query as { slug: string }
+  const base = `/tienda/${slug}`
+
+  const [msgs, setMsgs] = useState<MensajeCliente[]>(MENSAJES_MOCK)
+  const [draft, setDraft] = useState('')
+  const [hashTrigger, setHashTrigger] = useState<{ idx: number; query: string } | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [msgs])
+
+  const irAPedido = (id: string) => router.push(`${base}/pedido/${id}`)
+
+  const enviar = () => {
+    const m = draft.trim()
+    if (!m) return
+    const d = new Date()
+    const hora = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+    setMsgs(prev => [...prev, { from: 'cliente', txt: m, hora }])
+    setDraft('')
+    setHashTrigger(null)
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setDraft(val)
+    const m = val.match(/#(\S*)$/)
+    setHashTrigger(m ? { idx: val.length - m[0].length, query: m[1] } : null)
+  }
+
+  const handleSelectPedido = (id: string) => {
+    if (hashTrigger === null) return
+    const before = draft.slice(0, hashTrigger.idx)
+    const after = draft.slice(hashTrigger.idx + 1 + hashTrigger.query.length)
+    setDraft(`${before}#${id} ${after}`)
+    setHashTrigger(null)
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
+  return (
+    <div className="sf-msg-cliente" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 600 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sf-msg-cliente { height: calc(100vh - 260px) !important; min-height: 420px; }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+          <MessageCircle size={18} color="#fff" strokeWidth={1.6} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{TIENDA.nombre}</div>
+          <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 1 }}>Consultá sobre cualquiera de tus pedidos en este mismo chat</div>
+        </div>
+      </div>
+
+      {/* Mensajes */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--color-surface)', minHeight: 0 }}>
+        {msgs.map((m, i) => {
+          const me = m.from === 'cliente'
+          return (
+            <div key={i} style={{ alignSelf: me ? 'flex-end' : 'flex-start', maxWidth: '76%' }}>
+              <div style={{
+                padding: '10px 13px', borderRadius: 12,
+                background: me ? 'var(--color-primary)' : 'var(--color-bg)',
+                border: me ? 'none' : '1px solid var(--color-border)',
+                color: me ? '#fff' : 'var(--color-text)',
+                fontSize: 13.5, lineHeight: 1.6,
+                borderBottomRightRadius: me ? 4 : 12,
+                borderBottomLeftRadius: me ? 12 : 4,
+              }}>
+                <Burbuja txt={m.txt} me={me} onGoPedido={irAPedido} />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--color-muted)', fontFamily: MONO, marginTop: 3, textAlign: me ? 'right' : 'left' }}>{m.hora}</div>
+            </div>
+          )
+        })}
+        {msgs.length === 0 && (
+          <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--color-muted)', fontSize: 13 }}>
+            Escribile a {TIENDA.nombre} por cualquier consulta
+          </div>
+        )}
+      </div>
+
+      {/* Composer */}
+      <div style={{ position: 'relative', padding: '10px 14px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        {hashTrigger !== null && (
+          <PedidoMencionPopover query={hashTrigger.query} onSelect={handleSelectPedido} onClose={() => setHashTrigger(null)} />
+        )}
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={handleChange}
+          onKeyDown={e => {
+            if (e.key === 'Escape') setHashTrigger(null)
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() }
+          }}
+          placeholder="Escribí un mensaje… (usá # para mencionar un pedido)"
+          style={{ flex: 1, height: 42, padding: '0 14px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10, fontSize: 13.5, color: 'var(--color-text)', fontFamily: 'inherit', outline: 'none' }}
+        />
+        <button
+          onClick={enviar}
+          disabled={!draft.trim()}
+          title="Enviar"
+          style={{
+            width: 42, height: 42, borderRadius: 10, border: 'none', flexShrink: 0,
+            background: draft.trim() ? 'var(--color-primary)' : 'var(--color-surface)',
+            color: draft.trim() ? '#fff' : 'var(--color-subtle)',
+            cursor: draft.trim() ? 'pointer' : 'default',
+            display: 'grid', placeItems: 'center', transition: 'background 150ms ease',
+          }}
+        >
+          <Send size={17} strokeWidth={1.8} />
+        </button>
+      </div>
+    </div>
+  )
+}
