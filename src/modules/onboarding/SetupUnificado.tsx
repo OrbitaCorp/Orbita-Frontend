@@ -203,49 +203,6 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
         </p>
       </div>
 
-      <div style={{ marginBottom: 28 }}>
-        <Field label="¿Cómo vas a vender?" required>
-          <div style={{ fontSize: 12, color: 'var(--color-muted)', margin: '-2px 0 12px' }}>
-            Definí cómo van a operar tus clientes con vos. Podés cambiarlo más adelante.
-          </div>
-        </Field>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <SelectCard
-            sel={negocio.modoVenta === 'ecommerce'} Icon={ShoppingCart}
-            label="Tienda online"
-            desc="Catálogo con carrito, checkout y cobro online completo"
-            onClick={() => setModoVenta('ecommerce')}
-          />
-          <SelectCard
-            sel={negocio.modoVenta === 'vidriera'} Icon={Eye}
-            label="Vidriera digital"
-            desc="Solo mostrás tu catálogo. Los clientes te consultan por WhatsApp"
-            onClick={() => setModoVenta('vidriera')}
-          />
-        </div>
-
-        {negocio.modoVenta === 'vidriera' && (
-          <div style={{
-            display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14,
-            background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
-            borderRadius: 12, padding: '14px 16px', animation: 'fadeSlideDown 220ms ease',
-          }}>
-            <AlertTriangle size={16} color="#D97706" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                Con vidriera digital no vas a tener disponible:
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--color-body)', lineHeight: 1.7 }}>
-                Checkout ni carrito de compra · Módulo de clientes y pedidos · Cupones · Mensajes · Opiniones de compradores
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--color-muted)', lineHeight: 1.6, marginTop: 8 }}>
-                Vas a poder seguir creando productos, aplicando descuentos y usando el POS. Cada producto va a tener un botón para que el cliente te consulte directo por WhatsApp.
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 }}>
         <input ref={fileRef} type="file" accept="image/*" onChange={handleLogo} style={{ display: 'none' }} />
         <button
@@ -327,6 +284,49 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
             Una vez activo tu espacio, podés conectar un dominio propio como <strong>tunegocio.com.ar</strong>.
           </p>
         </Field>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <Field label="¿Cómo vas a vender?" required>
+          <div style={{ fontSize: 12, color: 'var(--color-muted)', margin: '-2px 0 12px' }}>
+            Definí cómo van a operar tus clientes con vos. Podés cambiarlo más adelante.
+          </div>
+        </Field>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <SelectCard
+            sel={negocio.modoVenta === 'ecommerce'} Icon={ShoppingCart}
+            label="Tienda online"
+            desc="Catálogo con carrito, checkout y cobro online completo"
+            onClick={() => setModoVenta('ecommerce')}
+          />
+          <SelectCard
+            sel={negocio.modoVenta === 'vidriera'} Icon={Eye}
+            label="Vidriera digital"
+            desc="Solo mostrás tu catálogo. Los clientes te consultan por WhatsApp"
+            onClick={() => setModoVenta('vidriera')}
+          />
+        </div>
+
+        {negocio.modoVenta === 'vidriera' && (
+          <div style={{
+            display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14,
+            background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
+            borderRadius: 12, padding: '14px 16px', animation: 'fadeSlideDown 220ms ease',
+          }}>
+            <AlertTriangle size={16} color="#D97706" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                Con vidriera digital no vas a tener disponible:
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--color-body)', lineHeight: 1.7 }}>
+                Checkout ni carrito de compra · Módulo de clientes y pedidos · Cupones · Mensajes · Opiniones de compradores
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--color-muted)', lineHeight: 1.6, marginTop: 8 }}>
+                Vas a poder seguir creando productos, aplicando descuentos y usando el POS. Cada producto va a tener un botón para que el cliente te consulte directo por WhatsApp.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <style>{`
