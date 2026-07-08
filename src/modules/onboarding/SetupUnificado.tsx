@@ -6,6 +6,7 @@ import {
   Banknote, Landmark, QrCode, CreditCard,
   User, Users, UsersRound, Building2,
   Camera, Info, MapPin, Globe, LocateFixed,
+  ShoppingCart, Eye, AlertTriangle,
   type LucideIcon,
 } from 'lucide-react'
 import { Skeleton } from '@/design-system/components/Skeleton'
@@ -38,6 +39,8 @@ export type SetupUnificadoProps = {
 
 // ─── Internal types ───────────────────────────────────────────────────────────
 
+type ModoVenta = 'ecommerce' | 'vidriera' | ''
+
 type Negocio = {
   nombre:     string
   descripcion:string
@@ -48,6 +51,7 @@ type Negocio = {
   latLng:     [number, number]
   subdominio: string
   tipoLocal:  ('fisico' | 'online')[]
+  modoVenta:  ModoVenta
 }
 
 const BA: [number, number] = [-34.6037, -58.3816]
@@ -178,6 +182,8 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
   const set = (k: 'nombre' | 'descripcion' | 'email' | 'telefono') => (v: string) =>
     setNegocio(prev => ({ ...prev, [k]: v }))
 
+  const setModoVenta = (v: ModoVenta) => setNegocio(prev => ({ ...prev, modoVenta: v }))
+
   function handleLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -195,6 +201,49 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
         <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0 }}>
           Esta información aparecerá en tu perfil y en los turnos.
         </p>
+      </div>
+
+      <div style={{ marginBottom: 28 }}>
+        <Field label="¿Cómo vas a vender?" required>
+          <div style={{ fontSize: 12, color: 'var(--color-muted)', margin: '-2px 0 12px' }}>
+            Definí cómo van a operar tus clientes con vos. Podés cambiarlo más adelante.
+          </div>
+        </Field>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <SelectCard
+            sel={negocio.modoVenta === 'ecommerce'} Icon={ShoppingCart}
+            label="Tienda online"
+            desc="Catálogo con carrito, checkout y cobro online completo"
+            onClick={() => setModoVenta('ecommerce')}
+          />
+          <SelectCard
+            sel={negocio.modoVenta === 'vidriera'} Icon={Eye}
+            label="Vidriera digital"
+            desc="Solo mostrás tu catálogo. Los clientes te consultan por WhatsApp"
+            onClick={() => setModoVenta('vidriera')}
+          />
+        </div>
+
+        {negocio.modoVenta === 'vidriera' && (
+          <div style={{
+            display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14,
+            background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
+            borderRadius: 12, padding: '14px 16px', animation: 'fadeSlideDown 220ms ease',
+          }}>
+            <AlertTriangle size={16} color="#D97706" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                Con vidriera digital no vas a tener disponible:
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--color-body)', lineHeight: 1.7 }}>
+                Checkout ni carrito de compra · Módulo de clientes y pedidos · Cupones · Mensajes · Opiniones de compradores
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--color-muted)', lineHeight: 1.6, marginTop: 8 }}>
+                Vas a poder seguir creando productos, aplicando descuentos y usando el POS. Cada producto va a tener un botón para que el cliente te consulte directo por WhatsApp.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 }}>
@@ -279,6 +328,13 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
           </p>
         </Field>
       </div>
+
+      <style>{`
+        @keyframes fadeSlideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }
@@ -607,7 +663,7 @@ export function SetupUnificado({
   const [seleccion,    setSeleccion]   = useState<string[]>([])
   const [negocio,      setNegocio]     = useState<Negocio>({
     nombre: '', descripcion: '', email: '', telefono: '',
-    direccion: '', logo: '', latLng: BA, subdominio: '', tipoLocal: [],
+    direccion: '', logo: '', latLng: BA, subdominio: '', tipoLocal: [], modoVenta: '',
   })
   const [pagos,       setPagos]       = useState<string[]>([])
   const [tamano,      setTamano]      = useState('')
