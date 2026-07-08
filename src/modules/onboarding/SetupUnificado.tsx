@@ -47,7 +47,7 @@ type Negocio = {
   logo:       string
   latLng:     [number, number]
   subdominio: string
-  tipoLocal:  'fisico' | 'online' | ''
+  tipoLocal:  ('fisico' | 'online')[]
 }
 
 const BA: [number, number] = [-34.6037, -58.3816]
@@ -289,7 +289,10 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
   const [buscarInput, setBuscarInput] = useState(negocio.direccion)
 
   const tipoLocal = negocio.tipoLocal
-  const setTipo   = (v: 'fisico' | 'online') => setNegocio(prev => ({ ...prev, tipoLocal: v }))
+  const toggleTipo = (v: 'fisico' | 'online') => setNegocio(prev => ({
+    ...prev,
+    tipoLocal: prev.tipoLocal.includes(v) ? prev.tipoLocal.filter(t => t !== v) : [...prev.tipoLocal, v],
+  }))
 
   async function geocodificar() {
     const q = buscarInput.trim()
@@ -339,27 +342,27 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
           ¿Dónde operás?
         </h2>
         <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0 }}>
-          Contanos si tenés un espacio físico donde atendés o los clientes pueden visitar.
+          Contanos cómo operás — podés elegir una opción o ambas.
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
         <SelectCard
-          sel={tipoLocal === 'fisico'} Icon={MapPin}
+          sel={tipoLocal.includes('fisico')} Icon={MapPin}
           label="Local físico"
           desc="Tengo un local, showroom, consultorio o espacio propio"
-          onClick={() => setTipo('fisico')}
+          onClick={() => toggleTipo('fisico')}
         />
         <SelectCard
-          sel={tipoLocal === 'online'} Icon={Globe}
+          sel={tipoLocal.includes('online')} Icon={Globe}
           label="Online / A domicilio"
           desc="Vendo o atiendo de forma remota o en el domicilio del cliente"
-          onClick={() => setTipo('online')}
+          onClick={() => toggleTipo('online')}
         />
       </div>
 
-      {tipoLocal === 'fisico' && (
-        <div style={{ animation: 'fadeSlideDown 220ms ease' }}>
+      {tipoLocal.includes('fisico') && (
+        <div style={{ animation: 'fadeSlideDown 220ms ease', marginBottom: tipoLocal.includes('online') ? 20 : 0 }}>
           <Field label="Dirección de tu negocio" required>
             <div style={{
               border: '1.5px solid var(--color-border)', borderRadius: 14,
@@ -425,7 +428,7 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
         </div>
       )}
 
-      {tipoLocal === 'online' && (
+      {tipoLocal.includes('online') && (
         <div style={{
           display: 'flex', gap: 12, alignItems: 'flex-start',
           background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)',
@@ -436,10 +439,14 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-              Perfecto, tu negocio opera sin dirección fija
+              {tipoLocal.includes('fisico')
+                ? 'Perfecto, también atendés de forma remota'
+                : 'Perfecto, tu negocio opera sin dirección fija'}
             </div>
             <div style={{ fontSize: 13, color: 'var(--color-muted)', lineHeight: 1.5 }}>
-              Podés agregar una dirección física después desde tu panel si en algún momento abrís un local.
+              {tipoLocal.includes('fisico')
+                ? 'Vas a poder configurar zonas de envío o atención a domicilio desde tu panel.'
+                : 'Podés agregar una dirección física después desde tu panel si en algún momento abrís un local.'}
             </div>
           </div>
         </div>
@@ -600,7 +607,7 @@ export function SetupUnificado({
   const [seleccion,    setSeleccion]   = useState<string[]>([])
   const [negocio,      setNegocio]     = useState<Negocio>({
     nombre: '', descripcion: '', email: '', telefono: '',
-    direccion: '', logo: '', latLng: BA, subdominio: '', tipoLocal: '',
+    direccion: '', logo: '', latLng: BA, subdominio: '', tipoLocal: [],
   })
   const [pagos,       setPagos]       = useState<string[]>([])
   const [tamano,      setTamano]      = useState('')
@@ -619,7 +626,7 @@ export function SetupUnificado({
 
   const puedeAvanzar =
     paso === 0        ? seleccion.length > 0 :
-    paso === 2        ? negocio.tipoLocal !== '' :
+    paso === 2        ? negocio.tipoLocal.length > 0 :
     true
 
   function avanzar() {
