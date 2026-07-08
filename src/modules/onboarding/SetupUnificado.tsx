@@ -33,6 +33,8 @@ export type SetupUnificadoProps = {
   toggleFn?: (prev: string[], key: string) => string[]
   /** Si true, agrega el paso "Tu equipo" al final (usado por turnos) */
   conEquipo?: boolean
+  /** Si true, agrega en "Tu negocio" la elección ecommerce/vidriera digital (exclusivo de tienda) */
+  conModoVenta?: boolean
   /** Ruta de redirección al finalizar */
   successPath: string
 }
@@ -165,7 +167,7 @@ function SelectCard({ sel, Icon, label, desc, onClick }: {
 
 // ─── Shared steps ─────────────────────────────────────────────────────────────
 
-function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Dispatch<SetStateAction<Negocio>> }) {
+function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; setNegocio: Dispatch<SetStateAction<Negocio>>; conModoVenta?: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [estadoSub, setEstadoSub] = useState<EstadoSub>('idle')
 
@@ -286,48 +288,50 @@ function StepNegocio({ negocio, setNegocio }: { negocio: Negocio; setNegocio: Di
         </Field>
       </div>
 
-      <div style={{ marginTop: 24 }}>
-        <Field label="¿Cómo vas a vender?" required>
-          <div style={{ fontSize: 12, color: 'var(--color-muted)', margin: '-2px 0 12px' }}>
-            Definí cómo van a operar tus clientes con vos. Podés cambiarlo más adelante.
+      {conModoVenta && (
+        <div style={{ marginTop: 24 }}>
+          <Field label="¿Cómo vas a vender?" required>
+            <div style={{ fontSize: 12, color: 'var(--color-muted)', margin: '-2px 0 12px' }}>
+              Definí cómo van a operar tus clientes con vos. Podés cambiarlo más adelante.
+            </div>
+          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <SelectCard
+              sel={negocio.modoVenta === 'ecommerce'} Icon={ShoppingCart}
+              label="Tienda online"
+              desc="Catálogo con carrito, checkout y cobro online completo"
+              onClick={() => setModoVenta('ecommerce')}
+            />
+            <SelectCard
+              sel={negocio.modoVenta === 'vidriera'} Icon={Eye}
+              label="Vidriera digital"
+              desc="Solo mostrás tu catálogo. Los clientes te consultan por WhatsApp"
+              onClick={() => setModoVenta('vidriera')}
+            />
           </div>
-        </Field>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <SelectCard
-            sel={negocio.modoVenta === 'ecommerce'} Icon={ShoppingCart}
-            label="Tienda online"
-            desc="Catálogo con carrito, checkout y cobro online completo"
-            onClick={() => setModoVenta('ecommerce')}
-          />
-          <SelectCard
-            sel={negocio.modoVenta === 'vidriera'} Icon={Eye}
-            label="Vidriera digital"
-            desc="Solo mostrás tu catálogo. Los clientes te consultan por WhatsApp"
-            onClick={() => setModoVenta('vidriera')}
-          />
-        </div>
 
-        {negocio.modoVenta === 'vidriera' && (
-          <div style={{
-            display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14,
-            background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
-            borderRadius: 12, padding: '14px 16px', animation: 'fadeSlideDown 220ms ease',
-          }}>
-            <AlertTriangle size={16} color="#D97706" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                Con vidriera digital no vas a tener disponible:
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--color-body)', lineHeight: 1.7 }}>
-                Checkout ni carrito de compra · Módulo de clientes y pedidos · Cupones · Mensajes · Opiniones de compradores
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--color-muted)', lineHeight: 1.6, marginTop: 8 }}>
-                Vas a poder seguir creando productos, aplicando descuentos y usando el POS. Cada producto va a tener un botón para que el cliente te consulte directo por WhatsApp.
+          {negocio.modoVenta === 'vidriera' && (
+            <div style={{
+              display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14,
+              background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
+              borderRadius: 12, padding: '14px 16px', animation: 'fadeSlideDown 220ms ease',
+            }}>
+              <AlertTriangle size={16} color="#D97706" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Con vidriera digital no vas a tener disponible:
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--color-body)', lineHeight: 1.7 }}>
+                  Checkout ni carrito de compra · Módulo de clientes y pedidos · Cupones · Mensajes · Opiniones de compradores
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--color-muted)', lineHeight: 1.6, marginTop: 8 }}>
+                  Vas a poder seguir creando productos, aplicando descuentos y usando el POS. Cada producto va a tener un botón para que el cliente te consulte directo por WhatsApp.
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeSlideDown {
@@ -645,6 +649,7 @@ export function SetupUnificado({
   PrimerPaso,
   toggleFn = defaultToggle,
   conEquipo = false,
+  conModoVenta = false,
   successPath,
 }: SetupUnificadoProps) {
   const router = useRouter()
@@ -704,7 +709,7 @@ export function SetupUnificado({
 
   function renderStep() {
     if (paso === 0) return <PrimerPaso seleccion={seleccion} toggle={toggle} />
-    if (paso === 1) return <StepNegocio  negocio={negocio}  setNegocio={setNegocio} />
+    if (paso === 1) return <StepNegocio  negocio={negocio}  setNegocio={setNegocio} conModoVenta={conModoVenta} />
     if (paso === 2) return <StepUbicacion negocio={negocio} setNegocio={setNegocio} />
     if (paso === 3) return <StepPagos    pagos={pagos}      setPagos={setPagos}     />
     if (paso === pasoEquipo) return <StepEquipo tamano={tamano} setTamano={setTamano} />

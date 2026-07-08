@@ -118,6 +118,7 @@ export function TiendaSetup() {
       PrimerPaso={StepTipo}
       toggleFn={toggleTienda}
       conEquipo={true}
+      conModoVenta={true}
       successPath="/onboarding/plan?next=/onboarding/tienda/success"
     />
   )
