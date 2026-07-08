@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { Minus, Plus, ShoppingCart, Star, Lock, Truck, RotateCcw } from 'lucide-react'
+import { Minus, Plus, ShoppingCart, Lock, Truck, RotateCcw } from 'lucide-react'
 import { StorefrontHeader } from '@/components/storefront/StorefrontHeader'
 import { StorefrontFooter } from '@/components/storefront/StorefrontFooter'
 import { ProductCard } from '@/components/storefront/ProductCard'
@@ -139,11 +139,9 @@ export default function ProductoDetalle() {
               {producto.nombre}
             </h1>
 
-            {/* Valoración */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              {[1,2,3,4,5].map(i => <Star key={i} size={14} fill={i <= Math.floor(producto.rating) ? '#F59E0B' : 'none'} color="#F59E0B" />)}
-              <span style={{ fontSize: 13, color: 'var(--color-body)', fontWeight: 600, fontFamily: '"Geist Mono", monospace' }}>{producto.rating}</span>
-              <span style={{ fontSize: 13, color: 'var(--color-muted)' }}>· 62 reseñas</span>
+            {/* Reseñas */}
+            <div style={{ marginBottom: 16 }}>
+              <span style={{ fontSize: 13, color: 'var(--color-muted)' }}>62 reseñas de compradores verificados</span>
             </div>
 
             {/* Descripción — movida aquí, arriba del precio */}
@@ -236,11 +234,7 @@ export default function ProductoDetalle() {
         <div style={{ marginBottom: 72 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 8 }}>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Reseñas de clientes</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {[1,2,3,4,5].map(i => <Star key={i} size={14} fill={i <= 4 ? '#F59E0B' : 'none'} color="#F59E0B" />)}
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-body)', fontFamily: '"Geist Mono", monospace' }}>4.7</span>
-              <span style={{ fontSize: 13, color: 'var(--color-muted)' }}>· 62 reseñas</span>
-            </div>
+            <span style={{ fontSize: 13, color: 'var(--color-muted)' }}>62 reseñas</span>
           </div>
 
           <div className="sf-pd-reviews" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
@@ -250,8 +244,7 @@ export default function ProductoDetalle() {
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>{r.autor}</div>
                   <div style={{ fontSize: 11, color: 'var(--color-subtle)' }}>{r.fecha}</div>
                 </div>
-                <div style={{ display: 'flex', gap: 2, marginBottom: 8 }}>{[1,2,3,4,5].map(n => <Star key={n} size={12} fill={n <= r.rating ? '#F59E0B' : 'none'} color="#F59E0B" />)}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>{r.titulo}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', margin: '4px 0' }}>{r.titulo}</div>
                 <div style={{ fontSize: 13, color: 'var(--color-body)', lineHeight: 1.5 }}>{r.texto}</div>
               </div>
             ))}
@@ -262,9 +255,6 @@ export default function ProductoDetalle() {
             {/* Form de fondo (deshabilitado visualmente) */}
             <div style={{ padding: 20, pointerEvents: 'none', userSelect: 'none', filter: 'blur(2px)', opacity: 0.45 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 12 }}>Escribí tu reseña</div>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-                {[1,2,3,4,5].map(n => <Star key={n} size={20} fill="none" color="var(--color-border)" />)}
-              </div>
               <input disabled placeholder="Título de tu reseña" style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', fontSize: 13, marginBottom: 10, color: 'var(--color-text)', outline: 'none' }} />
               <textarea disabled placeholder="Contanos tu experiencia con este producto..." style={{ width: '100%', boxSizing: 'border-box', height: 88, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg)', fontSize: 13, resize: 'none', color: 'var(--color-text)', outline: 'none', fontFamily: 'inherit' }} />
               <button disabled style={{ marginTop: 10, height: 38, padding: '0 20px', borderRadius: 8, background: 'var(--color-primary)', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'not-allowed' }}>Publicar reseña</button>

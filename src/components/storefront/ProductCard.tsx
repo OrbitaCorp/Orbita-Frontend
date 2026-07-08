@@ -143,16 +143,6 @@ export function ProductCard({ producto, height = 240, rank, stockCount, onAdd }:
           {producto.nombre}
         </div>
 
-        {/* Rating */}
-        {producto.rating > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 8 }}>
-            {[1,2,3,4,5].map(i => (
-              <span key={i} style={{ fontSize: 11, color: i <= Math.round(producto.rating) ? '#F59E0B' : 'var(--color-border)', lineHeight: 1 }}>★</span>
-            ))}
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace', marginLeft: 2 }}>{producto.rating.toFixed(1)}</span>
-          </div>
-        )}
-
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 10 }}>
           <span style={{
             fontSize: 16, fontWeight: 700, color: 'var(--color-text)',
