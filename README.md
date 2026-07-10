@@ -2,27 +2,23 @@
 
 SaaS multirubro argentino. Cada negocio tiene su propio sitio, catálogo y panel de gestión bajo un subdominio propio (`negocio.orbita.com`). Sin comisiones, suscripción mensual.
 
-**Stack:** Next.js (Pages Router) · TypeScript · Tailwind CSS · Supabase · Turborepo
+**Stack:** Next.js (Pages Router) · TypeScript · Tailwind CSS · Supabase
 
 ---
 
-## Monorepo
+## Estructura del repo
+
+Dos proyectos independientes conviviendo en el mismo repo (sin Turborepo ni workspaces por ahora):
 
 ```
-orbita/
-  apps/
-    frontend/          ← este repo (Next.js + TypeScript + Tailwind)
-    backend/           ← NestJS (no tocar en esta etapa)
-  packages/
-    shared-types/      ← tipos compartidos frontend + backend
-  turbo.json
-  package.json
-  tsconfig.base.json
+apps/
+  web/    ← Frontend (Next.js + TypeScript + Tailwind)
+  api/    ← Backend (NestJS + Prisma) — pendiente de inicializar
 ```
 
 ---
 
-## Estructura de `apps/frontend/src/`
+## Estructura de `apps/web/src/`
 
 ```
 src/

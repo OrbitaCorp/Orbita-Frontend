@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# apps/* (repo restructured into apps/web + apps/api, not a workspace tool yet;
+# patterns above are anchored to repo root and don't reach into apps/*)
+apps/*/node_modules
+apps/*/.next/
+apps/*/out/
+apps/*/build
+apps/*/coverage
+apps/*/.env*.local
