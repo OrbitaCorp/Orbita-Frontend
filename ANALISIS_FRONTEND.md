@@ -1,4 +1,4 @@
-# Análisis Frontend → Modelo de datos (`src/modules/ventas/`)
+# Análisis Frontend → Modelo de datos (`apps/web/src/modules/ventas/`)
 
 > Análisis exhaustivo módulo por módulo del frontend de Ventas para derivar el modelo de
 > persistencia (NestJS + Prisma + PostgreSQL/Supabase). **No es Prisma todavía**: es la capa
@@ -10,6 +10,41 @@
 > - `branch_id` → multi-branch. Se marca solo donde la lógica lo requiere (stock, caja, ventas presenciales).
 > - Campos `hue`, `hue2`, `imagenes: number`, `color` (de placeholder), `avatar` (iniciales) → **UI-only**, generan thumbnails de color falsos. No se persisten como tales (ver sección cruzada).
 > - `[AMBIGUO: …]` marca decisiones que el código no resuelve.
+
+---
+
+## Cambios detectados (actualización post-`MODELO_DATOS_DEFINITIVO.md`)
+
+> Verificado con `git log` (rango `cd5f9f9..HEAD`, commit en que se creó este análisis hasta hoy)
+> y `git status` (sin drift sin commitear). El frontend se movió de `src/` a `apps/web/src/`
+> (reestructuración pura, `git mv`, cero cambios de contenido) y tuvo **un solo cambio de
+> contenido** en `ventas/` + `components/storefront/` desde entonces:
+
+- **`fix(storefront): quitar rating con estrellas del cliente`** (commit `3931223`) — elimina la
+  UI de estrellas en `apps/web/src/components/storefront/ProductCard.tsx` y
+  `cliente/producto/ProductoDetalle.tsx` (bloque de valoración junto al título, promedio en el
+  header de "Reseñas de clientes", estrellas por reseña individual, selector de estrellas del
+  formulario "Escribí tu reseña"). Implementa la **Decisión 5** de `MODELO_DATOS_DEFINITIVO.md`
+  (`reviews` = opiniones verificadas, **sin rating numérico**).
+  - **El propio commit aclara que es un cambio parcial, solo de UI**: "No se tocan los tipos ni
+    los datos mock (`rating` en `Producto`/`PRODUCTOS`): el cambio de modelo de datos queda a
+    cargo del CTO según el documento." Verificado — sigue habiendo `rating: number` en
+    `@/lib/storefront/types.ts` y en cada producto de `@/lib/storefront/mock.ts`.
+  - **El rollout quedó incompleto** — quedan restos de rating no tocados por el commit:
+    `cliente/catalogo/Categoria.tsx` todavía muestra `'4.6 ★'` hardcodeado junto al conteo de
+    productos; `panel/configuracion/Apariencia.tsx` (+ `StorePreview.tsx` +
+    `mock/apariencia.mock.ts`) todavía expone el toggle `mostrarRating` ("Puntuaciones y
+    reseñas") que ya no debería tener efecto si no hay rating que mostrar. Ver nota en Módulo 10
+    y en Análisis Cruzado.
+- **Ningún otro archivo cambió** bajo `ventas/` desde el análisis original: mismos 9 módulos de
+  `panel/`, misma estructura de `cliente/*`, `tienda/` sigue siendo 5 archivos stub de 0 líneas,
+  `_shared/hooks/useInventario.ts` sigue vacío. No hay módulos nuevos, archivos borrados/renombrados,
+  ni mock data o tipos TS modificados fuera del cambio de UI de rating descripto arriba.
+- El resto de esta actualización consiste en **cruzar cada `[AMBIGUO: …]` contra
+  `MODELO_DATOS_DEFINITIVO.md`** (documento "Estado: Definitivo", todas las decisiones de
+  arquitectura cerradas) para marcar cuáles ya tienen decisión tomada.
+
+---
 
 **Alcance descubierto:** 3 áreas de nivel superior bajo `ventas/`:
 - `panel/` — panel de administración (9 módulos funcionales).
@@ -37,6 +72,8 @@
 ---
 
 # Módulo 1: `panel/reportes`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **Dashboard** (`panel/reportes/Dashboard.tsx`) — home del panel: KPIs, alertas, gráfico de ventas, top productos/categorías/canal, actividad reciente, botón "Publicar tienda".
@@ -89,12 +126,14 @@ Este módulo **no define entidades propias**; consume agregaciones de Pedidos, P
 - **Multi-branch:** ventas/inventario aceptan `branch_id` opcional.
 
 ## Ambigüedades
-- `[AMBIGUO: los KPIs del Dashboard están hardcodeados en JSX, no en mock. No hay contrato claro de qué ventana temporal cubre cada delta ("vs ayer" vs período seleccionado).]`
-- `[AMBIGUO: "Clientes nuevos" — la definición de "nuevo" (primer pedido en el período vs alta de cuenta) no está en el código.]`
+- `[AMBIGUO: los KPIs del Dashboard están hardcodeados en JSX, no en mock. No hay contrato claro de qué ventana temporal cubre cada delta ("vs ayer" vs período seleccionado).]` — **sigue sin resolver.** `MODELO_DATOS_DEFINITIVO.md` define las tablas fuente (`orders`, `payments`, etc.) pero no especifica la ventana temporal de comparación de los deltas; queda para el contrato de API de `/api/reportes/dashboard`.
+- `[AMBIGUO: "Clientes nuevos" — la definición de "nuevo" (primer pedido en el período vs alta de cuenta) no está en el código.]` — **sigue sin resolver.** No hay definición en el documento; es una regla de negocio a definir en el contrato de API, no en el schema.
 
 ---
 
 # Módulo 2: `panel/pedidos`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **PedidoLista** (`panel/pedidos/PedidoLista.tsx`) — tabla de pedidos con filtros/tabs.
@@ -125,7 +164,7 @@ Este módulo **no define entidades propias**; consume agregaciones de Pedidos, P
 ### `Pedido` (Order)
 | Campo | Tipo | Origen | Notas |
 |---|---|---|---|
-| id | string | interfaz TS | PK. En mock son `"1284"`; storefront usa `"ORB-2847"` → `[AMBIGUO: formato de numeración]` |
+| id | string | interfaz TS | PK. En mock son `"1284"`; storefront usa `"ORB-2847"` → `[RESUELTO: orderNumber unificado, ver Ambigüedades del módulo]` |
 | business_id | uuid | falta en mock | **multi-tenant** |
 | branch_id | uuid | falta en mock | **multi-branch** — canal Presencial ata a sucursal |
 | clienteId | string | interfaz TS | FK → Cliente |
@@ -179,7 +218,7 @@ Este módulo **no define entidades propias**; consume agregaciones de Pedidos, P
 | monto | number | interfaz TS | |
 | tipo | 'Saldo a favor'\|'Reembolso' | interfaz TS | |
 | estado | 'emitida'\|'aplicada' | interfaz TS | |
-| vence | string | interfaz TS | ¡`"30 jun"` display, no ISO! → `[AMBIGUO: tipo real de fecha]` |
+| vence | string | interfaz TS | ¡`"30 jun"` display, no ISO! → `[RESUELTO: credit_notes.expiresAt es DateTime? real]` |
 
 ## Relaciones
 - `Pedido → LineaPedido` (1:N)
@@ -206,14 +245,19 @@ Este módulo **no define entidades propias**; consume agregaciones de Pedidos, P
 | POST | `/api/notas-credito` | `{ pedidoId, monto, tipo }` | `NotaCredito` | NotasCredito |
 
 ## Ambigüedades
-- `[AMBIGUO: LineaPedido no referencia producto por id, solo por nombre string. Hay que decidir si las líneas apuntan a Producto/Variante (con FK) o son snapshots puros.]`
-- `[AMBIGUO: la etapa de la cola de preparación vive en un mapa aparte (MOCK_COLA_INICIAL), no en Pedido. ¿Es un campo de Pedido o una tabla de tablero separada?]`
-- `[AMBIGUO: Devolucion no tiene pedido_id. Sin él no se puede validar stock/monto contra el pedido original.]`
-- `[AMBIGUO: NotaCredito.vence es un string de display ("30 jun", "—"). El tipo real debería ser date nullable.]`
+- `[RESUELTO: OrderItem (order_items §8.2) — las líneas referencian variant_id (FK a product_variants), no un nombre string. productName/variantLabel quedan como snapshot desnormalizado además de la FK, no en lugar de ella. Todo producto tiene al menos una variante (incluso los "sin variación" tienen una variante default), así que la línea siempre apunta a una variante concreta.]`
+- `[AMBIGUO: la etapa de la cola de preparación (kanban preparar/listo/despachado) sigue sin un campo propio en el modelo definitivo. `OrderStatus` (PENDING→CONFIRMED→PREPARING→SHIPPED→DELIVERED) cubre el ciclo de vida general de una orden ONLINE, pero no está confirmado si `PREPARING` reemplaza 1:1 al tablero de 3 etapas de `ColaPreparacion` o si esa vista necesita un campo/tabla aparte. Confirmar con el CTO al implementar `ColaPreparacion`.]`
+- `[RESUELTO: Return (returns §12.1) tiene order_id obligatorio y order_item_id opcional (línea específica devuelta). Resuelve exactamente la ambigüedad — "resuelve la ambigüedad del frontend donde faltaba pedido_id" según la nota del propio documento.]`
+- `[RESUELTO: CreditNote.expiresAt (credit_notes §12.2) es DateTime? real, no un string de display. La nota del documento lo confirma explícitamente: "resolviendo la ambigüedad del frontend donde vence era un string de display".]`
+
+**Nuevo en el modelo definitivo (no estaba en la ambigüedad original, pero afecta este módulo):**
+`CreditNote.returnId` es `@unique` — 1:1 opcional con la devolución que la originó (antes no estaba claro si una nota de crédito podía originarse de más de una devolución). `Return.status` usa un enum de 4 valores (`PENDING/IN_PROCESS/APPROVED/REJECTED`), igual cardinalidad que `EstadoDevolucion` del frontend.
 
 ---
 
 # Módulo 3: `panel/catalogo`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **ProductoLista** (`panel/catalogo/ProductoLista.tsx`)
@@ -306,14 +350,20 @@ Derivada del wizard (`tiposVariante` + `combos`) y presente rica en descuentos/p
 | GET | `/api/productos/codigos-barras` | query `{ ids? }` | `{ sku, codigoBarras, nombre }[]` | CodigosBarras |
 
 ## Ambigüedades
-- `[AMBIGUO: hay DOS modelos de variante: `Producto.variantes: string[]` (solo talles) y el wizard con `tiposVariante`/combos ricos. Persistir el modelo rico y deprecar el string[].]`
-- `[AMBIGUO: Producto.imagenes es un número (cantidad), no URLs. El modelo real necesita una tabla ProductoImagen con url/orden.]`
-- `[AMBIGUO: categoría referenciada por nombre en Producto pero por id/slug en el árbol. Unificar a FK.]`
-- `[AMBIGUO: `costo` y `descripcion` y `tags` existen en el form de alta pero NO en la interfaz `Producto`. Faltan en el tipo persistente.]`
+- `[RESUELTO: se persiste el modelo rico y se deprecа Producto.variantes: string[]. product_options (§6.5, ej. "Talle"/"Color") → product_option_values (§6.6, ej. "M"/"Negro") → product_variants (§6.7, combinación concreta con SKU/precio/barcode propios) → variant_option_values (§6.8, pivot). Modelo relacional tipo Shopify, según lo nombra el propio documento.]`
+- `[RESUELTO: product_images (§6.9) — tabla con url (Supabase Storage), position, isPrimary y option_value_id opcional (para asociar fotos a un color específico, ej. "Negro"). Reemplaza el contador Producto.imagenes: number.]`
+- `[RESUELTO: products.category_id (§6.3) es FK real a categories.id. Un producto pertenece a una sola categoría (la más específica del árbol). El árbol de categorías vive en categories vía parent_id self-referencing (§6.1), con slug único por negocio — unifica el doble esquema de IDs del frontend (`remeras` en catálogo vs `cat-remeras` en descuentos).]`
+- `[RESUELTO: products (§6.3) tiene cost (privado, para margen), description y basePrice como columnas propias. tags se modela como tabla Tag + pivot product_tags (§6.2/§6.4) en vez de string[] libre, "para evitar duplicados por inconsistencia de escritura".]`
+
+**Nuevo en el modelo definitivo (no estaba en la ambigüedad original):**
+- **Todo producto tiene al menos una variante**, incluso los que el dueño crea "sin variantes": el backend crea una variante `isDefault` que hereda precio/stock. El frontend no la muestra como variante, pero toda venta/todo stock es siempre de una variante — unifica la lógica de inventario y ventas de punta a punta.
+- `products.inventoryType` existe como punto de bifurcación futuro (`standard | serialized | fractional | batch | simple`); en V1 siempre es `'standard'`, no tiene UI todavía.
 
 ---
 
 # Módulo 4: `panel/inventario`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **StockGeneral** (`panel/inventario/StockGeneral.tsx`)
@@ -395,14 +445,16 @@ Derivada del wizard (`tiposVariante` + `combos`) y presente rica en descuentos/p
 | GET/POST/PUT | `/api/proveedores` | `Proveedor` | `Proveedor[]` | Proveedores |
 
 ## Ambigüedades
-- `[AMBIGUO: Proveedor se identifica por nombre en el mock (sin id). Necesita PK.]`
-- `[AMBIGUO: los Movimientos referencian producto y usuario por string. Faltan FKs.]`
-- `[AMBIGUO: el motivo "Venta #1284" implica que las salidas se generan automáticamente al cobrar. ¿El movimiento se crea desde POS/Pedidos? Falta el vínculo venta→movimiento.]`
-- `[AMBIGUO: el stock es claramente por sucursal (branch), pero el mock lo tiene plano en el producto. Confirmar StockPorSucursal.]`
+- `[RESUELTO: suppliers (§7.3) tiene id UUID propio como PK. ultimaCompra y totalComprado quedan confirmados como calculados (agregando stock_movements), no se persisten — igual que había anticipado el análisis original.]`
+- `[RESUELTO: stock_movements (§7.2) tiene variant_id (FK a product_variants) y created_by (FK opcional a members) — ya no son strings sueltos.]`
+- `[RESUELTO: stock_movements.order_id (FK opcional a orders) vincula la salida a la orden real que la generó. Nota textual del documento: "el vínculo orderId resuelve la ambigüedad del frontend donde el motivo 'Venta #1284' era solo un string". Al cobrar (POS u online), el backend crea los stock_movements de tipo SALIDA automáticamente.]`
+- `[RESUELTO: variant_stock (§7.1) — stock por variante Y por sucursal (`@@unique([variantId, branchId])`), nunca "global". Es la fuente de verdad del inventario; "stock bajo" se deriva de `quantity <= stockMin` en tiempo de lectura, no se persiste.]`
 
 ---
 
 # Módulo 5: `panel/clientes`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **ClienteLista** (`panel/clientes/ClienteLista.tsx`)
@@ -467,13 +519,17 @@ Derivada del wizard (`tiposVariante` + `combos`) y presente rica en descuentos/p
 | POST | `/api/clientes/email` | `{ clienteIds[], asunto, cuerpo }` | `{ enviados }` | EmailMasivoModal |
 
 ## Ambigüedades
-- `[AMBIGUO: pedidos/gasto/ticket/ultima/segmento — ¿se recalculan on-read o se materializan? Para tiendas grandes conviene materializar.]`
-- `[AMBIGUO: el DNI del cliente solo aparece en POS (ClienteAsociado). El Cliente del panel no lo tiene. Unificar.]`
-- `[AMBIGUO: la relación Cliente↔cuenta-de-usuario del storefront (login) no está modelada; puede haber clientes sin cuenta (creados en POS) y cuentas de storefront.]`
+- `[RESUELTO: customers (§5.1) NO tiene columnas pedidos/gasto/ticket/ultima/segmento — se calculan on-read (agregando orders), no se materializan. Es la decisión implícita de no incluirlas como columnas propias en el modelo definitivo. tags y segment quedan explícitamente diferidos ("Sin segment ni tags en V1 (diferido)").]`
+- `[RESUELTO: customers.dni (§5.1) es un campo único del Customer unificado — ya no vive solo en el POS.]`
+- `[RESUELTO: customers unifica los cuatro modelos del frontend (Cliente panel, ClienteAsociado POS, Usuario storefront, comprador de checkout) en una sola tabla. auth_user_id (FK a Supabase auth.users) es nullable: NULL = cliente sin cuenta (creado en POS), con valor = cliente con cuenta de storefront. Vinculación POS↔storefront: si alguien se registra en storefront con un email que ya existe como cliente POS, el backend setea auth_user_id sobre el registro existente en vez de duplicar.]`
+
+**Nuevo en el modelo definitivo:** `addresses` (§5.2) resuelve "Direccion (Address) — falta en el panel" de la sección cruzada: pasa a ser 1:N de `customers`, ya no exclusiva del storefront. `ClienteNota` (la tab "notas" de `ClienteDetalle`) **no aparece en los 51 modelos** — sigue sin tabla propia, `[AMBIGUO: sigue sin resolver]`.
 
 ---
 
 # Módulo 6: `panel/descuentos`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 > El módulo **más completo y mejor tipado**. Fuente de verdad para descuentos y cupones,
 > compartido por POS y Storefront ("best discount wins", evaluación en backend).
@@ -608,14 +664,36 @@ Para `usosMaxPorCliente`, tasa de canje y métricas se necesita registro de canj
 - **Multi-branch:** `MetricasFiltros.sucursalId` confirma que las métricas se filtran por sucursal → `branch_id` en `UsoCupon/UsoDescuento`.
 - **Canal:** `CanalMetricas = 'pos'|'storefront'` → el registro de uso debe guardar canal.
 
+## ⚠️ Decisión de arquitectura no anticipada por este análisis: `Descuento` y `Cupon` se UNIFICAN
+
+El análisis original modelaba `Descuento` y `Cupon` como **dos entidades separadas** (con `LogAuditoria`
+polimórfico entre ambas). `MODELO_DATOS_DEFINITIVO.md` (§11.1) decide lo contrario: **una sola tabla
+`discounts`**, con un campo `code String?` nullable — si `code` es `null` es un descuento automático
+(sin código), si tiene valor es un cupón canjeable. Cita textual: *"Una sola tabla discounts con un
+campo code nullable unifica descuentos automáticos (sin código) y cupones (con código)"*.
+
+Consecuencias para el contrato de API y el frontend (a implementar, no implementado hoy):
+- `discount_redemptions` (antes `UsoCupon`/`UsoDescuento`, dos conceptos separados en el análisis)
+  pasa a tener una sola FK `discount_id` — "ya no discount_id Y coupon_id separados como en el diseño
+  anterior. Simplifica la tabla" (nota textual del documento).
+- **V1 solo implementa 4 de los 7 `DiscountType`** (`PERCENT_PRODUCT`, `AMOUNT_PRODUCT`,
+  `PERCENT_TICKET`, `AMOUNT_TICKET`). Los otros 3 (`BUY_X_PAY_Y`, `BUY_X_GET_Z`, `VOLUME` — que en el
+  frontend son `lleva_x_paga_y`, `compra_x_obtiene_z`, `volumen`) quedan en el enum para no migrar en
+  V2, pero su evaluación se difiere y la UI debe ocultarlos. Los campos `bonus*` de
+  `compra_x_obtiene_z` **no están en el schema V1** — se agregan cuando se implemente ese tipo.
+- Campos de link compartible (`linkActive`, `linkRedirect`) y `isPrivate` quedan en la tabla unificada
+  — antes eran exclusivos de `Cupon` en el análisis.
+
 ## Ambigüedades
-- `[AMBIGUO: no existe tabla de canjes (UsoCupon) en el mock, pero usosMaxPorCliente, tasaCanje y métricas por canal/sucursal la requieren sí o sí.]`
-- `[AMBIGUO: la regla "best discount wins" y la interacción cupón+descuento automático se evalúan en backend; el frontend solo envía a `/evaluar`. La lógica de precedencia (prioridad vs mayor ahorro) no está en el front.]`
-- `[AMBIGUO: `creadoPor: 'usr-admin'` es un string, no FK real todavía.]`
+- `[RESUELTO: discount_redemptions (§11.4) — tabla de solo-inserción, imprescindible para límites por cliente, tasa de canje y métricas por canal. Trackea tanto descuentos automáticos como cupones (ver unificación arriba). Incluye channel (POS|STOREFRONT), confirmando la necesidad de branch/canal que ya intuía el análisis original.]`
+- `[RESUELTO: "best discount wins" se evalúa en /api/discounts/evaluate (backend) y aplica el de mayor ahorro, con priority (Int, default 0) como desempate — confirma exactamente la hipótesis del análisis original ("prioridad vs mayor ahorro"): es mayor ahorro primero, prioridad para desempatar.]`
+- `[RESUELTO: discounts.createdBy (§11.1) es FK opcional real a members, no un string suelto como `'usr-admin'`.]`
 
 ---
 
 # Módulo 7: `panel/pos`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **POSShell** (orquestador) / **POSCobro** (`POSCobro.tsx`) — catálogo + ticket + cobro.
@@ -729,15 +807,19 @@ Proyecciones de Producto para el POS: `{ id, nombre, sku, precio, stock, foto?, 
 | GET | `/api/pos/caja/:id/resumen` | — | `ResumenTurno` | POSReporte |
 
 ## Ambigüedades
-- `[AMBIGUO: precioEditado permite cambiar el precio en el ticket. Necesita permiso ("editar_precio") y quedar en auditoría; el front no lo restringe.]`
-- `[AMBIGUO: TicketPausado vive en localStorage. Multi-tab/multi-dispositivo requiere persistencia server-side.]`
-- `[AMBIGUO: la Venta del POS y el Pedido del panel son entidades distintas hoy (numeroComprobante vs id "1284"). ¿Se unifican en un modelo de "orden" con canal, o son tablas separadas Venta/Pedido?]`
-- `[AMBIGUO: el descuento del ticket usa el tipo simple `pos/types.ts::Descuento` (`{tipo,valor,codigo}`), distinto del rico `descuentos/`. La evaluación real debe ir contra `/descuentos/evaluar`.]`
-- `[AMBIGUO: `esConcepto` (ítem libre sin stock) — necesita bandera para no generar movimiento de inventario.]`
+- `[RESUELTO: existe el permiso pos.edit_price (permissions §4.3, catálogo global) que controla si un miembro puede usar order_items.editedPrice. Nota textual: "Es el permiso que faltaba en el frontend para restringir la edición de precio." Además queda auditable vía audit_logs (entityType genérico, ya no exclusivo de descuentos/cupones) — resuelve también la parte de "quedar en auditoría".]`
+- `[AMBIGUO: TicketPausado (ticket en pausa) sigue sin tabla en el modelo definitivo — no aparece ningún modelo de "parked ticket" entre los 51. Sigue viviendo solo en localStorage (`usePausadosStore`). Sigue sin resolver; si se necesita multi-dispositivo, es un modelo a agregar en un futuro incremento, no contemplado en V1.]`
+- `[RESUELTO: se unifican en una sola tabla orders (§8.1) con channel: OrderChannel (POS|ONLINE). Los campos comunes (customerId, total, status, etc.) viven en orders; los específicos de canal en satélites 1:1 — pos_sale_details (§8.3: cashSessionId, changeAmount/vuelto) y online_order_details (§8.4: shippingAddressId, datos del comprador, tracking). orderNumber (Int, único por negocio) reemplaza tanto el numeroComprobante del POS como el id "1284" del panel — "es lo que ve el dueño y el cliente". fiscalNumber queda separado y nullable, para cuando se implemente facturación AFIP real.]`
+- `[RESUELTO: el frontend debe migrar el descuento simple embebido del ticket (`pos/types.ts::Descuento`) a consumir discounts (el modelo unificado, ver Módulo 6) vía /api/discounts/evaluate. No hay dos modelos de descuento en el backend — el tipo simple del POS queda obsoleto.]`
+- `[RESUELTO: order_items.isConcept (§8.2) es exactamente la bandera que pedía la ambigüedad — "ítem libre... que no existe como producto y no descuenta stock". Nota textual: "Resuelve la ambigüedad del frontend".]`
+
+**Nuevo en el modelo definitivo (no anticipado):** `favorito` de `ProductoPOS` — ¿por usuario o por negocio? — **sigue sin resolver**, ningún campo de favoritos aparece en los 51 modelos. `pos_sale_details.cashSessionId` confirma que toda venta POS pertenece a una `CashSession` (una sesión = un turno de un cajero en una sucursal; el modelo **soporta múltiples cajas simultáneas** por sucursal, algo que el análisis original no había explicitado).
 
 ---
 
 # Módulo 8: `panel/mensajes`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **Bandeja** (`panel/mensajes/Bandeja.tsx`) — lista de conversaciones.
@@ -809,14 +891,16 @@ Proyecciones de Producto para el POS: `{ id, nombre, sku, precio, stock, foto?, 
 | GET/POST/PUT/DELETE | `/api/plantillas` | `Plantilla` | `Plantilla[]` | Plantillas |
 
 ## Ambigüedades
-- `[AMBIGUO: el remitente usa enums distintos en panel ('cli'/'me') y storefront ('cliente'/'tienda'). Unificar.]`
-- `[AMBIGUO: `tiempo`/`hora` son strings de display, no timestamps. El modelo real necesita created_at.]`
-- `[AMBIGUO: el storefront tiene UNA conversación por cliente (hilo único con menciones de pedido), el panel tiene una por cliente ligada opcionalmente a un pedido. Confirmar cardinalidad conversación↔cliente↔pedido.]`
-- `[AMBIGUO: canal del mensaje (WhatsApp vs chat interno) no está modelado, aunque las plantillas y config sugieren WhatsApp.]`
+- `[RESUELTO: messages.sender usa el enum MessageSender (CUSTOMER|STORE) — unificado. Nota textual: "unifica los remitentes que en el frontend estaban inconsistentes (panel usaba 'cli'/'me', storefront 'cliente'/'tienda')".]`
+- `[RESUELTO: messages.createdAt es DateTime real (@default(now())), no un string de display. Nota textual lo confirma explícitamente.]`
+- `[RESUELTO (por regla de negocio, no por constraint de DB): la sección 13 del documento abre con "Un hilo por cliente, con menciones opcionales a pedidos" — confirma la cardinalidad que proponía el storefront (1 conversación por cliente) sobre la del panel. `conversations` no tiene `@@unique([businessId, customerId])` en el schema, así que la unicidad de "un hilo por cliente" queda a cargo de la lógica de aplicación, no de una constraint de base. `messages.orderId` (opcional) modela la mención a pedido igual que proponía el análisis original.]`
+- `[AMBIGUO: el canal del mensaje (WhatsApp vs chat interno) sigue sin campo en el modelo — ni conversations ni messages tienen channel. Sigue sin resolver.]`
 
 ---
 
 # Módulo 9: `panel/configuracion`
+
+> **Sin cambios detectados en el código** desde el análisis original.
 
 ## Vistas encontradas
 - **ConfigGeneral** (`panel/configuracion/ConfigGeneral.tsx`) — hub + V15 (negocio, contacto, pagos, envíos, redes, zona peligrosa).
@@ -911,10 +995,15 @@ Matriz evento×canal: eventos (Nuevo pedido, Pedido cancelado, Stock crítico, D
 | POST | `/api/tienda/pausar` / `/api/negocio/eliminar` | — | `{ok}` | Zona peligrosa |
 
 ## Ambigüedades
-- `[AMBIGUO: los datos de ConfigGeneral (negocio, pagos, envíos, redes) están hardcodeados en JSX sin interfaz TS ni mock. Falta el tipo `Negocio` explícito.]`
-- `[AMBIGUO: 3 roles en mock vs 4 roles (owner/admin/cajero/empleado) del proyecto. Reconciliar nombres.]`
-- `[AMBIGUO: `logo`/`favicon`/`HeroSlide.img` son null en mock. Se necesita storage de imágenes (Supabase Storage).]`
-- `[AMBIGUO: Permiso ¿es catálogo global (seed) o por negocio? El mock lo trata como global.]`
+- `[RESUELTO: el ConfigGeneral hardcodeado se reparte en dos tablas 1:1 con businesses — business_config (§3.3: whatsapp, email, scheduleText, toggles acceptsMercadopago/acceptsCash/acceptsTransfer/acceptsPickup, transferAlias, shippingBase/freeShippingFrom/deliveryZones/shippingPolicy, instagram/tiktok/facebook) y businesses mismo (name, industry, description, mode, isActive/isPaused — "zona peligrosa"). Ya no son datos hardcodeados sin tipo.]`
+- `[RESUELTO: se confirman 4 roles default por negocio — owner, admin, cajero, empleado (roles §4.2, isDefault=true, no editables/eliminables) — gana el esquema del proyecto sobre los 3 del mock (dueno/admin/vendedor). El frontend debe migrar los nombres.]`
+- `[RESUELTO: storefront_config (§3.4) tiene logoUrl/faviconUrl como String? (URL de Supabase Storage), heroSlides como Json (array de {id,titulo,subtitulo,img,cta}). Confirma Supabase Storage como mecanismo, tal como anticipaba la ambigüedad.]`
+- `[RESUELTO: permissions (§4.3) es catálogo global explícito — "No lleva business_id — es un seed estático compartido por todos los negocios", ~19 permisos en 7 grupos. Confirma la hipótesis del análisis original.]`
+
+**Nuevo en el modelo definitivo (no anticipado):**
+- `storefront_config.showRating` (default `true`) **sigue existiendo** como toggle pese a que `reviews` ya no tiene rating numérico (ver Módulo 10) — posible inconsistencia dentro del propio documento definitivo, no solo del frontend; ver nota en Análisis Cruzado.
+- `notification_config` (§3.5) modela la matriz evento×canal como un solo campo `Json` (`matrix`), no como filas — más simple que lo que el análisis original dejaba abierto.
+- `businesses.mode` (`FULL | SHOWCASE`) es una decisión de producto no cubierta por el análisis original: en modo `SHOWCASE` ("vidriera digital") el storefront **oculta** checkout/carrito/cupones/mensajes/opiniones y muestra un botón de WhatsApp por producto en su lugar. Esto afecta directamente a los módulos `panel/mensajes`, `panel/descuentos` y `cliente/*` (Módulo 10) — sus endpoints y vistas deben condicionarse a `business.mode`.
 
 ---
 
@@ -923,6 +1012,14 @@ Matriz evento×canal: eventos (Nuevo pedido, Pedido cancelado, Stock crítico, D
 > Todas las vistas consumen **`@/lib/storefront/mock.ts`** (fuera de `ventas/`), con tipos en
 > `@/lib/storefront/types.ts`. Es un **modelo de datos paralelo** al del panel — clave para el
 > análisis cruzado. Comparte la API de descuentos con el POS.
+>
+> **Cambio de código detectado** (commit `3931223`, ver "Cambios detectados" al inicio del
+> documento): se quitó la UI de estrellas de `ProductoDetalle.tsx` y `ProductCard.tsx`. Es un
+> cambio **parcial y solo visual** — `@/lib/storefront/types.ts` sigue declarando
+> `rating: number` y `mock.ts` sigue trayendo un valor de rating por producto; además
+> `cliente/catalogo/Categoria.tsx` (`'4.6 ★'` hardcodeado) y el toggle `mostrarRating` de
+> `panel/configuracion/Apariencia.tsx` no se tocaron. Ver detalle e inconsistencia en Análisis
+> Cruzado.
 
 ## Vistas encontradas
 - **Inicio** (`cliente/inicio/Inicio.tsx`) — home de la tienda (hero, categorías, destacados).
@@ -1014,11 +1111,11 @@ Matriz evento×canal: eventos (Nuevo pedido, Pedido cancelado, Stock crítico, D
 | GET | `/api/descuento-exclusivo/:codigo` | — | `DescuentoExclusivo` | DescuentoExclusivo |
 
 ## Ambigüedades
-- `[AMBIGUO: el descuento de cupón en checkout es 10% HARDCODEADO. La evaluación real debe ir a /descuentos/evaluar.]`
-- `[AMBIGUO: `Producto` del storefront (stock:boolean, rating, badge) vs `Producto` del catálogo (stock:number, sku, variantes). Es la MISMA entidad con proyecciones distintas — badge/rating deben resolverse: badge es derivado (Nuevo/Oferta), rating requiere tabla de reseñas.]`
-- `[AMBIGUO: `rating` no tiene fuente (no hay entidad Reseña en ningún módulo). ¿Se persiste rating agregado o hay reseñas?]`
-- `[AMBIGUO: relación cuenta storefront (`Usuario`) ↔ `Cliente` del panel: mismo email pero modelos separados. Definir si son una sola tabla `clientes` con login opcional.]`
-- `[AMBIGUO: numeración de pedidos: storefront `ORB-2847`, panel `1284`, POS `0001-00000001`. Tres esquemas.]`
+- `[RESUELTO (arquitectura): la evaluación de descuentos/cupones queda centralizada en /api/discounts/evaluate contra la tabla discounts unificada (ver Módulo 6), con priority para desempate de "best discount wins". El 10% hardcodeado en el checkout del storefront es deuda de implementación pendiente de reemplazar por esa llamada — el modelo de datos y el contrato ya están definidos, falta que el frontend deje de simular.]`
+- `[RESUELTO: badge (Nuevo/Oferta) queda confirmado como derivado — se deriva de comparePrice != null (Oferta) o de antigüedad (Nuevo), no se persiste como columna. `Producto` del storefront y del catálogo son la misma entidad products/product_variants con proyecciones distintas por endpoint, tal como proponía el análisis.]`
+- `[RESUELTO — CON CAMBIO DE DISEÑO: no se persiste un "rating agregado". reviews (§14.1) son opiniones de texto verificadas, "sin rating numérico". No hay Review.rating ni ningún campo numérico de puntuación en los 51 modelos. Esto no es lo que proponía la ambigüedad original (que asumía un rating agregado o reseñas con puntuación) — es una decisión de producto más restrictiva. El frontend actual sigue mostrando `rating: number` en tipos/mock (ver nota de cambio de código arriba); falta la migración de datos para dejar de exponer ese campo.]`
+- `[RESUELTO: customers (§5.1) es una única tabla con auth_user_id opcional — unifica Usuario (storefront) y Cliente (panel) en una sola entidad con o sin cuenta. Ver detalle en Módulo 5.]`
+- `[RESUELTO: orderNumber (Int, único por negocio) es el único esquema de numeración operativa — reemplaza los tres esquemas del frontend (`ORB-2847` storefront, `1284` panel, `0001-00000001` POS). fiscalNumber queda aparte y nullable para cuando exista facturación AFIP real. Ver detalle en Módulo 7.]`
 
 ---
 
@@ -1026,19 +1123,19 @@ Matriz evento×canal: eventos (Nuevo pedido, Pedido cancelado, Stock crítico, D
 
 ## Entidades compartidas entre módulos
 
-| Entidad | Módulos que la usan | Campos en conflicto / observación |
-|---|---|---|
-| **Producto** | catalogo, inventario, pos, descuentos, pedidos, reportes, storefront | **7 formas distintas.** catalogo: `Producto{sku,stock:number,variantes:string[],estado,precioAnt}`; inventario: `ProductoStock{stock,stockMin}`; pos: `ProductoPOS{tieneVariantes,favorito,foto,categoriaId}`; descuentos: `ProductoPadre{precioDesde,variantes:Variante[]}`; pedidos: `ProductoRapido{precio}` + `LineaPedido{nombre}`; reportes: `TopProducto{unidades,monto}`; storefront: `Producto{stock:boolean,rating,badge,hue2}`. **Un solo modelo canónico con proyecciones.** |
-| **VarianteProducto** | catalogo (combos), pos (VariantePOS), descuentos (Variante) | catalogo genera combos `{key,sku,precio,stock}`; pos `{talle,color,stock}`; descuentos `{nombre,sku,precio,stock}`. Atributos (talle/color) modelados como string libre en unos, tipados en otros. |
-| **Categoria** | catalogo (plana + CatNode árbol), descuentos, pos, storefront | catalogo tiene jerarquía (`subcategorias`, `slug`, `icono`); descuentos plana con `productos[]`; pos `{id,label}`; storefront `{count,hue}`. IDs distintos: `'remeras'` (catalogo) vs `'cat-remeras'` (descuentos). |
-| **Cliente / Customer** | clientes, pos, descuentos, pedidos, mensajes, storefront | clientes: `Cliente{segmento,tags,gasto,ticket}`; pos: `ClienteAsociado{dni}` (¡único con DNI!); descuentos: `ClienteMock{nombre,apellido}`; pedidos: `clienteId+cliente string`; mensajes: `cliente string`; storefront: `Usuario{avatar,miembro}` + `comprador`. Sin `dni`/`direcciones` unificados. |
-| **Descuento** | descuentos (rico), pos (simple), storefront (Cupon/DescuentoExclusivo) | descuentos: 7 tipos con condiciones/bonus/vigencia; pos/types: `{tipo,valor,codigo}` plano; storefront: `Cupon`/`DescuentoExclusivo` simplificados. **descuentos/ es la fuente de verdad**; los demás son inputs a `/evaluar`. |
-| **Cupon** | descuentos (rico), storefront (público) | descuentos: `{usosMaxPorCliente,privado,link_*,estado(agotado)}`; storefront: `{minCompra,vencimiento,categorias}`. |
-| **Pedido / Venta** | pedidos (Pedido), pos (ResultadoVenta), storefront (Pedido), reportes | pedidos: `{clienteId,productos:LineaPedido[],canal,monto,estado}`; pos: `{numeroComprobante,metodosPago[],vuelto,items:TicketItem[]}`; storefront: `{tracking,timeline[],comprador}`. **¿Un modelo Orden unificado con canal, o Venta(POS)+Pedido(online) separados?** |
-| **LineaPedido / TicketItem** | pedidos, pos, storefront, carrito | pedidos: `{nombre,cantidad,precio}` sin FK; pos: `{productoId,varianteId,precioEditado,descuento,esConcepto}`; carrito: `{key,qty,descPct,variante}`. |
-| **Miembro / Usuario-staff** | configuracion (Miembro), pos (cajero), descuentos (creadoPor), inventario (usuario), auditoria (usuarioId) | Referenciado como FK en muchos lados pero por string suelto (`'usr-admin'`, `'Alexander'`). Tabla `business_members`. |
-| **Branch / Sucursal** | pos (SesionCaja), inventario (stock), descuentos (métricas sucursalId), pedidos (Presencial) | **No existe entidad Branch en ningún mock**, pero el proyecto la exige día 1 y varios módulos la necesitan. Falta crear. |
-| **Negocio / Business** | configuracion (raíz), TODOS (business_id) | Solo aparece hardcodeado en ConfigGeneral. Es el tenant raíz. |
+| Entidad | Módulos que la usan | Campos en conflicto / observación | Resuelto en `MODELO_DATOS_DEFINITIVO.md` |
+|---|---|---|---|
+| **Producto** | catalogo, inventario, pos, descuentos, pedidos, reportes, storefront | **7 formas distintas.** catalogo: `Producto{sku,stock:number,variantes:string[],estado,precioAnt}`; inventario: `ProductoStock{stock,stockMin}`; pos: `ProductoPOS{tieneVariantes,favorito,foto,categoriaId}`; descuentos: `ProductoPadre{precioDesde,variantes:Variante[]}`; pedidos: `ProductoRapido{precio}` + `LineaPedido{nombre}`; reportes: `TopProducto{unidades,monto}`; storefront: `Producto{stock:boolean,rating,badge,hue2}`. **Un solo modelo canónico con proyecciones.** | ✅ **Sí** — `products` (§6.3) + `product_variants` (§6.7) + `variant_stock` (§7.1, stock por variante×sucursal, ya no en el producto). Todo producto tiene al menos una variante (incluso sin variación explícita). `rating`/`badge`/`hue*` quedan fuera del modelo persistente (derivados o eliminados, ver abajo). |
+| **VarianteProducto** | catalogo (combos), pos (VariantePOS), descuentos (Variante) | catalogo genera combos `{key,sku,precio,stock}`; pos `{talle,color,stock}`; descuentos `{nombre,sku,precio,stock}`. Atributos (talle/color) modelados como string libre en unos, tipados en otros. | ✅ **Sí** — `product_options`→`product_option_values`→`product_variants`→`variant_option_values` (§6.5-6.8), modelo relacional tipado (no string libre). |
+| **Categoria** | catalogo (plana + CatNode árbol), descuentos, pos, storefront | catalogo tiene jerarquía (`subcategorias`, `slug`, `icono`); descuentos plana con `productos[]`; pos `{id,label}`; storefront `{count,hue}`. IDs distintos: `'remeras'` (catalogo) vs `'cat-remeras'` (descuentos). | ✅ **Sí** — `categories` (§6.1), árbol self-referencing vía `parent_id`, `slug` único por negocio. Un solo esquema de IDs. |
+| **Cliente / Customer** | clientes, pos, descuentos, pedidos, mensajes, storefront | clientes: `Cliente{segmento,tags,gasto,ticket}`; pos: `ClienteAsociado{dni}` (¡único con DNI!); descuentos: `ClienteMock{nombre,apellido}`; pedidos: `clienteId+cliente string`; mensajes: `cliente string`; storefront: `Usuario{avatar,miembro}` + `comprador`. Sin `dni`/`direcciones` unificados. | ✅ **Sí** — `customers` (§5.1) unifica los 4 modelos, `dni` y `addresses` (§5.2) incluidos. `auth_user_id` opcional distingue cliente con/sin cuenta. `segmento`/`tags` quedan explícitamente diferidos (no en V1). |
+| **Descuento** | descuentos (rico), pos (simple), storefront (Cupon/DescuentoExclusivo) | descuentos: 7 tipos con condiciones/bonus/vigencia; pos/types: `{tipo,valor,codigo}` plano; storefront: `Cupon`/`DescuentoExclusivo` simplificados. **descuentos/ es la fuente de verdad**; los demás son inputs a `/evaluar`. | ✅ **Sí, con cambio de diseño no anticipado** — `discounts` (§11.1) unifica Descuento Y Cupon en una sola tabla (`code` nullable). Ver nota completa en Módulo 6. Solo 4 de 7 `DiscountType` van en V1. |
+| **Cupon** | descuentos (rico), storefront (público) | descuentos: `{usosMaxPorCliente,privado,link_*,estado(agotado)}`; storefront: `{minCompra,vencimiento,categorias}`. | ✅ **Sí** — absorbido dentro de `discounts` (ver fila de arriba); deja de ser una entidad separada. |
+| **Pedido / Venta** | pedidos (Pedido), pos (ResultadoVenta), storefront (Pedido), reportes | pedidos: `{clienteId,productos:LineaPedido[],canal,monto,estado}`; pos: `{numeroComprobante,metodosPago[],vuelto,items:TicketItem[]}`; storefront: `{tracking,timeline[],comprador}`. **¿Un modelo Orden unificado con canal, o Venta(POS)+Pedido(online) separados?** | ✅ **Sí** — `orders` (§8.1) unificado con `channel: OrderChannel(POS\|ONLINE)`, satélites 1:1 `pos_sale_details`/`online_order_details` (§8.3-8.4) para los campos específicos de canal. |
+| **LineaPedido / TicketItem** | pedidos, pos, storefront, carrito | pedidos: `{nombre,cantidad,precio}` sin FK; pos: `{productoId,varianteId,precioEditado,descuento,esConcepto}`; carrito: `{key,qty,descPct,variante}`. | ✅ **Sí** — `order_items` (§8.2), único modelo con `variantId` FK real, `editedPrice`, `discountAmount`, `isConcept`. |
+| **Miembro / Usuario-staff** | configuracion (Miembro), pos (cajero), descuentos (creadoPor), inventario (usuario), auditoria (usuarioId) | Referenciado como FK en muchos lados pero por string suelto (`'usr-admin'`, `'Alexander'`). Tabla `business_members`. | ✅ **Sí** — `members` (§4.1), FK real en todos los lugares donde el frontend usaba string (`discounts.createdBy`, `stock_movements.createdBy`, `payments.verifiedBy`, `cash_sessions.cashierId`, `audit_logs.memberId`). |
+| **Branch / Sucursal** | pos (SesionCaja), inventario (stock), descuentos (métricas sucursalId), pedidos (Presencial) | **No existe entidad Branch en ningún mock**, pero el proyecto la exige día 1 y varios módulos la necesitan. Falta crear. | ✅ **Sí** — `branches` (§3.2), se auto-crea una sucursal "Principal" al crear el negocio. `orders`, `variant_stock`, `stock_movements`, `cash_sessions`, `cash_movements` llevan `branch_id`. |
+| **Negocio / Business** | configuracion (raíz), TODOS (business_id) | Solo aparece hardcodeado en ConfigGeneral. Es el tenant raíz. | ✅ **Sí** — `businesses` (§3.1) es la raíz multi-tenant, + `business_config`/`storefront_config`/`notification_config` (§3.3-3.5) 1:1 para los datos que cambian con distinta frecuencia. |
 
 ## Datos que el mock tiene pero son de UI (NO persistir)
 
@@ -1051,43 +1148,54 @@ Matriz evento×canal: eventos (Nuevo pedido, Pedido cancelado, Stock crítico, D
 - **`recurrente`, `miembros`(count), `count`(categorías), `totalComprado`, `pedidos/gasto/ticket/ultima`(cliente)** — **agregaciones/derivados**, no fuentes de verdad.
 - **`tiempo`/`hora`** de mensajes (`"14:26"`, `"Ayer"`) — formato de display, no timestamp real.
 - KPIs y series de reportes/dashboard — todos calculados.
+- **`rating` numérico** (storefront) — **confirmado que NO se persiste de ninguna forma**, ni como columna en `reviews` ni como agregado. Decisión de producto (no solo de modelado): las opiniones son solo texto. Ver inconsistencia pendiente abajo.
+
+## ⚠️ Inconsistencia detectada (no del frontend — dentro del propio `MODELO_DATOS_DEFINITIVO.md`)
+
+`storefront_config.showRating` (§3.4, default `true`) sigue existiendo como toggle "mostrar puntuaciones y reseñas", pero `reviews` (§14.1) no tiene ningún campo de rating que ese toggle pueda mostrar u ocultar — son solo opiniones de texto. O el campo es un remanente que debería quitarse del modelo definitivo, o su semántica cambió a "mostrar/ocultar la sección de reseñas" sin que el nombre lo refleje. Vale la pena confirmarlo con el CTO antes de implementar `Apariencia.tsx`/`StorePreview.tsx`, que hoy exponen el toggle `mostrarRating` tal cual.
 
 ## Datos que faltan en el mock pero la lógica de negocio necesita
 
-- **`business_id`** en TODAS las entidades persistentes (multi-tenant). Ausente en todos los mocks.
-- **`branch_id`** en Stock, Movimiento, SesionCaja, Venta, Pedido (Presencial), métricas. **No existe entidad `Branch`** pese al requerimiento "branches desde día uno".
-- **Timestamps `created_at` / `updated_at`** en la mayoría (Cliente, Producto, Categoria, Proveedor, Conversacion, Movimiento parcial). Solo descuentos/cupones los tienen.
-- **FKs reales**: hoy muchas relaciones son por **string/nombre** (LineaPedido→producto, Movimiento→producto/usuario, Devolucion→pedido, Conversacion→cliente). Falta `producto_id`, `usuario_id`, `pedido_id`, `cliente_id`.
-- **Tabla de canjes `UsoCupon`/`UsoDescuento`** (`{cupon_id,cliente_id,pedido_id,monto,canal,branch_id,fecha}`) — imprescindible para `usosMaxPorCliente`, tasa de canje y métricas por canal/sucursal.
-- **`Direccion`** del cliente — solo existe en storefront; el panel `Cliente` no la tiene.
-- **`ClienteNota`** y **actividad/timeline del cliente** — inferidas de tabs de ClienteDetalle, sin modelo.
-- **`ProductoImagen`** (URLs, orden, principal) — hoy solo hay un contador.
-- **`ProductoReseña` / rating** — el storefront muestra `rating` sin fuente.
-- **`PedidoEstadoHistorial`** — el storefront tiene `timeline[]`; el panel cambia estado sin historial.
-- **`Pago` como entidad** con estado (pendiente/confirmado) — hoy `metodoPago` es un string; MercadoPago V1 necesita `{ preference_id, payment_id, status, monto }`.
-- **`costo`, `descripcion`, `tags`** del producto — en el form de alta pero no en el tipo `Producto`.
-- **`dni`** del cliente — solo en POS.
-- **Vínculo cuenta-storefront (`Usuario`) ↔ `Cliente`** — sin modelar.
-- **Persistencia server-side de tickets pausados** (hoy localStorage).
-- **`StockPorSucursal`** — el stock hoy es plano en el producto.
+> Estado tras cruzar con `MODELO_DATOS_DEFINITIVO.md` — la enorme mayoría ya tiene tabla/campo
+> asignado. Se marca cada ítem como resuelto (✅, con la tabla que lo cubre) o pendiente (❌).
+
+- ✅ **`business_id`** en TODAS las entidades persistentes — confirmado como convención general (§1), con las 3 excepciones documentadas (pivots, `permissions`, `role_permissions`).
+- ✅ **`branch_id`** — `branches` (§3.2) existe; llevan `branch_id` exactamente `orders`, `variant_stock`, `stock_movements`, `cash_sessions`, `cash_movements` (§1), ni más ni menos que lo que pedía el análisis.
+- ✅ **Timestamps `created_at`/`updated_at`** — convención general (§1): toda tabla lleva `created_at`; las que se modifican después de creadas llevan además `updated_at`. Las de solo-inserción (movimientos, canjes, auditoría, historial) no llevan `updated_at` (decisión explícita, no un olvido).
+- ✅ **FKs reales** en vez de string/nombre — resueltas módulo por módulo (ver arriba): `order_items.variantId`, `stock_movements.variantId`/`createdBy`, `returns.orderId`, `conversations.customerId`.
+- ✅ **Tabla de canjes** — `discount_redemptions` (§11.4), ver Módulo 6 (con el cambio de diseño de unificación Descuento+Cupon).
+- ✅ **`Direccion`/`addresses`** del cliente — ahora 1:N de `customers` (§5.2), ya no exclusiva del storefront.
+- ❌ **`ClienteNota`** y actividad/timeline del cliente — **sigue sin tabla** en los 51 modelos. Sigue pendiente.
+- ✅ **`ProductoImagen`/`product_images`** — con URL, orden, principal y FK opcional a `product_option_values` (§6.9).
+- ✅ (con cambio de diseño) **Reseñas** — `reviews` (§14.1) existe, pero **sin rating**, solo texto verificado. No es lo que pedía el análisis original (que dejaba abierto si habría puntuación).
+- ✅ **`PedidoEstadoHistorial`** — `order_status_history` (§8.5), solo para órdenes `ONLINE` (POS nace y muere en `COMPLETED`, no tiene historial).
+- ✅ **`Pago`/`payments`** — entidad completa (§9.1) con `status`, referencia externa (`mpOrderId`/`mpPaymentId`), y verificación humana para transferencias (`verifiedBy`/`verifiedAt`).
+- ✅ **`costo`, `descripcion`, `tags`** del producto — `products.cost`/`products.description` (§6.3) + `tags`/`product_tags` (§6.2/6.4).
+- ✅ **`dni`** del cliente — `customers.dni` (§5.1), ya no exclusivo de POS.
+- ✅ **Vínculo cuenta-storefront ↔ Cliente** — `customers.authUserId` opcional (§5.1) resuelve la unificación.
+- ❌ **Persistencia server-side de tickets pausados** — **sigue sin tabla**. Sigue en localStorage, sin decisión de backend.
+- ✅ **`StockPorSucursal`** — `variant_stock` (§7.1), único por (`variantId`,`branchId`).
 
 ## Decisiones pendientes
 
-1. **¿Orden unificada o Venta+Pedido separadas?** POS (`ResultadoVenta`, comprobante, pago mixto, vuelto) y online (`Pedido`, tracking, timeline, envío) tienen ciclos distintos. Recomendación: una tabla `orden` con `canal` + campos opcionales, o dos tablas con vista común. Definir antes de tocar Reportes (que agrega ambas).
-2. **Numeración de comprobantes/pedidos**: unificar los 3 esquemas (`ORB-2847`, `1284`, `0001-00000001`).
-3. **Modelo de Producto canónico**: consolidar las 7 proyecciones en una entidad + variantes ricas + imágenes reales + costo/descripcion/tags. Deprecar `variantes: string[]`.
-4. **Producto ↔ Categoria por FK** (no por nombre). Unificar IDs de categoría (`remeras` vs `cat-remeras`).
-5. **Stock por sucursal** (`StockPorSucursal`) y creación de la entidad **`Branch`** (falta por completo).
-6. **Cliente único**: fusionar `Cliente` (panel) + `ClienteAsociado` (POS, con DNI) + `Usuario` (storefront, con login) + direcciones. ¿Cliente con o sin cuenta?
-7. **Tabla de canjes de descuentos/cupones** para soportar límites por cliente y métricas por canal/sucursal.
-8. **Roles**: reconciliar 3 del mock (dueno/admin/vendedor) con 4 del proyecto (owner/admin/cajero/empleado). ¿`Permiso` es catálogo global o por negocio?
-9. **Evaluación de descuentos**: confirmar contrato de `/api/descuentos/evaluar` (input carrito, output desglose) y la precedencia "best discount wins" (¿mayor ahorro o `prioridad`?). Reemplazar los descuentos hardcodeados (10% en checkout).
-10. **Pagos MercadoPago V1**: modelar entidad `Pago` con estado y referencia externa; hoy `metodoPago` es solo un enum string.
-11. **Storage de imágenes** (logo, favicon, sliders, fotos de producto) — Supabase Storage; los mocks tienen `null`/contadores.
-12. **Devoluciones/Notas de crédito**: agregar `pedido_id` a `Devolucion`; tipar `NotaCredito.vence` como fecha; vincular devolución→nota de crédito→saldo del cliente.
-13. **Mensajería**: unificar enum de remitente, agregar timestamps reales y canal (WhatsApp vs interno); definir cardinalidad conversación↔pedido.
-14. **Auditoría transversal**: `LogAuditoria` hoy es solo de descuentos/cupones. Evaluar extenderlo a productos, precios (POS `precioEditado`), stock y pedidos.
-15. **`tienda/` (stubs vacíos)**: la carpeta `ventas/tienda/` (`CatalogoTienda`, `CarritoTienda`, `FlujoPagoTienda`, `ProductoCard`, `useInventarioTienda`) está **vacía (0 líneas)**. El storefront real vive en `cliente/` + `@/lib/storefront/`. Decidir si `tienda/` se elimina o se implementa.
+> Estado de cada una tras `MODELO_DATOS_DEFINITIVO.md` ("Definitivo", arquitectura cerrada).
+
+1. ✅ **RESUELTO — Orden unificada.** `orders` (§8.1) con `channel: OrderChannel`, satélites `pos_sale_details`/`online_order_details` (§8.3-8.4) para lo específico de cada canal. Exactamente la opción "una tabla orden con canal + campos opcionales" que este documento recomendaba.
+2. ✅ **RESUELTO — Numeración unificada.** `orderNumber` (Int, único por negocio) reemplaza los 3 esquemas. `fiscalNumber` queda aparte para AFIP (nullable, diferido).
+3. ✅ **RESUELTO — Producto canónico.** `products`+`product_variants`+`product_options`(+values)+`product_images` (§6.3-6.9). `variantes: string[]` queda deprecado a favor del modelo relacional.
+4. ✅ **RESUELTO — Producto↔Categoria por FK.** `products.categoryId` (§6.3), un solo esquema de IDs vía `categories.slug` (§6.1).
+5. ✅ **RESUELTO — Stock por sucursal + Branch.** `variant_stock` (§7.1) + `branches` (§3.2).
+6. ✅ **RESUELTO — Cliente único.** `customers` (§5.1) fusiona los 4 modelos; `authUserId` opcional define cliente con/sin cuenta.
+7. ✅ **RESUELTO — Tabla de canjes.** `discount_redemptions` (§11.4) — **con el cambio adicional de unificar Descuento+Cupon en `discounts`** (§11.1, no anticipado por este análisis, ver Módulo 6).
+8. ✅ **RESUELTO — Roles.** 4 roles default (owner/admin/cajero/empleado, `roles` §4.2) ganan sobre los 3 del mock. `permissions` (§4.3) confirmado como catálogo global (sin `business_id`).
+9. ✅ **RESUELTO (arquitectura) — Evaluación de descuentos.** `/api/discounts/evaluate`, `priority` (Int) para desempate de "best discount wins" (mayor ahorro primero). **Pendiente de implementación**: el frontend sigue con el 10% hardcodeado en el checkout — el contrato ya está definido, falta que el código lo use.
+10. ✅ **RESUELTO — Pagos MercadoPago V1.** `payments` (§9.1): `method`/`status` tipados, campos `mp*` para MP, `verifiedBy`/`verifiedAt` para la confirmación humana de transferencias POS (sin webhook).
+11. ✅ **RESUELTO — Storage de imágenes.** Confirmado Supabase Storage: `storefront_config.logoUrl`/`faviconUrl` (§3.4), `product_images.url` (§6.9).
+12. ✅ **RESUELTO — Devoluciones/Notas de crédito.** `returns.orderId` (§12.1) obligatorio; `credit_notes.expiresAt` (§12.2) es `DateTime?` real; `credit_notes.returnId` (`@unique`) vincula devolución→nota de crédito 1:1 opcional.
+13. 🟡 **PARCIALMENTE RESUELTO — Mensajería.** Enum de remitente (`MessageSender`) y timestamps reales (`createdAt`) sí se resolvieron (§13.2). Cardinalidad conversación↔cliente confirmada como "un hilo por cliente" (regla de negocio, sin `@@unique` en la tabla). **El canal (WhatsApp vs interno) sigue sin campo — sigue pendiente.**
+14. ✅ **RESUELTO — Auditoría transversal.** `audit_logs` (§15.1) es polimórfico desde el día uno (`entityType`+`entityId`), ya no exclusivo de descuentos/cupones. Nota del documento: útil especialmente para cambios de precio POS, toggles de descuentos, cambios de estado de órdenes y config.
+15. ❌ **SIGUE ABIERTA — `tienda/` (stubs vacíos).** No es una pregunta de modelo de datos — `MODELO_DATOS_DEFINITIVO.md` no la menciona. Verificado por código (`git log`/`wc -l`): los 5 archivos de `ventas/tienda/` siguen en 0 líneas, sin cambios. Sigue pendiente decidir si se elimina o se implementa.
+16. ❌ **NUEVA — Rollout incompleto de "sin rating".** El commit que quita las estrellas del cliente es parcial (ver "Cambios detectados"): quedan `types.ts`/`mock.ts` con `rating: number`, `Categoria.tsx` con `'4.6 ★'` hardcodeado, y el toggle `mostrarRating` en `Apariencia.tsx`/`StorePreview.tsx`/`mock/apariencia.mock.ts` sin tocar. Falta terminar la migración en el frontend y decidir qué hacer con `storefront_config.showRating` (ver inconsistencia arriba).
 
 ---
 

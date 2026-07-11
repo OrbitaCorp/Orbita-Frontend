@@ -1,0 +1,16 @@
+# Dependencies
+/node_modules
+
+# Compiled output
+/dist
+
+# Env (los valores reales se cargan a mano, nunca a git)
+.env
+.env.local
+.env.*.local
+
+# Prisma
+/prisma/migrations/dev.db*
+
+# Logs
+*.log
