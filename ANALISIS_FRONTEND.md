@@ -1194,8 +1194,6 @@ Matriz evento×canal: eventos (Nuevo pedido, Pedido cancelado, Stock crítico, D
 12. ✅ **RESUELTO — Devoluciones/Notas de crédito.** `returns.orderId` (§12.1) obligatorio; `credit_notes.expiresAt` (§12.2) es `DateTime?` real; `credit_notes.returnId` (`@unique`) vincula devolución→nota de crédito 1:1 opcional.
 13. 🟡 **PARCIALMENTE RESUELTO — Mensajería.** Enum de remitente (`MessageSender`) y timestamps reales (`createdAt`) sí se resolvieron (§13.2). Cardinalidad conversación↔cliente confirmada como "un hilo por cliente" (regla de negocio, sin `@@unique` en la tabla). **El canal (WhatsApp vs interno) sigue sin campo — sigue pendiente.**
 14. ✅ **RESUELTO — Auditoría transversal.** `audit_logs` (§15.1) es polimórfico desde el día uno (`entityType`+`entityId`), ya no exclusivo de descuentos/cupones. Nota del documento: útil especialmente para cambios de precio POS, toggles de descuentos, cambios de estado de órdenes y config.
-15. ❌ **SIGUE ABIERTA — `tienda/` (stubs vacíos).** No es una pregunta de modelo de datos — `MODELO_DATOS_DEFINITIVO.md` no la menciona. Verificado por código (`git log`/`wc -l`): los 5 archivos de `ventas/tienda/` siguen en 0 líneas, sin cambios. Sigue pendiente decidir si se elimina o se implementa.
-16. ❌ **NUEVA — Rollout incompleto de "sin rating".** El commit que quita las estrellas del cliente es parcial (ver "Cambios detectados"): quedan `types.ts`/`mock.ts` con `rating: number`, `Categoria.tsx` con `'4.6 ★'` hardcodeado, y el toggle `mostrarRating` en `Apariencia.tsx`/`StorePreview.tsx`/`mock/apariencia.mock.ts` sin tocar. Falta terminar la migración en el frontend y decidir qué hacer con `storefront_config.showRating` (ver inconsistencia arriba).
 
 ---
 
