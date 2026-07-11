@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h2>Tu pedido #{{orderNumber}} está en camino</h2>
+  <p>Tu pedido en <strong>{{storeName}}</strong> ya fue despachado.</p>
+  {{#if tracking}}
+  <p>Código de seguimiento: <strong>{{tracking}}</strong></p>
+  {{/if}}
+  <p style="color: #666; font-size: 12px;">Te vamos a avisar apenas llegue a destino.</p>
+</body>
+</html>
