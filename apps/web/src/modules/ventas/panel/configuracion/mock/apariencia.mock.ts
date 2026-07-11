@@ -40,7 +40,7 @@ export interface Apariencia {
     headerLinks:  HeaderLink[]
     layoutGrid:   LayoutGrid
     radioCards:   RadioCards
-    mostrarRating:      boolean
+    mostrarResenas:     boolean
     mostrarBadgeNuevo:  boolean
     mostrarBadgeOferta: boolean
     mostrarStockBajo:   boolean
@@ -73,7 +73,7 @@ export const AP_DEFAULTS: Apariencia = {
         { id: 'masVendidos', label: 'Más vendidos', on: true  },
     ],
     layoutGrid: '4col', radioCards: 'md',
-    mostrarRating: true, mostrarBadgeNuevo: true, mostrarBadgeOferta: true, mostrarStockBajo: true,
+    mostrarResenas: true, mostrarBadgeNuevo: true, mostrarBadgeOferta: true, mostrarStockBajo: true,
     mostrarWhatsapp: true, mostrarBuscador: true, mostrarCategorias: true, mostrarFooter: true,
     textoCTA: 'Agregar al carrito', textoEnvio: 'Envíos coordinados por WhatsApp', textoWhatsapp: '💬 Escribinos',
 }

@@ -50,17 +50,17 @@ const CATS_CARRUSEL = [
 ]
 
 const OFERTA_FLASH = [
-    { id: 'of1', nombre: 'Remera oversize negra',   precio: 24900, precioAnt: 32000, hue: 220, badge: '−22%', cat: 'Remeras',    rating: 4.6, stock: true, stockCount: 4 },
-    { id: 'of2', nombre: 'Jogger gris melange',     precio: 34500, precioAnt: 45000, hue: 210, badge: '−23%', cat: 'Pantalones', rating: 4.7, stock: true, stockCount: 2 },
-    { id: 'of3', nombre: 'Buzo sin capucha crema',  precio: 32000, precioAnt: 40000, hue: 45,  badge: '−20%', cat: 'Buzos',      rating: 4.5, stock: true, stockCount: 7 },
-    { id: 'of4', nombre: 'Jean tiro medio celeste', precio: 56000, precioAnt: 68000, hue: 200, badge: '−18%', cat: 'Jeans',      rating: 4.8, stock: true, stockCount: 3 },
+    { id: 'of1', nombre: 'Remera oversize negra',   precio: 24900, precioAnt: 32000, hue: 220, badge: '−22%', cat: 'Remeras',    stock: true, stockCount: 4 },
+    { id: 'of2', nombre: 'Jogger gris melange',     precio: 34500, precioAnt: 45000, hue: 210, badge: '−23%', cat: 'Pantalones', stock: true, stockCount: 2 },
+    { id: 'of3', nombre: 'Buzo sin capucha crema',  precio: 32000, precioAnt: 40000, hue: 45,  badge: '−20%', cat: 'Buzos',      stock: true, stockCount: 7 },
+    { id: 'of4', nombre: 'Jean tiro medio celeste', precio: 56000, precioAnt: 68000, hue: 200, badge: '−18%', cat: 'Jeans',      stock: true, stockCount: 3 },
 ]
 
 const NUEVOS_INGRESOS = [
-    { id: 'ni1', nombre: 'Campera técnica impermeable', precio: 112000, precioAnt: null, hue: 200, badge: 'Nuevo', cat: 'Camperas',    rating: 4.8, stock: true },
-    { id: 'ni2', nombre: 'Remera estampada gráfica',    precio: 27500,  precioAnt: null, hue: 280, badge: 'Nuevo', cat: 'Remeras',     rating: 4.9, stock: true },
-    { id: 'ni3', nombre: 'Gorra trucker bordada',       precio: 15900,  precioAnt: null, hue: 30,  badge: 'Nuevo', cat: 'Accesorios',  rating: 4.5, stock: true },
-    { id: 'ni4', nombre: 'Top deportivo lila',          precio: 19500,  precioAnt: null, hue: 270, badge: 'Nuevo', cat: 'Deportivo',   rating: 4.7, stock: true },
+    { id: 'ni1', nombre: 'Campera técnica impermeable', precio: 112000, precioAnt: null, hue: 200, badge: 'Nuevo', cat: 'Camperas',    stock: true },
+    { id: 'ni2', nombre: 'Remera estampada gráfica',    precio: 27500,  precioAnt: null, hue: 280, badge: 'Nuevo', cat: 'Remeras',     stock: true },
+    { id: 'ni3', nombre: 'Gorra trucker bordada',       precio: 15900,  precioAnt: null, hue: 30,  badge: 'Nuevo', cat: 'Accesorios',  stock: true },
+    { id: 'ni4', nombre: 'Top deportivo lila',          precio: 19500,  precioAnt: null, hue: 270, badge: 'Nuevo', cat: 'Deportivo',   stock: true },
 ]
 
 const STATS: [string, string][] = [

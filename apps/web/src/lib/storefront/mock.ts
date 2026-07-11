@@ -18,18 +18,18 @@ export const CATEGORIAS: Categoria[] = [
 ]
 
 export const PRODUCTOS: Producto[] = [
-  { id:'p1',  nombre:'Remera oversize negra',      cat:'Remeras',    precio:24900, precioAnt:null,   badge:'Nuevo',  hue:220, hue2:235, rating:4.9, stock:true  },
-  { id:'p2',  nombre:'Pantalón cargo verde oliva', cat:'Pantalones', precio:48900, precioAnt:62000,  badge:'Oferta', hue:140,           rating:4.7, stock:true  },
-  { id:'p3',  nombre:'Buzo frisa con capucha',     cat:'Buzos',      precio:38500, precioAnt:null,   badge:null,     hue:220, hue2:210, rating:4.8, stock:true  },
-  { id:'p4',  nombre:'Campera bomber beige arena', cat:'Camperas',   precio:89000, precioAnt:110000, badge:'Oferta', hue:35,  hue2:45,  rating:4.6, stock:true  },
-  { id:'p5',  nombre:'Remera básica blanca',       cat:'Remeras',    precio:18900, precioAnt:null,   badge:null,     hue:200, hue2:215, rating:4.5, stock:true  },
-  { id:'p6',  nombre:'Jogger gris melange',        cat:'Pantalones', precio:34500, precioAnt:null,   badge:null,     hue:210,           rating:4.4, stock:true  },
-  { id:'p7',  nombre:'Buzo sin capucha crema',     cat:'Buzos',      precio:32000, precioAnt:40000,  badge:'Oferta', hue:45,  hue2:55,  rating:4.6, stock:true  },
-  { id:'p8',  nombre:'Campera cortaviento azul',   cat:'Camperas',   precio:67000, precioAnt:null,   badge:null,     hue:215, hue2:225, rating:4.7, stock:true  },
-  { id:'p9',  nombre:'Remera estampada gráfica',   cat:'Remeras',    precio:27500, precioAnt:null,   badge:'Nuevo',  hue:280, hue2:295, rating:4.8, stock:true  },
-  { id:'p10', nombre:'Gorra trucker bordada',      cat:'Accesorios', precio:15900, precioAnt:null,   badge:'Nuevo',  hue:30,            rating:4.5, stock:true  },
-  { id:'p11', nombre:'Jean tiro medio celeste',    cat:'Pantalones', precio:56000, precioAnt:68000,  badge:'Oferta', hue:200,           rating:4.5, stock:true  },
-  { id:'p12', nombre:'Remera orgánica oversize',   cat:'Remeras',    precio:26900, precioAnt:null,   badge:null,     hue:195, hue2:205, rating:4.6, stock:true  },
+  { id:'p1',  nombre:'Remera oversize negra',      cat:'Remeras',    precio:24900, precioAnt:null,   badge:'Nuevo',  hue:220, hue2:235, stock:true  },
+  { id:'p2',  nombre:'Pantalón cargo verde oliva', cat:'Pantalones', precio:48900, precioAnt:62000,  badge:'Oferta', hue:140,           stock:true  },
+  { id:'p3',  nombre:'Buzo frisa con capucha',     cat:'Buzos',      precio:38500, precioAnt:null,   badge:null,     hue:220, hue2:210, stock:true  },
+  { id:'p4',  nombre:'Campera bomber beige arena', cat:'Camperas',   precio:89000, precioAnt:110000, badge:'Oferta', hue:35,  hue2:45,  stock:true  },
+  { id:'p5',  nombre:'Remera básica blanca',       cat:'Remeras',    precio:18900, precioAnt:null,   badge:null,     hue:200, hue2:215, stock:true  },
+  { id:'p6',  nombre:'Jogger gris melange',        cat:'Pantalones', precio:34500, precioAnt:null,   badge:null,     hue:210,           stock:true  },
+  { id:'p7',  nombre:'Buzo sin capucha crema',     cat:'Buzos',      precio:32000, precioAnt:40000,  badge:'Oferta', hue:45,  hue2:55,  stock:true  },
+  { id:'p8',  nombre:'Campera cortaviento azul',   cat:'Camperas',   precio:67000, precioAnt:null,   badge:null,     hue:215, hue2:225, stock:true  },
+  { id:'p9',  nombre:'Remera estampada gráfica',   cat:'Remeras',    precio:27500, precioAnt:null,   badge:'Nuevo',  hue:280, hue2:295, stock:true  },
+  { id:'p10', nombre:'Gorra trucker bordada',      cat:'Accesorios', precio:15900, precioAnt:null,   badge:'Nuevo',  hue:30,            stock:true  },
+  { id:'p11', nombre:'Jean tiro medio celeste',    cat:'Pantalones', precio:56000, precioAnt:68000,  badge:'Oferta', hue:200,           stock:true  },
+  { id:'p12', nombre:'Remera orgánica oversize',   cat:'Remeras',    precio:26900, precioAnt:null,   badge:null,     hue:195, hue2:205, stock:true  },
 ]
 
 export const CARRITO_INICIAL: ItemCarrito[] = [

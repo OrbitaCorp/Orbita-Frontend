@@ -226,7 +226,7 @@ export default function Apariencia({ ir, onToast }: AparienciaProps) {
 
                     <SecCard title="¿Qué ven tus clientes?" icon={Eye}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                            {([['mostrarRating', 'Puntuaciones y reseñas'], ['mostrarBadgeNuevo', 'Badge "Nuevo"'], ['mostrarBadgeOferta', 'Badge "Oferta" con %'], ['mostrarStockBajo', 'Indicador de stock bajo'], ['mostrarWhatsapp', 'WhatsApp flotante'], ['mostrarBuscador', 'Barra de búsqueda'], ['mostrarCategorias', 'Sección de categorías'], ['mostrarFooter', 'Footer completo']] as [keyof Ap, string][]).map(([k, l]) => (
+                            {([['mostrarResenas', 'Opiniones de clientes'], ['mostrarBadgeNuevo', 'Badge "Nuevo"'], ['mostrarBadgeOferta', 'Badge "Oferta" con %'], ['mostrarStockBajo', 'Indicador de stock bajo'], ['mostrarWhatsapp', 'WhatsApp flotante'], ['mostrarBuscador', 'Barra de búsqueda'], ['mostrarCategorias', 'Sección de categorías'], ['mostrarFooter', 'Footer completo']] as [keyof Ap, string][]).map(([k, l]) => (
                                 <ToggleRow key={k} label={l} on={ap[k] as boolean} onChange={v => set(k, v as Ap[typeof k])} />
                             ))}
                         </div>

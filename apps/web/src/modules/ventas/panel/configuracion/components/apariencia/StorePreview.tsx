@@ -11,25 +11,25 @@ const DESIGN_W = 1280
 
 // ─── Datos de muestra (espejo del home) ─────────────────────────────────────────
 
-type PvProd = { n: string; p: string; old: string | null; hue: number; badge: string | null; r: number; stock?: number }
+type PvProd = { n: string; p: string; old: string | null; hue: number; badge: string | null; stock?: number }
 
 const MAS_VENDIDOS: PvProd[] = [
-    { n: 'Remera oversize negra',   p: '$24.900', old: null,       hue: 220, badge: null,    r: 4.9 },
-    { n: 'Campera bomber beige',    p: '$89.000', old: '$110.000', hue: 35,  badge: '−19%',  r: 4.7 },
-    { n: 'Jean tiro medio celeste', p: '$56.000', old: '$68.000',  hue: 200, badge: '−18%',  r: 4.8 },
-    { n: 'Buzo capucha crema',      p: '$38.500', old: null,       hue: 45,  badge: null,    r: 4.6 },
+    { n: 'Remera oversize negra',   p: '$24.900', old: null,       hue: 220, badge: null   },
+    { n: 'Campera bomber beige',    p: '$89.000', old: '$110.000', hue: 35,  badge: '−19%' },
+    { n: 'Jean tiro medio celeste', p: '$56.000', old: '$68.000',  hue: 200, badge: '−18%' },
+    { n: 'Buzo capucha crema',      p: '$38.500', old: null,       hue: 45,  badge: null   },
 ]
 const DESTACADOS: PvProd[] = [
-    { n: 'Remera oversize negra',   p: '$24.900', old: '$32.000',  hue: 220, badge: '−22%',  r: 4.6, stock: 4 },
-    { n: 'Jogger gris melange',     p: '$34.500', old: '$45.000',  hue: 210, badge: '−23%',  r: 4.7, stock: 2 },
-    { n: 'Buzo sin capucha crema',  p: '$32.000', old: '$40.000',  hue: 45,  badge: '−20%',  r: 4.5, stock: 7 },
-    { n: 'Jean tiro medio celeste', p: '$56.000', old: '$68.000',  hue: 200, badge: '−18%',  r: 4.8, stock: 3 },
+    { n: 'Remera oversize negra',   p: '$24.900', old: '$32.000',  hue: 220, badge: '−22%',  stock: 4 },
+    { n: 'Jogger gris melange',     p: '$34.500', old: '$45.000',  hue: 210, badge: '−23%',  stock: 2 },
+    { n: 'Buzo sin capucha crema',  p: '$32.000', old: '$40.000',  hue: 45,  badge: '−20%',  stock: 7 },
+    { n: 'Jean tiro medio celeste', p: '$56.000', old: '$68.000',  hue: 200, badge: '−18%',  stock: 3 },
 ]
 const NUEVOS: PvProd[] = [
-    { n: 'Campera técnica impermeable', p: '$112.000', old: null, hue: 200, badge: 'Nuevo', r: 4.8 },
-    { n: 'Remera estampada gráfica',    p: '$27.500',  old: null, hue: 280, badge: 'Nuevo', r: 4.9 },
-    { n: 'Gorra trucker bordada',       p: '$15.900',  old: null, hue: 30,  badge: 'Nuevo', r: 4.5 },
-    { n: 'Top deportivo lila',          p: '$19.500',  old: null, hue: 270, badge: 'Nuevo', r: 4.7 },
+    { n: 'Campera técnica impermeable', p: '$112.000', old: null, hue: 200, badge: 'Nuevo' },
+    { n: 'Remera estampada gráfica',    p: '$27.500',  old: null, hue: 280, badge: 'Nuevo' },
+    { n: 'Gorra trucker bordada',       p: '$15.900',  old: null, hue: 30,  badge: 'Nuevo' },
+    { n: 'Top deportivo lila',          p: '$19.500',  old: null, hue: 270, badge: 'Nuevo' },
 ]
 
 const CATS = [
@@ -506,14 +506,6 @@ function PreviewCard({ p, ap, c, prim, fh, rad, dk }: { p: PvProd; ap: Aparienci
             </div>
             <div style={{ padding: '12px 14px 14px' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: c.text, lineHeight: 1.35, marginBottom: 6, fontFamily: fh, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.n}</div>
-                {ap.mostrarRating && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 8 }}>
-                        {[1, 2, 3, 4, 5].map(i => (
-                            <span key={i} style={{ fontSize: 11, color: i <= Math.round(p.r) ? '#F59E0B' : c.border, lineHeight: 1 }}>★</span>
-                        ))}
-                        <span style={{ fontSize: 11, fontWeight: 600, color: c.text, fontFamily: '"Geist Mono", monospace', marginLeft: 2 }}>{p.r.toFixed(1)}</span>
-                    </div>
-                )}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 10 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: c.text, fontFamily: '"Geist Mono", monospace' }}>{p.p}</span>
                     {p.old && <span style={{ fontSize: 12, color: c.muted, textDecoration: 'line-through', fontFamily: '"Geist Mono", monospace' }}>{p.old}</span>}

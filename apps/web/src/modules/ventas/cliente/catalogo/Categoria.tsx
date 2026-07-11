@@ -29,7 +29,7 @@ export default function Categoria() {
             <h1 style={{ fontSize: 42, fontWeight: 800, letterSpacing: '-0.03em', color: '#0F172A', margin: '0 0 8px' }}>{cat.nombre}</h1>
             <p style={{ fontSize: 15, color: '#334155', maxWidth: 380, marginBottom: 20 }}>Explorá toda nuestra selección de {cat.nombre.toLowerCase()}.</p>
             <div style={{ display: 'flex', gap: 20 }}>
-              {[[cat.count, 'modelos'], ['4.6 ★', 'rating']].map(([v, l]) => (
+              {[[cat.count, 'modelos']].map(([v, l]) => (
                 <div key={String(l)}>
                   <div style={{ fontSize: 18, fontWeight: 700, color: '#0F172A', fontFamily: '"Geist Mono", monospace' }}>{v}</div>
                   <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#475569' }}>{l}</div>

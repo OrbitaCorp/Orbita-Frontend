@@ -21,10 +21,10 @@ const CARACT  = [
 ]
 
 const RESENAS = [
-  { autor:'Lucía M.',  rating:5, fecha:'hace 3 días',    titulo:'Hermosa y de excelente calidad', texto:'Mejor de lo que esperaba. El género es grueso y abriga muchísimo. El talle M me quedó perfecto.' },
-  { autor:'Tomás R.',  rating:5, fecha:'hace 1 semana',  titulo:'Justa para el frío',             texto:'La uso todos los días para ir al trabajo. Me re cumple. El color beige es tal cual la foto.' },
-  { autor:'Ana P.',    rating:4, fecha:'hace 2 semanas', titulo:'Linda pero abriga menos',        texto:'Es muy linda y el corte queda divino. Para días bajo 10° quizás conviene algo más pesado.' },
-  { autor:'Diego F.',  rating:5, fecha:'hace 3 semanas', titulo:'Envío rápido y buen producto',  texto:'Llegó al día siguiente. La calidad es notable, las costuras son prolijas. Volvería a comprar.' },
+  { autor:'Lucía M.',  fecha:'hace 3 días',    titulo:'Hermosa y de excelente calidad', texto:'Mejor de lo que esperaba. El género es grueso y abriga muchísimo. El talle M me quedó perfecto.' },
+  { autor:'Tomás R.',  fecha:'hace 1 semana',  titulo:'Justa para el frío',             texto:'La uso todos los días para ir al trabajo. Me re cumple. El color beige es tal cual la foto.' },
+  { autor:'Ana P.',    fecha:'hace 2 semanas', titulo:'Linda pero abriga menos',        texto:'Es muy linda y el corte queda divino. Para días bajo 10° quizás conviene algo más pesado.' },
+  { autor:'Diego F.',  fecha:'hace 3 semanas', titulo:'Envío rápido y buen producto',  texto:'Llegó al día siguiente. La calidad es notable, las costuras son prolijas. Volvería a comprar.' },
 ]
 
 export default function ProductoDetalle() {
