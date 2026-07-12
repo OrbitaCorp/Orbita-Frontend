@@ -243,14 +243,16 @@ Se exponen **rutas `/me` separadas** por contexto para evitar ambigüedad.
 - **Método**: PUT
 - **Ruta**: `/api/v1/business`
 - **Auth**: Requerida (permiso `config.edit`, rol owner/admin)
-- **Descripción**: edita nombre, rubro, descripción y modo (FULL/SHOWCASE).
+- **Descripción**: edita nombre, rubro y descripción.
 - **Request body**:
 ```typescript
-{ name?: string, industry?: string, description?: string, mode?: 'FULL' | 'SHOWCASE' }
+{ name?: string, industry?: string, description?: string }
 ```
 - **Response (200)**: el `business` actualizado.
 - **Tabla(s)**: `businesses`.
-- **Notas**: cambiar `mode` a SHOWCASE oculta checkout/mensajes/opiniones en el storefront (la
+- **Notas**: el campo `mode` se gestiona en un endpoint separado (pendiente de implementar,
+  ver PENDIENTES.md) con validaciones propias — no se edita junto con los demás campos del
+  negocio. Cambiar `mode` a SHOWCASE oculta checkout/mensajes/opiniones en el storefront (la
   bifurcación la aplican los endpoints "Solo FULL").
 
 ### Config operativa (contacto, pagos, envíos, redes)
@@ -358,10 +360,23 @@ Se exponen **rutas `/me` separadas** por contexto para evitar ambigüedad.
 
 ### Crear / actualizar sucursal
 - **Método**: POST `/api/v1/branches` · PUT `/api/v1/branches/:id`
-- **Auth**: Requerida (rol owner/admin)
+- **Auth**: Requerida (rol owner únicamente)
 - **Descripción**: preparados para V2 (en V1 la UI de gestión de sucursales no existe).
 - **Request body**: `{ name: string, address?: string, isActive?: boolean }`
 - **Response (200/201)**: `Branch`
+- **Tabla(s)**: `branches`.
+- **Notas**: crear/editar/eliminar una sucursal es una operación estructural que afecta
+  stock, caja y reportes de todo el negocio — más cerca de "zona peligrosa" que de gestión
+  operativa, por eso el rol mínimo es owner (no admin).
+
+### Eliminar sucursal
+- **Método**: DELETE
+- **Ruta**: `/api/v1/branches/:id`
+- **Auth**: Requerida (rol owner únicamente)
+- **Descripción**: elimina una sucursal no-default sin registros asociados.
+- **Response (200)**: `{ ok: true }`
+- **Errores**: 422 (es la sucursal default/`Principal`), 422 (tiene registros asociados:
+  stock, órdenes, caja).
 - **Tabla(s)**: `branches`.
 
 ---

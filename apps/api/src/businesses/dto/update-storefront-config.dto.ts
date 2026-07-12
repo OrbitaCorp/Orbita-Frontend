@@ -1,5 +1,7 @@
-import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsUUID, IsEmail, IsArray, IsIn, IsObject, ValidateNested, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsArray, IsIn, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { HeroSlideDto } from './hero-slide.dto';
+import { HeaderLinkDto } from './header-link.dto';
 
 export class UpdateStorefrontConfigDto {
   @IsOptional() @IsString() storeName?: string;
@@ -16,8 +18,21 @@ export class UpdateStorefrontConfigDto {
   @IsOptional() @IsString() headerLayout?: string;
   @IsOptional() @IsString() gridLayout?: string;
   @IsOptional() @IsInt() cardRadius?: number;
-  @IsOptional() @IsArray() heroSlides?: unknown[];
-  @IsOptional() @IsArray() headerLinks?: unknown[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => HeroSlideDto)
+  heroSlides?: HeroSlideDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => HeaderLinkDto)
+  headerLinks?: HeaderLinkDto[];
+
+  // "showReviews" es el nombre expuesto por la API (ver CONTRATO_API.md);
+  // el schema de Prisma lo mapea internamente como `showRating`.
   @IsOptional() @IsBoolean() showReviews?: boolean;
   @IsOptional() @IsBoolean() showNewBadge?: boolean;
   @IsOptional() @IsBoolean() showWhatsapp?: boolean;

@@ -46,10 +46,44 @@ export class AuthGuard implements CanActivate {
     }
     const { id: authUserId } = supabaseUser;
 
-    const slug = request.headers['x-business-slug'];
+    // Prioridad incondicional: member > customer.
+    // Buscar siempre en members primero, sin importar si el header X-Business-Slug
+    // está presente — el header lo controla el llamador y no debe poder forzar
+    // que un member sea tratado como customer.
+    const member = await this.prisma.member.findUnique({
+      where: { authUserId },
+      include: {
+        role: {
+          include: {
+            rolePermissions: { include: { permission: true } },
+          },
+        },
+        business: { select: { id: true, mode: true } },
+      },
+    });
 
-    if (slug) {
-      // Contexto storefront: el frontend envía el subdomain del negocio.
+    if (member) {
+      request.user = {
+        authUserId,
+        type: 'member',
+        memberId: member.id,
+        businessId: member.businessId,
+        businessMode: member.business.mode,
+        roleId: member.roleId,
+        roleName: member.role.name,
+        permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
+      };
+    } else {
+      // No es member → buscar como customer. El header es obligatorio para
+      // saber en qué negocio buscar (un mismo authUserId puede ser customer
+      // en múltiples negocios).
+      const slug = request.headers['x-business-slug'];
+      if (!slug) {
+        throw new UnauthorizedException(
+          'Usuario sin acceso a ningún negocio. Para acceso como cliente enviá el header X-Business-Slug.',
+        );
+      }
+
       const business = await this.prisma.business.findUnique({
         where: { subdomain: slug },
       });
@@ -66,36 +100,6 @@ export class AuthGuard implements CanActivate {
         customerId: customer.id,
         businessId: business.id,
         businessMode: business.mode,
-      };
-    } else {
-      // Contexto panel: business se deduce desde la tabla members.
-      // Member.authUserId es @unique → un usuario = un negocio de panel.
-      const member = await this.prisma.member.findUnique({
-        where: { authUserId },
-        include: {
-          role: {
-            include: {
-              rolePermissions: { include: { permission: true } },
-            },
-          },
-          business: { select: { id: true, mode: true } },
-        },
-      });
-      if (!member) {
-        throw new UnauthorizedException(
-          'Usuario sin acceso a ningún negocio. Para acceso como cliente enviá el header X-Business-Slug.',
-        );
-      }
-
-      request.user = {
-        authUserId,
-        type: 'member',
-        memberId: member.id,
-        businessId: member.businessId,
-        businessMode: member.business.mode,
-        roleId: member.roleId,
-        roleName: member.role.name,
-        permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
       };
     }
 

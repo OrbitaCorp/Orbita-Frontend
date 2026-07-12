@@ -1,5 +1,8 @@
-import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentBusiness } from '../common/decorators/current-business.decorator';
+import { AuthContext } from '../common/types/auth-context.type';
+import { assertMemberContext } from '../common/utils/assert-member-context';
 import { BusinessesService } from './businesses.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { UpdateBusinessConfigDto } from './dto/update-business-config.dto';
@@ -12,75 +15,78 @@ export class BusinessesController {
   constructor(private readonly businessesService: BusinessesService) {}
 
   @Get()
-  getBusiness() {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  getBusiness(@CurrentBusiness() ctx: AuthContext) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.getMe(member.businessId);
   }
 
   @Put()
   @Roles('owner', 'admin')
-  updateBusiness(@Body() dto: UpdateBusinessDto) {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  updateBusiness(@CurrentBusiness() ctx: AuthContext, @Body() dto: UpdateBusinessDto) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.updateMe(member.businessId, dto);
   }
 
   @Get('config')
-  getConfig() {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  getConfig(@CurrentBusiness() ctx: AuthContext) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.getConfig(member.businessId);
   }
 
   @Put('config')
   @Roles('owner', 'admin')
-  updateConfig(@Body() dto: UpdateBusinessConfigDto) {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  updateConfig(@CurrentBusiness() ctx: AuthContext, @Body() dto: UpdateBusinessConfigDto) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.updateConfig(member.businessId, dto);
   }
 
   @Get('storefront-config')
-  getStorefrontConfig() {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  getStorefrontConfig(@CurrentBusiness() ctx: AuthContext) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.getAppearance(member.businessId);
   }
 
   @Put('storefront-config')
   @Roles('owner', 'admin')
-  updateStorefrontConfig(@Body() dto: UpdateStorefrontConfigDto) {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  updateStorefrontConfig(
+    @CurrentBusiness() ctx: AuthContext,
+    @Body() dto: UpdateStorefrontConfigDto,
+  ) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.updateAppearance(member.businessId, dto);
   }
 
   @Get('notification-config')
-  getNotificationConfig() {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  getNotificationConfig(@CurrentBusiness() ctx: AuthContext) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.getNotifications(member.businessId);
   }
 
   @Put('notification-config')
   @Roles('owner', 'admin')
-  updateNotificationConfig(@Body() dto: UpdateNotificationConfigDto) {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  updateNotificationConfig(
+    @CurrentBusiness() ctx: AuthContext,
+    @Body() dto: UpdateNotificationConfigDto,
+  ) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.updateNotifications(member.businessId, dto);
   }
 
   @Post('publish')
   @Roles('owner', 'admin')
-  publish() {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  publish(@CurrentBusiness() ctx: AuthContext) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.publish(member.businessId);
   }
 
   @Post('pause')
   @Roles('owner')
-  pause(@Body() dto: PauseBusinessDto) {
-    void this.businessesService;
-    return { message: 'not implemented' };
+  pause(@CurrentBusiness() ctx: AuthContext, @Body() dto: PauseBusinessDto) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.pause(member.businessId, dto.paused);
   }
 
-  @Delete()
-  @Roles('owner')
-  remove() {
-    void this.businessesService;
-    return { message: 'not implemented' };
-  }
+  // DELETE /business (eliminar negocio) queda fuera de esta fase: interactúa con
+  // `subscriptions` (cancelación) y cascadas que todavía no están implementadas.
+  // Ver decisión documentada en el resumen final.
 }

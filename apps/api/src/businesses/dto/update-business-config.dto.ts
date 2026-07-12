@@ -1,5 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsUUID, IsEmail, IsArray, IsIn, IsObject, ValidateNested, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsEmail, IsArray } from 'class-validator';
 
 export class UpdateBusinessConfigDto {
   @IsOptional() @IsString() whatsapp?: string;
