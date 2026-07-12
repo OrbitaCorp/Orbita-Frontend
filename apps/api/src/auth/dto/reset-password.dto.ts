@@ -1,7 +1,11 @@
-import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsUUID, IsEmail, IsArray, IsIn, IsObject, ValidateNested, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, MinLength } from 'class-validator';
 
 export class ResetPasswordDto {
-  @IsString() token!: string;
-  @IsString() password!: string;
+  /** Access token extraído del hash de la URL de recuperación (#access_token=...). */
+  @IsString()
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
 }

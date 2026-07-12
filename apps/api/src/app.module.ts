@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { MailModule } from './mail/mail.module';
+import { SupabaseModule } from './supabase/supabase.module';
+
+import { AuthGuard } from './common/guards/auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { BusinessModeGuard } from './common/guards/business-mode.guard';
 
 import { AuthModule } from './auth/auth.module';
 import { BusinessesModule } from './businesses/businesses.module';
@@ -35,6 +41,7 @@ import { StorefrontModule } from './storefront/storefront.module';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     MailModule,
+    SupabaseModule,
     AuthModule,
     BusinessesModule,
     BranchesModule,
@@ -62,5 +69,12 @@ import { StorefrontModule } from './storefront/storefront.module';
     StorefrontModule,
   ],
   controllers: [AppController],
+  providers: [
+    // Orden de guards: AuthGuard primero (valida token y puebla req.user),
+    // luego RolesGuard y BusinessModeGuard (leen req.user ya poblado).
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: BusinessModeGuard },
+  ],
 })
 export class AppModule {}

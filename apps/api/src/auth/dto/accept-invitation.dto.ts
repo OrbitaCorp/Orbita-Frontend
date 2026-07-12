@@ -1,7 +1,11 @@
-import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsUUID, IsEmail, IsArray, IsIn, IsObject, ValidateNested, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsUUID, MinLength } from 'class-validator';
 
 export class AcceptInvitationDto {
-  @IsString() token!: string;
-  @IsString() password!: string;
+  /** ID del registro Member (enviado como `token` en el link de invitación). */
+  @IsUUID()
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
 }

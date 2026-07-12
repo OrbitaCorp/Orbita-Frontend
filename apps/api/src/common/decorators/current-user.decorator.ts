@@ -1,9 +1,10 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { AuthContext } from '../types/auth-context.type';
 
-/** Extrae el usuario autenticado del request (seteado por AuthGuard). */
+/** Extrae el contexto completo del usuario autenticado (seteado por AuthGuard). */
 export const CurrentUser = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): unknown => {
-    const request = ctx.switchToHttp().getRequest();
+  (_data: unknown, ctx: ExecutionContext): AuthContext | undefined => {
+    const request = ctx.switchToHttp().getRequest<{ user?: AuthContext }>();
     return request.user;
   },
 );
