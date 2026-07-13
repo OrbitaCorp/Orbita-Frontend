@@ -274,6 +274,25 @@ async function main() {
     },
   });
 
+  // ── 6b. Customer sin cuenta #2 (fixture reutilizable para pruebas manuales) ─
+  // El de arriba (sinregistrar@) ya se vinculó a una cuenta real de Supabase en
+  // pruebas anteriores. Este segundo customer permite repetir el flujo de
+  // vinculación POS→storefront sin depender de un dato ya "gastado".
+
+  const sinCuentaEmail2 = 'sinregistrar2@zapatoslorena.test';
+  await prisma.customer.upsert({
+    where: { businessId_email: { businessId: business.id, email: sinCuentaEmail2 } },
+    update: {},
+    create: {
+      businessId: business.id,
+      authUserId: null,
+      firstName: 'Laura',
+      lastName: 'Fernández',
+      email: sinCuentaEmail2,
+      phone: '+5493751987654',
+    },
+  });
+
   // ── Resumen ──────────────────────────────────────────────────────────────────
 
   console.log('');
@@ -298,8 +317,16 @@ async function main() {
   console.log('├─────────────────────────────────────────────────────────┤');
   console.log('│ Cliente SIN cuenta (creado desde POS, sin auth todavía)  │');
   console.log(`│   email: ${sinCuentaEmail}`);
-  console.log('│   (usar este email en /auth/register para probar        │');
-  console.log('│   vinculación en vez de duplicado)                       │');
+  console.log('│   (ya está vinculado a una cuenta real de Supabase por   │');
+  console.log('│   pruebas anteriores — usalo para loguearte, no para     │');
+  console.log('│   registrarte de nuevo)                                  │');
+  console.log('├─────────────────────────────────────────────────────────┤');
+  console.log('│ Cliente SIN cuenta #2 (fixture reutilizable para pruebas │');
+  console.log('│ manuales repetidas de vinculación POS→storefront)        │');
+  console.log(`│   email: ${sinCuentaEmail2}`);
+  console.log('│   (usar este email en /auth/register cuando quieras      │');
+  console.log('│   repetir la prueba — el primero, sinregistrar@, ya está │');
+  console.log('│   vinculado y no sirve más para este caso)               │');
   console.log('└─────────────────────────────────────────────────────────┘');
   console.log('');
 }

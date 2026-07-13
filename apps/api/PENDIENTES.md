@@ -9,6 +9,18 @@ de cada tarea, no acá.
 
 ---
 
+## Seed / Fixtures
+
+### [2026-07-12] GUIA_PRUEBA_MANUAL_FASES_1_2.md no existe en apps/api
+**Estado:** ABIERTO
+Se pidió actualizar la sección 1.9 de `GUIA_PRUEBA_MANUAL_FASES_1_2.md` para reflejar el nuevo
+fixture `sinregistrar2@zapatoslorena.test` (agregado en `prisma/seed.ts` como segundo customer
+sin cuenta, reutilizable, porque `sinregistrar@` ya quedó vinculado a una cuenta real de
+Supabase en pruebas anteriores). El archivo no existe en ningún lugar de este repo (búsqueda
+por nombre y por contenido `sinregistrar` no lo encontró) — probablemente vive fuera del
+backend (otro repo, Drive, Notion, etc.). Si se encuentra o crea, agregar ahí la nota sobre
+por qué se usa `sinregistrar2@` en vez de `sinregistrar@`.
+
 ## Tests E2E
 
 ### [2026-07-12] Tests e2e crean usuarios reales en Supabase que no se limpian
