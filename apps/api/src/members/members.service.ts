@@ -1,13 +1,160 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
+import { MailService } from '../mail/mail.service';
+import { InviteMemberDto } from './dto/invite-member.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
+
+// Sin caracteres ambiguos (0/O, 1/l/I) para que sea legible al copiarla del email.
+const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
 
 @Injectable()
 export class MembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabase: SupabaseService,
+    private readonly mail: MailService,
+  ) {}
 
-  // Stub: la lógica de negocio se implementa en un paso posterior.
-  private notImplemented(): never {
-    void this.prisma;
-    throw new NotImplementedException();
+  async findAll(businessId: string) {
+    const members = await this.prisma.member.findMany({
+      where: { businessId },
+      include: { role: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return members.map((m) => this.toResponse(m));
+  }
+
+  async invite(businessId: string, dto: InviteMemberDto) {
+    const existing = await this.prisma.member.findUnique({
+      where: { businessId_email: { businessId, email: dto.email } },
+    });
+    if (existing) throw new ConflictException('Ese email ya es miembro de este negocio');
+
+    const role = await this.prisma.role.findFirst({ where: { id: dto.roleId, businessId } });
+    if (!role) throw new BadRequestException('Rol inválido');
+
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      include: { storefrontConfig: { select: { storeName: true } } },
+    });
+    if (!business) throw new NotFoundException('Negocio no encontrado');
+
+    const tempPassword = this.genTempPassword();
+
+    const { data: authData, error } = await this.supabase.adminClient.auth.admin.createUser({
+      email: dto.email,
+      password: tempPassword,
+      email_confirm: true,
+    });
+    if (error || !authData.user) {
+      throw new BadRequestException(error?.message ?? 'Error al crear el usuario de invitación');
+    }
+
+    const member = await this.prisma.member.create({
+      data: {
+        businessId,
+        authUserId: authData.user.id,
+        name: dto.name,
+        email: dto.email,
+        roleId: dto.roleId,
+        status: 'PENDING',
+        hasTempPassword: true,
+      },
+    });
+
+    // El token de aceptación es el memberId — misma decisión (y misma deuda
+    // de seguridad, ya registrada en PENDIENTES.md) que accept-invitation.
+    const storeName = business.storefrontConfig?.storeName ?? business.name;
+    const panelUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:3001'}/aceptar-invitacion?token=${member.id}`;
+    await this.mail.sendMemberInvitation(dto.email, {
+      storeName,
+      roleName: role.name,
+      panelUrl,
+      tempPassword,
+    });
+
+    return {
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      status: member.status,
+      hasTempPassword: member.hasTempPassword,
+    };
+  }
+
+  async update(businessId: string, id: string, dto: UpdateMemberDto) {
+    await this.findOneRaw(businessId, id);
+
+    if (dto.roleId) {
+      const role = await this.prisma.role.findFirst({ where: { id: dto.roleId, businessId } });
+      if (!role) throw new BadRequestException('Rol inválido');
+    }
+
+    const updated = await this.prisma.member.update({
+      where: { id },
+      data: { name: dto.name, roleId: dto.roleId },
+      include: { role: { select: { id: true, name: true } } },
+    });
+    return this.toResponse(updated);
+  }
+
+  async remove(businessId: string, id: string) {
+    const member = await this.findOneRaw(businessId, id);
+    if (member.role.name === 'owner') {
+      throw new UnprocessableEntityException('No se puede eliminar al owner');
+    }
+
+    // No se borra el usuario de Supabase Auth asociado — ver PENDIENTES.md
+    // (decisión abierta: si conviene liberar el email para poder reinvitarlo).
+    await this.prisma.member.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  private async findOneRaw(businessId: string, id: string) {
+    const member = await this.prisma.member.findFirst({
+      where: { id, businessId },
+      include: { role: { select: { id: true, name: true } } },
+    });
+    if (!member) throw new NotFoundException('Miembro no encontrado');
+    return member;
+  }
+
+  private toResponse(member: {
+    id: string;
+    name: string;
+    email: string;
+    role: { id: string; name: string };
+    status: string;
+    hasTempPassword: boolean;
+    lastAccessAt: Date | null;
+  }) {
+    return {
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      role: member.role,
+      status: member.status,
+      hasTempPassword: member.hasTempPassword,
+      lastAccessAt: member.lastAccessAt,
+    };
+  }
+
+  private genTempPassword(): string {
+    const bytes = randomBytes(12);
+    let out = '';
+    for (let i = 0; i < 12; i++) {
+      out += TEMP_PASSWORD_CHARS[bytes[i] % TEMP_PASSWORD_CHARS.length];
+    }
+    return out;
   }
 }

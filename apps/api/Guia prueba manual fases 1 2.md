@@ -14,9 +14,14 @@
 
 | Sección | Estado |
 |---|---|
-| 1.1 a 1.9 (Auth) | ✅ **Verificado manualmente** — todos los pasos respondieron según lo esperado |
-| 1.10 (forgot-password) | ⬜ Pendiente de probar manualmente |
-| Parte 2 (Negocio y sucursales) | ⬜ Pendiente de probar manualmente |
+| 1.1 a 1.10 (Auth) | ✅ **Verificado manualmente** — todos los pasos respondieron según lo esperado |
+| Parte 2 (Negocio y sucursales) | ✅ **Verificado manualmente** — todos los pasos (2.1 a 2.13) respondieron según lo esperado |
+
+> **Nota (2026-07-13):** esta segunda corrida completa se hizo contra la base de Supabase real
+> (no local). En el camino apareció un bug de infraestructura que bloqueaba **todos** los logins
+> con `401`, incluso con credenciales correctas — no relacionado a esta guía en sí. Está
+> documentado en `PENDIENTES.md` → "Infraestructura / Entorno de desarrollo". Una vez corregido,
+> los 23 pasos de la guía pasaron sin sorpresas.
 
 ---
 
@@ -224,7 +229,7 @@ confirmando la vinculación (no duplicación).
 
 ---
 
-### 1.10 Forgot password (no debe filtrar información) ⬜ Pendiente
+### 1.10 Forgot password (no debe filtrar información) ✅
 
 ```bash
 # Con email que existe
@@ -241,11 +246,13 @@ curl -s -o /dev/null -w "Con email falso: %{http_code}\n" -X POST http://localho
 **Qué esperar:** los dos deben dar el mismo código (`201`) — si uno diera 404 y el otro 201,
 alguien podría usar este endpoint para averiguar qué emails están registrados.
 
+**Resultado real:** ✅ correcto — `201` en ambos casos.
+
 ---
 
-## Parte 2 — Negocio y sucursales ⬜ Pendiente de probar
+## Parte 2 — Negocio y sucursales ✅
 
-### 2.1 Ver los datos del negocio
+### 2.1 Ver los datos del negocio ✅
 
 ```bash
 curl -s http://localhost:3000/api/v1/business -H "Authorization: Bearer $TOKEN_OWNER" | jq
@@ -253,7 +260,9 @@ curl -s http://localhost:3000/api/v1/business -H "Authorization: Bearer $TOKEN_O
 
 **Qué esperar:** `200`, datos de "Zapatos Lorena".
 
-### 2.2 Editar el negocio
+**Resultado real:** ✅ correcto.
+
+### 2.2 Editar el negocio ✅
 
 ```bash
 curl -s -X PUT http://localhost:3000/api/v1/business \
@@ -264,7 +273,9 @@ curl -s -X PUT http://localhost:3000/api/v1/business \
 
 **Qué esperar:** `200`. Confirmá con un GET posterior que el cambio quedó.
 
-### 2.3 Intentar pausar la tienda como cajero (debe fallar)
+**Resultado real:** ✅ correcto — `200`, el cambio quedó confirmado en un GET posterior.
+
+### 2.3 Intentar pausar la tienda como cajero (debe fallar) ✅
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/v1/business/pause \
@@ -275,7 +286,9 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/v1/bu
 
 **Qué esperar:** `403`.
 
-### 2.4 Pausar la tienda como owner
+**Resultado real:** ✅ correcto.
+
+### 2.4 Pausar la tienda como owner ✅
 
 ```bash
 curl -s -X POST http://localhost:3000/api/v1/business/pause \
@@ -296,7 +309,10 @@ curl -s -X POST http://localhost:3000/api/v1/business/pause \
   -d '{"paused": false}' | jq
 ```
 
-### 2.5 Configurar transferencias sin alias (debe fallar)
+**Resultado real:** ✅ correcto — `isPaused` pasó a `true` y se revirtió a `false` sin dejar la
+tienda pausada.
+
+### 2.5 Configurar transferencias sin alias (debe fallar) ✅
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X PUT http://localhost:3000/api/v1/business/config \
@@ -307,7 +323,9 @@ curl -s -o /dev/null -w "%{http_code}\n" -X PUT http://localhost:3000/api/v1/bus
 
 **Qué esperar:** `400`.
 
-### 2.6 Configurar transferencias con alias (debe funcionar)
+**Resultado real:** ✅ correcto.
+
+### 2.6 Configurar transferencias con alias (debe funcionar) ✅
 
 ```bash
 curl -s -X PUT http://localhost:3000/api/v1/business/config \
@@ -318,7 +336,9 @@ curl -s -X PUT http://localhost:3000/api/v1/business/config \
 
 **Qué esperar:** `200`.
 
-### 2.7 Apariencia con un slide inválido (debe fallar con mensaje claro)
+**Resultado real:** ✅ correcto.
+
+### 2.7 Apariencia con un slide inválido (debe fallar con mensaje claro) ✅
 
 ```bash
 curl -s -X PUT http://localhost:3000/api/v1/business/storefront-config \
@@ -330,7 +350,10 @@ curl -s -X PUT http://localhost:3000/api/v1/business/storefront-config \
 **Qué esperar:** `400`, con un mensaje que mencione específicamente el campo `titulo`
 faltante.
 
-### 2.8 Notificaciones con evento inventado (debe fallar)
+**Resultado real:** ✅ correcto — `400` con `"heroSlides.0.titulo must be a string"` (junto con
+`id`, `img` y `cta`, también requeridos en el DTO).
+
+### 2.8 Notificaciones con evento inventado (debe fallar) ✅
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X PUT http://localhost:3000/api/v1/business/notification-config \
@@ -341,7 +364,9 @@ curl -s -o /dev/null -w "%{http_code}\n" -X PUT http://localhost:3000/api/v1/bus
 
 **Qué esperar:** `400`.
 
-### 2.9 Sucursales — ver la lista
+**Resultado real:** ✅ correcto.
+
+### 2.9 Sucursales — ver la lista ✅
 
 ```bash
 curl -s http://localhost:3000/api/v1/branches -H "Authorization: Bearer $TOKEN_OWNER" | jq
@@ -349,7 +374,9 @@ curl -s http://localhost:3000/api/v1/branches -H "Authorization: Bearer $TOKEN_O
 
 **Qué esperar:** `200`, incluye la sucursal "Principal".
 
-### 2.10 Crear sucursal como cajero (debe fallar)
+**Resultado real:** ✅ correcto.
+
+### 2.10 Crear sucursal como cajero (debe fallar) ✅
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/v1/branches \
@@ -360,7 +387,9 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/v1/br
 
 **Qué esperar:** `403`.
 
-### 2.11 Crear sucursal como owner
+**Resultado real:** ✅ correcto.
+
+### 2.11 Crear sucursal como owner ✅
 
 ```bash
 curl -s -X POST http://localhost:3000/api/v1/branches \
@@ -375,7 +404,9 @@ curl -s -X POST http://localhost:3000/api/v1/branches \
 BRANCH_ID="<pegá el id acá>"
 ```
 
-### 2.12 Intentar borrar la sucursal "Principal" (debe fallar)
+**Resultado real:** ✅ correcto — `201`.
+
+### 2.12 Intentar borrar la sucursal "Principal" (debe fallar) ✅
 
 Primero conseguí el `id` de la sucursal Principal desde el resultado de 2.9, y:
 
@@ -386,7 +417,9 @@ curl -s -X DELETE http://localhost:3000/api/v1/branches/<ID_DE_PRINCIPAL> \
 
 **Qué esperar:** `422`, con mensaje explicando que no se puede eliminar la sucursal default.
 
-### 2.13 Borrar la sucursal de prueba que creaste
+**Resultado real:** ✅ correcto — `422` con `"No se puede eliminar la sucursal principal"`.
+
+### 2.13 Borrar la sucursal de prueba que creaste ✅
 
 ```bash
 curl -s -X DELETE http://localhost:3000/api/v1/branches/$BRANCH_ID \
@@ -394,6 +427,8 @@ curl -s -X DELETE http://localhost:3000/api/v1/branches/$BRANCH_ID \
 ```
 
 **Qué esperar:** `200`. Esto limpia el dato de prueba para no dejar basura.
+
+**Resultado real:** ✅ correcto — `{"ok":true}`, `200`.
 
 ---
 
@@ -410,22 +445,22 @@ curl -s -X DELETE http://localhost:3000/api/v1/branches/$BRANCH_ID \
 - [x] Registro nuevo → `201`
 - [x] Registro sin header → `400`
 - [x] Registro con email de cliente sin cuenta → vincula, no duplica (ver contexto en 1.9)
-- [ ] Forgot-password con email real vs falso → mismo código en ambos
+- [x] Forgot-password con email real vs falso → mismo código en ambos
 
 **Negocio:**
-- [ ] `GET /business` → datos correctos
-- [ ] `PUT /business` → cambio aplicado
-- [ ] Pausar como cajero → `403`
-- [ ] Pausar como owner → funciona, y lo revertiste después
-- [ ] Transferencia sin alias → `400`
-- [ ] Transferencia con alias → `200`
-- [ ] Slide inválido → `400` con mensaje claro
-- [ ] Evento de notificación inventado → `400`
-- [ ] `GET /branches` → incluye Principal
-- [ ] Crear sucursal como cajero → `403`
-- [ ] Crear sucursal como owner → `201`
-- [ ] Borrar Principal → `422`
-- [ ] Borrar la sucursal de prueba → `200` (limpieza)
+- [x] `GET /business` → datos correctos
+- [x] `PUT /business` → cambio aplicado
+- [x] Pausar como cajero → `403`
+- [x] Pausar como owner → funciona, y lo revertiste después
+- [x] Transferencia sin alias → `400`
+- [x] Transferencia con alias → `200`
+- [x] Slide inválido → `400` con mensaje claro
+- [x] Evento de notificación inventado → `400`
+- [x] `GET /branches` → incluye Principal
+- [x] Crear sucursal como cajero → `403`
+- [x] Crear sucursal como owner → `201`
+- [x] Borrar Principal → `422`
+- [x] Borrar la sucursal de prueba → `200` (limpieza)
 
 Si todos estos dan el resultado esperado, las Fases 1 y 2 están funcionando correctamente
 de punta a punta — exactamente lo mismo que confirma la suite automática, pero visto con

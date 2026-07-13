@@ -1,70 +1,102 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentBusiness } from '../common/decorators/current-business.decorator';
+import { AuthContext } from '../common/types/auth-context.type';
+import { assertMemberContext } from '../common/utils/assert-member-context';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { FindProductsQueryDto } from './dto/find-products-query.dto';
 import { ReorderImagesDto } from './dto/reorder-images.dto';
+import { AddImageDto } from './dto/add-image.dto';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  findAll() {
-    void this.productsService;
-    return { message: 'not implemented' };
+  findAll(@CurrentBusiness() ctx: AuthContext, @Query() query: FindProductsQueryDto) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.findAll(member.businessId, query);
   }
 
+  // Declarado antes de ':id' — si no, Nest interpreta "barcodes" como un :id.
   @Get('barcodes')
-  barcodes() {
-    void this.productsService;
-    return { message: 'not implemented' };
+  barcodes(
+    @CurrentBusiness() ctx: AuthContext,
+    @Query('variantIds') variantIds?: string,
+    @Query('categoryId') categoryId?: string,
+  ) {
+    const member = assertMemberContext(ctx);
+    const ids = variantIds ? variantIds.split(',').filter(Boolean) : undefined;
+    return this.productsService.barcodes(member.businessId, ids, categoryId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  findOne(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.findOne(member.businessId, id);
   }
 
   @Post()
   @Roles('owner', 'admin')
-  create(@Body() dto: CreateProductDto) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  create(@CurrentBusiness() ctx: AuthContext, @Body() dto: CreateProductDto) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.create(member.businessId, dto);
   }
 
   @Put(':id')
   @Roles('owner', 'admin')
-  update(@Param('id') id: string, @Body() dto: CreateProductDto) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  update(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string, @Body() dto: CreateProductDto) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.update(member.businessId, id, dto);
   }
 
   @Delete(':id')
   @Roles('owner', 'admin')
-  remove(@Param('id') id: string) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  remove(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.remove(member.businessId, id);
   }
 
   @Post(':id/images')
   @Roles('owner', 'admin')
-  addImage(@Param('id') id: string) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  @UseInterceptors(FileInterceptor('file'))
+  addImage(
+    @CurrentBusiness() ctx: AuthContext,
+    @Param('id') id: string,
+    @Body() dto: AddImageDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const member = assertMemberContext(ctx);
+    if (!file) throw new BadRequestException('Falta el archivo "file"');
+    return this.productsService.addImage(member.businessId, id, dto, file);
   }
 
   @Delete(':id/images/:imageId')
   @Roles('owner', 'admin')
-  removeImage(@Param('id') id: string, @Param('imageId') imageId: string) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  removeImage(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string, @Param('imageId') imageId: string) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.removeImage(member.businessId, id, imageId);
   }
 
   @Patch(':id/images/reorder')
   @Roles('owner', 'admin')
-  reorderImages(@Param('id') id: string, @Body() dto: ReorderImagesDto) {
-    void this.productsService;
-    return { message: 'not implemented' };
+  reorderImages(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string, @Body() dto: ReorderImagesDto) {
+    const member = assertMemberContext(ctx);
+    return this.productsService.reorderImages(member.businessId, id, dto);
   }
 }
