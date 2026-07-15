@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import { Roles } from '../common/decorators/roles.decorator';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentBusiness } from '../common/decorators/current-business.decorator';
 import { AuthContext } from '../common/types/auth-context.type';
 import { assertMemberContext } from '../common/utils/assert-member-context';
@@ -18,28 +18,28 @@ export class CategoriesController {
   }
 
   @Patch('reorder')
-  @Roles('owner', 'admin')
+  @RequirePermission('catalog.manage')
   reorder(@CurrentBusiness() ctx: AuthContext, @Body() dto: ReorderCategoriesDto) {
     const member = assertMemberContext(ctx);
     return this.categoriesService.reorder(member.businessId, dto);
   }
 
   @Post()
-  @Roles('owner', 'admin')
+  @RequirePermission('catalog.manage')
   create(@CurrentBusiness() ctx: AuthContext, @Body() dto: UpsertCategoryDto) {
     const member = assertMemberContext(ctx);
     return this.categoriesService.create(member.businessId, dto);
   }
 
   @Put(':id')
-  @Roles('owner', 'admin')
+  @RequirePermission('catalog.manage')
   update(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string, @Body() dto: UpsertCategoryDto) {
     const member = assertMemberContext(ctx);
     return this.categoriesService.update(member.businessId, id, dto);
   }
 
   @Delete(':id')
-  @Roles('owner', 'admin')
+  @RequirePermission('catalog.manage')
   remove(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string) {
     const member = assertMemberContext(ctx);
     return this.categoriesService.remove(member.businessId, id);

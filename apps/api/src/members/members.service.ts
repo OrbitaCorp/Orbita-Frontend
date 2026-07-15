@@ -15,6 +15,8 @@ import { UpdateMemberDto } from './dto/update-member.dto';
 // Sin caracteres ambiguos (0/O, 1/l/I) para que sea legible al copiarla del email.
 const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
 
+const INVITATION_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+
 @Injectable()
 export class MembersService {
   constructor(
@@ -48,6 +50,8 @@ export class MembersService {
     if (!business) throw new NotFoundException('Negocio no encontrado');
 
     const tempPassword = this.genTempPassword();
+    const invitationToken = randomBytes(32).toString('hex');
+    const invitationTokenExpiresAt = new Date(Date.now() + INVITATION_TOKEN_EXPIRY_MS);
 
     const { data: authData, error } = await this.supabase.adminClient.auth.admin.createUser({
       email: dto.email,
@@ -67,13 +71,15 @@ export class MembersService {
         roleId: dto.roleId,
         status: 'PENDING',
         hasTempPassword: true,
+        invitationToken,
+        invitationTokenExpiresAt,
       },
     });
 
-    // El token de aceptación es el memberId — misma decisión (y misma deuda
-    // de seguridad, ya registrada en PENDIENTES.md) que accept-invitation.
+    // El token de aceptación es un secreto aleatorio de un solo uso (32 bytes),
+    // no el memberId — expira a los 7 días y se limpia al aceptar (ver auth.service).
     const storeName = business.storefrontConfig?.storeName ?? business.name;
-    const panelUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:3001'}/aceptar-invitacion?token=${member.id}`;
+    const panelUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:3001'}/aceptar-invitacion?token=${invitationToken}`;
     await this.mail.sendMemberInvitation(dto.email, {
       storeName,
       roleName: role.name,

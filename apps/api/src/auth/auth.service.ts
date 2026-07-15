@@ -235,14 +235,18 @@ export class AuthService {
   async acceptInvitation(
     dto: AcceptInvitationDto,
   ): Promise<{ token: string; member: object }> {
-    // El token es el memberId enviado en el link de invitación.
+    // El token es un secreto aleatorio generado en invite() (no el memberId — ver
+    // members.service.ts), de un solo uso y con expiración.
     const member = await this.prisma.member.findUnique({
-      where: { id: dto.token },
+      where: { invitationToken: dto.token },
       include: { business: { select: { name: true } } },
     });
 
     if (!member || member.status !== 'PENDING' || !member.hasTempPassword) {
       throw new BadRequestException('Invitación inválida o ya aceptada');
+    }
+    if (!member.invitationTokenExpiresAt || member.invitationTokenExpiresAt < new Date()) {
+      throw new BadRequestException('La invitación expiró — pedí que te reinviten');
     }
     if (!member.authUserId) {
       throw new BadRequestException('La invitación no tiene un usuario de Supabase asociado');
@@ -255,10 +259,15 @@ export class AuthService {
       });
     if (updateError) throw new BadRequestException('No se pudo actualizar la contraseña');
 
-    // Activar el member.
+    // Activar el member y quemar el token (de un solo uso).
     const activatedMember = await this.prisma.member.update({
       where: { id: member.id },
-      data: { status: 'ACTIVE', hasTempPassword: false },
+      data: {
+        status: 'ACTIVE',
+        hasTempPassword: false,
+        invitationToken: null,
+        invitationTokenExpiresAt: null,
+      },
     });
 
     // Generar session token.

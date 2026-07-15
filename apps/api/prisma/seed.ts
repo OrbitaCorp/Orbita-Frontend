@@ -37,6 +37,8 @@ const PERMISSIONS: Array<{ group: string; code: string; label: string }> = [
   { group: 'Reportes', code: 'reports.export', label: 'Exportar reportes' },
   { group: 'Inventario', code: 'inventory.view', label: 'Ver inventario' },
   { group: 'Inventario', code: 'inventory.manage', label: 'Gestionar inventario' },
+  { group: 'Catálogo', code: 'catalog.view', label: 'Ver catálogo' },
+  { group: 'Catálogo', code: 'catalog.manage', label: 'Gestionar catálogo' },
   { group: 'POS', code: 'pos.sell', label: 'Vender (POS)' },
   { group: 'POS', code: 'pos.edit_price', label: 'Editar precio en ticket' },
   { group: 'POS', code: 'pos.cash', label: 'Operar caja' },
@@ -44,17 +46,29 @@ const PERMISSIONS: Array<{ group: string; code: string; label: string }> = [
   { group: 'Descuentos', code: 'discounts.view', label: 'Ver descuentos' },
   { group: 'Descuentos', code: 'discounts.manage', label: 'Gestionar descuentos' },
   { group: 'Configuración', code: 'config.edit', label: 'Editar configuración' },
+  { group: 'Configuración', code: 'config.team.view', label: 'Ver equipo' },
   { group: 'Configuración', code: 'config.team.manage', label: 'Gestionar equipo' },
   { group: 'Configuración', code: 'config.audit.view', label: 'Ver auditoría' },
   { group: 'Configuración', code: 'config.domains.manage', label: 'Gestionar dominios' },
 ];
 
-// Permisos por rol default (coarse-grained; @Roles() ya cubre los casos owner-only)
+// Permisos por rol default. cajero/empleado suman *.view de catálogo/equipo para no
+// perder acceso de lectura que ya tenían cuando los GET solo chequeaban membership
+// (ver PermissionsGuard) — los *.manage siguen exclusivos de owner/admin.
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   owner: PERMISSIONS.map((p) => p.code), // todo
   admin: PERMISSIONS.map((p) => p.code), // todo (los casos owner-only usan @Roles('owner') directo)
-  cajero: ['pos.sell', 'pos.cash', 'orders.view', 'customers.view', 'discounts.view'],
-  empleado: ['orders.view', 'customers.view', 'inventory.view'],
+  cajero: [
+    'pos.sell',
+    'pos.cash',
+    'orders.view',
+    'customers.view',
+    'discounts.view',
+    'catalog.view',
+    'inventory.view',
+    'config.team.view',
+  ],
+  empleado: ['orders.view', 'customers.view', 'inventory.view', 'catalog.view', 'config.team.view'],
 };
 
 // ── Helper: crear o reutilizar un usuario de Supabase Auth por email ──

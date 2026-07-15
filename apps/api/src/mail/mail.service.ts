@@ -19,6 +19,16 @@ export class MailService {
     await this.mailerService.sendMail({ to, subject, template, context });
   }
 
+  // ── Custom (free-form, used by POST /customers/email) ─
+
+  async sendCustomEmail(to: string, subject: string, htmlBody: string) {
+    if (!this.isConfigured) {
+      this.logger.log(`[MAIL STUB] To: ${to} | Subject: ${subject} | Body: ${htmlBody.substring(0, 200)}`);
+      return;
+    }
+    await this.mailerService.sendMail({ to, subject, html: htmlBody });
+  }
+
   // ── Auth ──────────────────────────────────────────────
 
   async sendWelcome(to: string, data: { storeName: string }) {

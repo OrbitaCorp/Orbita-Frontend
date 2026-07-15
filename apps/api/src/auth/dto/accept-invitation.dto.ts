@@ -1,8 +1,9 @@
-import { IsString, IsUUID, MinLength } from 'class-validator';
+import { IsString, Length, MinLength } from 'class-validator';
 
 export class AcceptInvitationDto {
-  /** ID del registro Member (enviado como `token` en el link de invitación). */
-  @IsUUID()
+  /** Secreto aleatorio de invitación (32 bytes en hex), generado en members.invite(). */
+  @IsString()
+  @Length(64, 64)
   token!: string;
 
   @IsString()

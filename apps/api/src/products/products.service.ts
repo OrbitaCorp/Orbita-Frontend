@@ -178,15 +178,21 @@ export class ProductsService {
   }
 
   // ── Actualizar ───────────────────────────────────────────────────────────
-  // NOTA: solo reconcilia campos escalares del producto y sus tags. El
-  // contrato pide reconciliar variantes "por id", pero CreateProductDto no
-  // trae id de variante para poder hacerlo sin arriesgar borrar/recrear
-  // variantes con historial de ventas/stock. Ver PENDIENTES.md.
+  // Reconcilia variantes por `id`: las que lo traen y matchean se actualizan
+  // (solo campos escalares); las que no traen `id` se crean, resolviendo
+  // optionValues contra las opciones YA existentes del producto (las opciones
+  // en sí no se reconcilian acá). Nunca se borran variantes ausentes del body:
+  // ProductVariant tiene orderItems/stockMovements sin onDelete:Cascade — un
+  // delete-and-recreate rompería historial de ventas/stock. Ver PENDIENTES.md.
 
   async update(businessId: string, id: string, dto: CreateProductDto) {
-    await this.findOneRaw(businessId, id);
+    const existing = await this.findOneRaw(businessId, id);
     if (dto.categoryId) await this.validateCategory(businessId, dto.categoryId);
     if (dto.tagIds?.length) await this.validateTags(businessId, dto.tagIds);
+    this.validateVariantReconciliation(dto, existing);
+
+    const defaultBranch = await this.getDefaultBranch(businessId);
+    const existingVariantIds = new Set(existing.variants.map((v) => v.id));
 
     await this.prisma.$transaction(async (tx) => {
       await tx.product.update({
@@ -205,6 +211,46 @@ export class ProductsService {
       await tx.productTag.deleteMany({ where: { productId: id } });
       if (dto.tagIds?.length) {
         await tx.productTag.createMany({ data: dto.tagIds.map((tagId) => ({ productId: id, tagId })) });
+      }
+
+      for (const v of dto.variants) {
+        if (v.id && existingVariantIds.has(v.id)) {
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: {
+              sku: v.sku ?? null,
+              barcode: v.barcode ?? null,
+              price: v.price,
+              comparePrice: v.comparePrice ?? null,
+            },
+          });
+          continue;
+        }
+
+        const optionValueIds = this.resolveOptionValueIdsFromExisting(v.optionValues, existing.options);
+        const variant = await tx.productVariant.create({
+          data: {
+            productId: id,
+            sku: v.sku ?? null,
+            barcode: v.barcode ?? null,
+            price: v.price,
+            comparePrice: v.comparePrice ?? null,
+            isDefault: false,
+          },
+        });
+        if (optionValueIds.length > 0) {
+          await tx.variantOptionValue.createMany({
+            data: optionValueIds.map((optionValueId) => ({ variantId: variant.id, optionValueId })),
+          });
+        }
+        await tx.variantStock.create({
+          data: {
+            variantId: variant.id,
+            branchId: defaultBranch.id,
+            quantity: v.initialStock ?? 0,
+            stockMin: v.stockMin ?? 0,
+          },
+        });
       }
     });
 
@@ -429,6 +475,41 @@ export class ProductsService {
       }
       return match.id;
     });
+  }
+
+  // Misma resolución posicional que en create(), pero contra las opciones ya
+  // persistidas del producto (update() no reconcilia el árbol de opciones).
+  private resolveOptionValueIdsFromExisting(
+    optionValues: string[],
+    existingOptions: ProductWithDetail['options'],
+  ): string[] {
+    return optionValues.map((val, i) => {
+      const option = existingOptions[i];
+      const match = option?.values.find((v) => v.value === val);
+      if (!match) {
+        throw new BadRequestException(`Valor de opción "${val}" no encontrado en la opción correspondiente`);
+      }
+      return match.id;
+    });
+  }
+
+  private validateVariantReconciliation(dto: CreateProductDto, existing: ProductWithDetail) {
+    const existingVariantIds = new Set(existing.variants.map((v) => v.id));
+    const optionCount = existing.options.length;
+    for (const v of dto.variants) {
+      if (v.id) {
+        if (!existingVariantIds.has(v.id)) {
+          throw new BadRequestException(`La variante ${v.id} no pertenece a este producto`);
+        }
+        continue; // variante existente: sus optionValues no se reconcilian, se ignoran
+      }
+      if (v.optionValues.length !== optionCount) {
+        throw new BadRequestException(
+          `Cada variante nueva debe definir exactamente ${optionCount} valor(es) de opción ` +
+            `(las opciones del producto no se reconcilian en PUT — solo variantes)`,
+        );
+      }
+    }
   }
 
   private async getDefaultBranch(businessId: string) {

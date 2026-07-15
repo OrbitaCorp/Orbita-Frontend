@@ -119,12 +119,15 @@ por request autenticado. Revisar si conviene cachear (ej. Redis, TTL corto) cuan
 de performance o el volumen de requests lo justifique.
 
 ### [2026-07-12] `accept-invitation` usa `memberId` como token, sin expiración ni secreto
-**Estado:** ABIERTO — deuda de seguridad
-El link de invitación de miembro usa el `id` (UUID) del registro `Member` directamente como
-"token" en `AcceptInvitationDto`. No tiene expiración ni es un secreto firmado — cualquiera que
-conozca (o adivine, aunque sea un UUID v4) el `memberId` de un miembro `PENDING` podría intentar
-aceptarlo. Antes de tener usuarios reales en producción, agregar un campo `invitationToken`
-(string aleatorio, con expiración) al modelo `Member` y usar eso en vez del `id`.
+**Estado:** RESUELTO (2026-07-14)
+Se agregaron `invitationToken` (único, 32 bytes aleatorios en hex) e `invitationTokenExpiresAt`
+(7 días) a `Member` — migración `20260715013513_add_member_invitation_token` (columnas
+nullable, aditiva, no tocó filas existentes). `members.invite()` genera el token y lo manda en
+`panelUrl` en vez del `memberId`; `auth.acceptInvitation()` busca por `invitationToken` (no por
+`id`), valida expiración y lo quema (`null`) al aceptar — de un solo uso. `AcceptInvitationDto.
+token` pasó de `@IsUUID()` a `@Length(64,64)`, así que un `memberId` viejo ya ni siquiera pasa la
+validación del DTO. Verificado en vivo: invite → token de 64 hex ≠ memberId → accept 201 → reuso
+del mismo token 400 "ya aceptada" → memberId como token 400 (longitud inválida).
 
 ### [2026-07-12] Email de recovery duplicado de Supabase
 **Estado:** ABIERTO — pendiente de confirmación manual
@@ -213,38 +216,41 @@ después del fix.
 ## Fase 3 — Equipo (Roles/Permissions/Members)
 
 ### [2026-07-13] Autorización por rol (`@Roles()`), no por permiso, pese a lo que dice el contrato
-**Estado:** ABIERTO
-`CONTRATO_API.md` especifica permiso mínimo por endpoint (`config.team.view`,
-`config.team.manage`, etc.) y dice explícitamente "el backend valida que el rol del miembro
-tenga ese permiso". Sin embargo, **todos** los controllers ya scaffoldeados (Fase 1/2 incluida,
-escritos por el CTO) solo usan `@Roles('owner','admin')` — nunca chequean `permissions[]` pese a
-que `MemberContext.permissions` ya trae los codes resueltos y listos para usarse. No existe
-ningún `PermissionsGuard`/`@RequirePermission()` en el código. Para Roles/Members se mantuvo el
-mismo patrón (`@Roles()`) por consistencia con el resto del código ya escrito, en vez de
-introducir un mecanismo de autorización nuevo sin que el equipo lo haya pedido. Si el criterio
-real es permiso-por-permiso (más granular que rol), hay que construir el guard y migrar todos
-los módulos, no solo los nuevos.
+**Estado:** RESUELTO (2026-07-14) — para los módulos de Fases 3-5
+Se construyó `PermissionsGuard` + `@RequirePermission(code)` (`common/guards/permissions.guard.ts`,
+`common/decorators/require-permission.decorator.ts`), registrado como `APP_GUARD` global junto a
+`RolesGuard`. Se migraron todos los controllers de Roles/Members/Categories/Tags/Products/
+Inventory/Suppliers siguiendo literalmente lo que dice `CONTRATO_API.md` por endpoint:
+- Donde el contrato solo pide un permiso (`catalog.manage`, `catalog.view`, `inventory.manage`,
+  `inventory.view`) se dejó **solo** `@RequirePermission()`, sin `@Roles()` — así un rol custom
+  con ese permiso puede operar, que era el objetivo de la migración.
+- Donde el contrato pide explícitamente "permiso + rol owner/admin" (crear/editar/eliminar
+  roles, invitar miembros) o "rol owner" (eliminar miembro) — operaciones que pueden escalar
+  privilegios de otros — se mantuvo `@Roles()` **además** de `@RequirePermission()`, a propósito:
+  un rol custom con `config.team.manage` no debe poder crear otros roles/miembros.
+- Los roles default (`cajero`, `empleado`) sumaron los `*.view` que antes tenían de facto (los
+  GET no chequeaban nada más que membership) para no perder acceso de lectura al migrar — ver
+  entrada siguiente y `prisma/seed.ts` → `ROLE_PERMISSIONS`.
+Verificado en vivo: owner sigue con acceso total; cajero ahora puede ver catálogo/inventario/
+roles (antes accesible a cualquier member sin permiso) y sigue bloqueado (403 con el permiso
+faltante en el mensaje) en las mutaciones. No se tocó ningún otro módulo (Orders, Cash, etc.) —
+siguen en `@Roles()` puro, fuera del alcance de este fix.
 
 ### [2026-07-13] Catálogo de permisos seed no incluye `catalog.*` ni `config.team.view`
-**Estado:** ABIERTO
-El contrato de Roles/Categories/Tags/Products pide permisos `catalog.view`, `catalog.manage` y
-`config.team.view`, pero `prisma/seed.ts` solo carga 19 permisos en 7 grupos (Pedidos, Clientes,
-Reportes, Inventario, POS, Descuentos, Configuración) — sin grupo "Catálogo" y sin
-`config.team.view` (solo existe `config.team.manage`). Como la autorización real usa `@Roles()`
-y no permisos (ver entrada anterior), esto no bloqueó nada hoy, pero el catálogo que devuelve
-`GET /permissions` queda incompleto respecto de lo que el contrato promete mostrar en la UI de
-gestión de roles. Falta decidir si se agregan esos codes al seed.
+**Estado:** RESUELTO (2026-07-14)
+Se agregaron `catalog.view`, `catalog.manage` (grupo nuevo "Catálogo") y `config.team.view`
+(grupo "Configuración") a `PERMISSIONS` en `prisma/seed.ts`, y se sumaron a `ROLE_PERMISSIONS`
+de `cajero`/`empleado` (además de `inventory.view` para cajero, que no lo tenía). `owner`/`admin`
+los reciben automáticamente (mapean todo el catálogo). Seed re-corrido (upsert, no destructivo):
+`GET /permissions` ahora devuelve 22 permisos en 8 grupos, verificado contra el server real.
 
 ### [2026-07-13] `AppRole` usa 'cashier'/'employee' (inglés) pero los roles seedeados son 'cajero'/'empleado' (español)
-**Estado:** ABIERTO
-`common/decorators/roles.decorator.ts` define `AppRole = 'owner' | 'admin' | 'cashier' |
-'employee'`, pero `prisma/seed.ts` crea los roles con `name: 'cajero'` y `name: 'empleado'`.
-`RolesGuard` compara `member.roleName` (el valor real en la DB, en español) contra el array de
-`@Roles(...)` — si algún endpoint futuro usa `@Roles('cashier')` o `@Roles('employee')`, **nunca
-va a matchear** y esos roles quedarán bloqueados de todo lo que debieran poder hacer. No se tocó
-en esta sesión porque ningún endpoint nuevo (Fase 3/4) usa esos dos roles — todos son
-`@Roles('owner')` o `@Roles('owner','admin')`. Corregir antes de que un módulo futuro (POS,
-Inventario) empiece a usar `@Roles('cashier'|'employee')`.
+**Estado:** RESUELTO (2026-07-14)
+`common/decorators/roles.decorator.ts` → `AppRole` ahora es `'owner' | 'admin' | 'cajero' |
+'empleado'`, alineado con los `name` reales de `prisma/seed.ts`. Ningún código usaba los valores
+en inglés (confirmado por grep antes del cambio), así que no hubo que tocar ningún `@Roles(...)`
+existente — el fix es puramente el tipo, para que el compilador rechace `@Roles('cashier')` en
+vez de dejarlo pasar silenciosamente como antes.
 
 ### [2026-07-13] Al eliminar un miembro no se borra su usuario de Supabase Auth
 **Estado:** ABIERTO
@@ -279,19 +285,24 @@ otro orden (o por nombre de opción), esto va a resolver mal — avisar si el fr
 el orden explícitamente.
 
 ### [2026-07-13] `PUT /products/:id` no reconcilia variantes/opciones/stock — solo campos escalares y tags
-**Estado:** ABIERTO — limitación deliberada, necesita definición del equipo
-El contrato dice que `PUT /products/:id` debe funcionar "igual que POST (reconciliando
-variantes existentes por `id`)", pero `CreateProductDto`/`ProductVariantInput` **no tiene un
-campo `id`** para poder identificar qué variante-request corresponde a qué variante-existente.
-Implementar un delete-and-recreate de variantes en `update()` es riesgoso: `ProductVariant`
-tiene `orderItems`/`stockMovements` con FK sin `onDelete: Cascade` — borrar una variante que ya
-tuvo una venta rompería el historial (o el `DELETE` fallaría con P2003 apenas el producto se
-vendiera una vez). Se optó por implementar `update()` solo para `name/description/categoryId/
-basePrice/comparePrice/cost/status` + reconciliación completa de `tagIds` (sin historial que
-proteger ahí). **Falta**: definir con el equipo el mecanismo real de edición de variantes
-(¿agregar `id?` opcional al DTO? ¿endpoints separados `POST/PUT/DELETE
-/products/:id/variants/:variantId`?) antes de que el panel de catálogo necesite editar
-variantes de un producto ya creado.
+**Estado:** RESUELTO (2026-07-14) — parcial, a propósito (ver alcance abajo)
+Se agregó `id?: string` (UUID opcional) a `ProductVariantInput`. `update()` ahora reconcilia
+variantes: las que traen `id` y matchean una variante existente del producto se actualizan
+(`sku`/`barcode`/`price`/`comparePrice`); las que no traen `id` se crean, resolviendo
+`optionValues` posicionalmente contra las **opciones ya persistidas** del producto (mismo
+criterio posicional que `create()`). Si un `id` no pertenece al producto → `400`. Si una
+variante nueva no trae la cantidad exacta de `optionValues` que el producto tiene opciones →
+`400`.
+**Alcance deliberado, sigue sin resolver:**
+- **No se borran variantes** ausentes del body — se mantuvo la protección contra
+  delete-and-recreate (mismo riesgo de `orderItems`/`stockMovements` sin cascade que motivó
+  esta entrada originalmente). Sacar una variante del array simplemente no la toca.
+- **El árbol de opciones (`options`) sigue sin reconciliarse** — una variante nueva solo puede
+  usar valores de opciones que YA existen en el producto; no se pueden agregar/editar opciones
+  vía `PUT`. Sigue pendiente si el panel necesita eso.
+Verificado en vivo contra un producto con 3 variantes: actualicé precio de una existente (sin
+duplicarla), agregué una variante nueva con combinación de opciones inédita, y confirmé los dos
+`400` (id ajeno, optionValues con cantidad incorrecta).
 
 ### [2026-07-13] No existe endpoint separado `PUT /products/:id/tags`
 **Estado:** RESUELTO (2026-07-13) — aclaración, no bug
@@ -354,3 +365,35 @@ El contrato no dice explícitamente qué pasa si un ajuste (`quantity` puede ser
 stock por debajo de cero. Se decidió bloquear con `422` en vez de permitir stock negativo —
 criterio de negocio (no tiene sentido operativo vender/ajustar por debajo de lo que hay). Mismo
 criterio no se aplicó a `entry` (siempre suma, no puede dar negativo por diseño).
+
+---
+
+## Fase 6 — Clientes (Customers/Addresses)
+
+### [2026-07-14] Análisis pre-implementación: 7 fallas detectadas, 4 resueltas
+**Estado:** PARCIALMENTE RESUELTO (2026-07-14)
+Se comparó el código contra `CONTRATO_API.md` (Fase 4), `BACKEND_IMPLEMENTACION.md` (Fase 6) y
+el schema de Prisma. Estado de cada falla:
+- **F1**: RESUELTO — `@Roles('owner','admin')` + `assertMemberContext()` agregados a `findAll()`
+  y `findOne()` en `CustomersController`.
+- **F2**: DESCARTADO — el usuario decidió no implementar `DELETE /customers/:id`. No tiene sentido
+  borrar un cliente.
+- **F3**: RESUELTO — agregado `sendCustomEmail(to, subject, htmlBody)` a `MailService` para envío
+  libre (sin template).
+- **F4**: ABIERTO — `AddressesController` sigue sin chequeo de contexto customer. Se resolverá
+  al implementar la lógica de negocio del módulo (crear `assertCustomerContext()` y aplicarlo).
+- **F5**: RESUELTO — `@CurrentBusiness()` y `@Query()` inyectados en todos los handlers de
+  `CustomersController`.
+- **F6**: NO APLICA — `MailModule` es `@Global()`, ya está disponible sin import explícito.
+- **F7**: RESUELTO (decisión) — se sigue el contrato: solo `/me/addresses` (storefront, scoped al
+  token). No se implementa `/customers/:id/addresses` como ruta separada; las addresses del panel
+  vienen embebidas en `GET /customers/:id`.
+
+### [2026-07-14] Módulo completo sin implementar — `CustomersService` es un stub
+**Estado:** ABIERTO
+`customers.controller.ts` y `addresses.controller.ts` devuelven `{"message":"not implemented"}`
+en todos los handlers; `CustomersService` solo tiene un método privado que lanza
+`NotImplementedException` sin usar. Pendiente: implementar `CustomersService` (CRUD con
+vinculación por email `@@unique([businessId, email])`, calculados `orderCount/totalSpent/
+avgTicket/lastOrderAt` desde `orders`, y `/me/addresses` scoped a customer) siguiendo el mismo
+patrón usado en Fases 3-5. Ver orden sugerido en `Guia prueba manual fase 6.md`.

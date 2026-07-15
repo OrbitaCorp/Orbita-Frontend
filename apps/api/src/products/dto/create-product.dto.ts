@@ -2,6 +2,9 @@ import { IsString, IsOptional, IsNumber, IsInt, IsBoolean, IsUUID, IsEmail, IsAr
 import { Type } from 'class-transformer';
 
 class ProductVariantInput {
+  // Presente en PUT para reconciliar contra una variante existente del producto;
+  // ausente (o no matcheado) → se crea como variante nueva.
+  @IsOptional() @IsUUID() id?: string;
   @IsOptional() @IsString() sku?: string;
   @IsOptional() @IsString() barcode?: string;
   @IsNumber() price!: number;
