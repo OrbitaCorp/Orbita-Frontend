@@ -1,19 +1,40 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { User, Mail, Lock, Eye, Briefcase } from 'lucide-react'
+import { registerBusiness, setOnboardingSession, ApiError } from '@/lib/api'
 
 export default function AdminRegistro() {
   const router  = useRouter()
   const [showPw, setShowPw] = useState(false)
   const [pw,     setPw]     = useState('')
 
+  const [ownerName,    setOwnerName]    = useState('')
+  const [businessName, setBusinessName] = useState('')
+  const [email,        setEmail]        = useState('')
+  const [error,        setError]        = useState('')
+  const [enviando,     setEnviando]     = useState(false)
+
   const strength      = pw.length === 0 ? 0 : pw.length < 6 ? 1 : pw.length < 10 ? 2 : pw.length < 14 ? 3 : 4
   const strengthLabel = ['', 'Débil', 'Regular', 'Buena', 'Excelente'][strength]
   const strengthColor = ['', 'var(--color-error)', 'var(--color-warning)', 'var(--color-warning)', 'var(--color-success)'][strength]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    router.push('/onboarding/rubro')
+    setError('')
+    if (!ownerName || !businessName || !email || pw.length < 8) {
+      setError('Completá todos los campos — la contraseña necesita al menos 8 caracteres.')
+      return
+    }
+    setEnviando(true)
+    try {
+      const res = await registerBusiness({ ownerName, businessName, email, password: pw })
+      setOnboardingSession({ token: res.token, businessId: res.business.id, branchId: res.branch.id })
+      router.push('/onboarding/rubro')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo crear la cuenta. Intentá de nuevo.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -58,16 +79,25 @@ export default function AdminRegistro() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {error && (
+            <div style={{
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 8, padding: '10px 12px', fontSize: 12.5, color: 'var(--color-error)',
+            }}>
+              {error}
+            </div>
+          )}
+
           <Field label="Nombre completo">
-            <Input placeholder="Juan García" icon={<User size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
+            <Input value={ownerName} onChange={setOwnerName} placeholder="Juan García" icon={<User size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
           <Field label="Nombre de tu negocio">
-            <Input placeholder="Ej: Barbería Don Juan" icon={<Briefcase size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
+            <Input value={businessName} onChange={setBusinessName} placeholder="Ej: Barbería Don Juan" icon={<Briefcase size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
           <Field label="Email">
-            <Input type="email" placeholder="tu@email.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
+            <Input type="email" value={email} onChange={setEmail} placeholder="tu@email.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
           {/* Contraseña con fortaleza */}
@@ -121,13 +151,13 @@ export default function AdminRegistro() {
             </span>
           </label>
 
-          <button type="submit" style={{
+          <button type="submit" disabled={enviando} style={{
             width: '100%', height: 48, borderRadius: 10, marginTop: 8,
-            background: 'var(--color-primary)', color: '#fff',
-            fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(59,130,246,0.25)',
+            background: enviando ? 'var(--color-surface-alt)' : 'var(--color-primary)', color: '#fff',
+            fontSize: 14, fontWeight: 700, border: 'none', cursor: enviando ? 'default' : 'pointer',
+            boxShadow: enviando ? 'none' : '0 4px 16px rgba(59,130,246,0.25)',
           }}>
-            Crear mi cuenta
+            {enviando ? 'Creando cuenta…' : 'Crear mi cuenta'}
           </button>
 
           {/* Beneficios */}
@@ -177,16 +207,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Input({ type = 'text', placeholder, icon }: { type?: string; placeholder?: string; icon?: React.ReactNode }) {
+function Input({ type = 'text', value, onChange, placeholder, icon }: {
+  type?: string; value: string; onChange: (v: string) => void; placeholder?: string; icon?: React.ReactNode
+}) {
   return (
     <div style={{ position: 'relative' }}>
       {icon && <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>{icon}</span>}
-      <input type={type} placeholder={placeholder} style={{
-        width: '100%', height: 44, padding: `0 14px 0 ${icon ? 40 : 14}px`,
-        borderRadius: 8, border: '1px solid var(--color-border)',
-        background: 'var(--color-bg)', color: 'var(--color-text)',
-        fontSize: 14, outline: 'none', boxSizing: 'border-box',
-      }} />
+      <input
+        type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{
+          width: '100%', height: 44, padding: `0 14px 0 ${icon ? 40 : 14}px`,
+          borderRadius: 8, border: '1px solid var(--color-border)',
+          background: 'var(--color-bg)', color: 'var(--color-text)',
+          fontSize: 14, outline: 'none', boxSizing: 'border-box',
+        }}
+      />
     </div>
   )
 }

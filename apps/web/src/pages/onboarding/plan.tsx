@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent, FileText, Printer, ArrowRight } from 'lucide-react'
+import { publishBusiness, clearOnboardingSession } from '@/lib/api'
 
 const FEATURES = [
   { texto: 'Panel de administración completo'      },
@@ -88,7 +89,7 @@ function Header() {
 
 // ─── Pantalla 1: Selección de plan ──────────────────────────────────────────
 
-function PlanScreen({ onPagar, onExplorar }: { onPagar: () => void; onExplorar: () => void }) {
+function PlanScreen({ onPagar, onExplorar, error }: { onPagar: () => void; onExplorar: () => void; error?: string }) {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)', fontFamily: 'inherit' }}>
       <Header />
@@ -112,6 +113,16 @@ function PlanScreen({ onPagar, onExplorar }: { onPagar: () => void; onExplorar: 
         <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: '0 0 36px', textAlign: 'center', lineHeight: 1.5 }}>
           Tu negocio está configurado. Elegí el plan de inicio para publicar tu espacio en Órbita.
         </p>
+
+        {error && (
+          <div style={{
+            width: '100%', marginBottom: 20, padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            fontSize: 12.5, color: 'var(--color-error)', textAlign: 'center',
+          }}>
+            {error}
+          </div>
+        )}
 
         <div style={{
           width: '100%',
@@ -477,14 +488,21 @@ export default function PlanPage() {
   const router = useRouter()
   const next   = (router.query.next as string) ?? '/admin'
   const [estado, setEstado] = useState<'plan' | 'procesando' | 'exito'>('plan')
+  const [errorPago, setErrorPago] = useState('')
 
   function pagar() {
+    setErrorPago('')
     setEstado('procesando')
-    // En producción: redirigir a MP y recibir callback. Aquí simulamos.
-    setTimeout(() => setEstado('exito'), 2800)
+    // En producción: redirigir a MP y recibir callback real. Por ahora el cobro
+    // en sí sigue simulado (setTimeout), pero la activación del negocio
+    // (POST /business/publish) es real — RBT-293: si "paga", el negocio se
+    // activa de verdad en la base.
+    Promise.all([publishBusiness(), new Promise(resolve => setTimeout(resolve, 2800))])
+      .then(() => { clearOnboardingSession(); setEstado('exito') })
+      .catch(() => { setErrorPago('No se pudo activar tu negocio. Intentá de nuevo.'); setEstado('plan') })
   }
 
   if (estado === 'procesando') return <ProcesandoScreen />
   if (estado === 'exito')      return <ExitoScreen next={next} router={router} />
-  return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} />
+  return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} error={errorPago} />
 }

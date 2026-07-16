@@ -397,3 +397,166 @@ en todos los handlers; `CustomersService` solo tiene un método privado que lanz
 vinculación por email `@@unique([businessId, email])`, calculados `orderCount/totalSpent/
 avgTicket/lastOrderAt` desde `orders`, y `/me/addresses` scoped a customer) siguiendo el mismo
 patrón usado en Fases 3-5. Ver orden sugerido en `Guia prueba manual fase 6.md`.
+
+---
+
+## Onboarding — RBT-291/292 (registro de negocio + rubros)
+
+### [2026-07-16] `POST /onboarding/register-business` compartía servicio con el seed script — no se hizo
+**Estado:** RESUELTO (2026-07-16) — decisión distinta a la prevista en la entrada de Fase 2
+La entrada de Fase 2 sobre `POST /businesses` proponía extraer un `BusinessOnboardingService`
+compartido con `prisma/seed.ts` para no duplicar la transacción. Al implementar RBT-291 se
+mantuvo la duplicación a propósito: `prisma/` está excluido de `tsconfig.build.json` (bug ya
+documentado arriba), así que código de `src/` no puede importar desde `prisma/seed.ts` sin
+romper el build. `OnboardingService` (`src/onboarding/onboarding.service.ts`) duplica
+`PERMISSIONS`/`ROLE_PERMISSIONS` de `prisma/seed.ts` con un comentario explícito señalando la
+duplicación. **Riesgo activo**: si el catálogo de permisos cambia, hay que actualizar los dos
+archivos a mano — no hay chequeo automático de que sigan sincronizados.
+
+### [2026-07-16] `registerBusiness()` no crea `Subscription`
+**Estado:** DIFERIDO — hasta que exista el módulo de Subscriptions/MercadoPago (RBT-295 o
+equivalente)
+El modelo `Business.subscription` es opcional en el schema. Se decidió no fabricar una
+`Subscription` fantasma en el registro (requeriría inventar un plan/estado sin criterio de
+negocio real). El wizard de onboarding llega hasta `plan.tsx` (mockeado) sin depender de este
+registro; la activación real de suscripción queda para cuando se implemente esa fase.
+
+### [2026-07-16] `Business.industry` se crea vacío (`''`) en el registro
+**Estado:** RESUELTO (2026-07-16) — decisión tomada por diseño del flujo, no por ambigüedad
+`POST /onboarding/register-business` solo recibe `ownerName/email/password/businessName` (lo
+que junta `registro.tsx`). El rubro se elige un paso después, ya autenticado, en
+`onboarding/rubro.tsx` vía `PUT /onboarding/business`. Se decidió crear el negocio con
+`industry: ''` en vez de `null` (el campo no es nullable en el schema) y confiar en que el
+wizard complete ese valor antes de publicar. **No hay validación que bloquee `publish()` si
+`industry` sigue vacío** — si el usuario abandona el wizard después de crear cuenta pero antes
+de elegir rubro, y de algún modo llega a publicar, el negocio queda publicado sin rubro. Falta
+decidir si `BusinessesService.publish()` debería exigir `industry` no vacío.
+
+### [2026-07-16] `Branch` no persiste lat/lng — dirección es solo texto libre
+**Estado:** ABIERTO
+Confirmado en el schema: `Branch.address` es `String?`, sin columnas de latitud/longitud. El
+wizard de onboarding (`SetupUnificado.tsx`) pide una dirección que probablemente el frontend
+resuelve con un mapa/autocomplete en algún momento — si en el futuro se necesita geolocalización
+real (cálculo de envíos, mapa en storefront, etc.), va a requerir una migración para agregar
+esas columnas. No bloqueante para el alcance actual de RBT-291.
+
+### [2026-07-16] Bug de infraestructura: `$transaction` de `registerBusiness()` excedía el timeout (P2028)
+**Estado:** RESUELTO (2026-07-16)
+La primera versión hacía, dentro de un mismo `$transaction`, 20 `permission.upsert()`
+secuenciales (catálogo global) más un loop de 4 roles con `findMany` + `createMany` cada uno —
+todo contra la Postgres remota de Supabase. Excedía el timeout default de Prisma (~5s), y
+fallaba con `P2028 Transaction not found` recién al llegar a `businessConfig.create()`, sin
+mensaje claro en la respuesta HTTP (el `HttpExceptionFilter` global no loguea excepciones no-HTTP).
+Diagnosticado agregando un `console.error` temporal en el catch y reproduciendo con un script
+Node aislado. Fix: el upsert de `PERMISSIONS` y el `findMany` de permisos por rol se movieron
+**fuera** de la transacción (son datos globales/idempotentes, no necesitan atomicidad con la
+creación del negocio); dentro del `$transaction` solo queda la creación de business/branch/
+roles/rolePermissions/member/configs, con `{ timeout: 15000 }` explícito por las dudas.
+Verificado: registro completo funciona de punta a punta contra la base real.
+
+### [2026-07-16] Subdominio temporal con sufijo aleatorio — el "real" se elige después
+**Estado:** RESUELTO (2026-07-16) — decisión tomada por diseño del flujo
+`registerBusiness()` no puede pedirle un subdominio al usuario todavía (recién se está creando
+la cuenta), pero `Business.subdomain` es `@unique` y no nullable. Se decidió generar uno
+temporal vía `generateUniqueSubdomain()`: slug del `businessName`, con reintento (hasta 20
+intentos) agregando un sufijo aleatorio de 4 caracteres si hay colisión. El usuario elige el
+subdominio definitivo después, ya autenticado, vía `PUT /onboarding/business` (que devuelve
+`409` si el elegido ya está en uso). Verificado: registro de 3 negocios con el mismo
+`businessName` generó `barberia-don-fernando`, luego (tras liberar ese slug al cambiarlo) lo
+reusó, y una tercera colisión forzada generó `don-fernando-kble`.
+
+### [2026-07-16] `PUT /onboarding/business` como endpoint separado de `PUT /business`, gateado por `isActive`
+**Estado:** RESUELTO (2026-07-16)
+`PUT /business` (Fase 2) ya excluye deliberadamente `subdomain`/`mode` por ser "zona peligrosa"
+para un negocio en producción (ver entrada de Fase 2). En vez de reabrir esos campos ahí, se
+creó `PUT /onboarding/business` (mismo controller `OnboardingController`), que solo permite
+escribir `name/industry/description/subdomain/mode` **mientras `business.isActive === false`**
+— tira `422` si el negocio ya fue publicado (`POST /business/publish`). Verificado: edición
+exitosa con `isActive: false`, y `422` inmediatamente después de publicar el mismo negocio.
+
+### [2026-07-16] RBT-293 — Persistencia completa del wizard de onboarding
+**Estado:** RESUELTO (2026-07-16) — backend verificado por curl de punta a punta; frontend
+verificado por tipo (TypeScript) y por curl simulando cada request, pero **no se pudo verificar
+interactivamente en navegador** (ver entrada de infraestructura más abajo).
+
+Se agregaron los campos que faltaban para guardar cada paso del wizard (antes solo existían
+`name/industry/description/subdomain/mode`):
+- **Migración `20260716191823_onboarding_wizard_fields`**: `Business.subrubros String[]`,
+  `Business.teamSize String?` (informativo: solo/mini/medio/grande, sin lógica de negocio que lo
+  consuma todavía), `Business.operatesPhysical/operatesOnline Boolean`, `Branch.latitude/
+  longitude Decimal(9,6)?`, `BusinessConfig.acceptsCard Boolean` (el "Tarjeta" del wizard —
+  decisión: campo propio, distinto de `acceptsMercadopago`, porque el checkout de MP y una
+  tarjeta física en POS son conceptualmente cosas distintas).
+- `UpdateOnboardingBusinessDto` extendido con `subrubros/teamSize/operatesPhysical/
+  operatesOnline`; `UpdateBranchDto` con `latitude/longitude`; `UpdateBusinessConfigDto` con
+  `acceptsCard`. Los servicios de `branches`/`businessConfig` ya hacían `data: dto` genérico, así
+  que no hicieron falta cambios ahí. `BusinessesService.getMe()` ahora devuelve los campos nuevos
+  (necesario para que el frontend pueda "retomar" el wizard leyendo el estado actual).
+- **Bug encontrado durante la verificación**: el paso "Métodos de pago" del wizard no pedía
+  alias de transferencia, pero `BusinessesService.updateConfig()` (regla de Fase 2, no tocada)
+  exige `transferAlias` no vacío si `acceptsTransfer: true` — el primer intento de guardar
+  "Transferencia" sin alias tiraba `400`. Se agregó un campo condicional "Alias o CBU" en
+  `StepPagos` (SetupUnificado.tsx) que aparece solo si el usuario tilda "Transferencia", y se
+  bloquea el avance del paso hasta completarlo. Verificado con y sin el fix (400 → éxito).
+- **Teléfono del wizard → `BusinessConfig.whatsapp`, no un campo nuevo**: decisión — el negocio
+  en Órbita usa WhatsApp como canal de contacto principal (`StorefrontConfig.showWhatsapp`,
+  modo `SHOWCASE` = "solo WhatsApp"), así que el "Teléfono" que pide `StepNegocio` se guarda como
+  `whatsapp`, no se creó un campo `phone` redundante.
+- **Logo del wizard (`StepNegocio`) — NO se persiste todavía**: sigue siendo un preview local
+  (base64 vía `FileReader`, nunca sale del navegador). `StorefrontConfig.logoUrl` espera una URL,
+  no un data-URI — guardar el logo de verdad necesita un endpoint de upload a Supabase Storage
+  igual al que ya existe para `POST /products/:id/images` (bucket dedicado, límite de tamaño,
+  tipos permitidos). Fuera de alcance de este pase — **DIFERIDO**.
+- **Tamaño de equipo (`StepEquipo`) — se guarda como dato informativo, sin validación de negocio**:
+  no hay ningún límite de asientos/roles atado a `teamSize` todavía. Si en el futuro se necesita
+  (ej. planes con tope de usuarios), revisar acá.
+- **Rehidratación para "retomar"**: `SetupUnificado` ahora llama `GET /business` + `GET /business/
+  config` al montar y precarga el estado si ya existe una sesión de onboarding guardada
+  (localStorage). No se creó ninguna tabla de "progreso de wizard" nueva — como el `Business`
+  real ya se crea en el registro (RBT-291) y se completa progresivamente, "retomar" es simplemente
+  leer lo que ya está guardado.
+- **Limpieza de negocios sin pagar — DIFERIDO, no implementado**: el usuario pidió explícitamente
+  contemplar que un negocio que nunca completa el pago no debería "ocupar espacio" indefinidamente
+  en la base. No se construyó ningún mecanismo de limpieza automática en este pase porque: (a) no
+  existe todavía una señal real de "pagó" — `plan.tsx` sigue simulando el cobro de MercadoPago con
+  un `setTimeout`, sin integración real (el módulo de Subscriptions/pagos sigue sin construir, ver
+  entradas de Fase 2); (b) sin esa señal, cualquier job de limpieza automática borraría negocios
+  indistintamente, sin poder distinguir "recién registrado, todavía completando el wizard" de
+  "abandonado hace 3 semanas". **Recomendación para cuando exista el módulo de pagos real**: un
+  job programado (`@nestjs/schedule`, no instalado todavía) que borre `Business` con
+  `isActive: false` y `createdAt` más viejo que N días (a definir por el equipo) Y sin pago
+  confirmado — reutilizando el mismo helper de limpieza usado manualmente en esta sesión
+  (`rolePermission` → `member` → `role` → `businessConfig`/`storefrontConfig`/
+  `notificationConfig` → `branch` → `business`, en ese orden por las FK).
+
+### [2026-07-16] Bug de infraestructura: `apps/web` nunca tuvo su propio `pnpm install`
+**Estado:** RESUELTO (2026-07-16)
+Al intentar levantar el frontend para probar el wizard de onboarding, `next dev` fallaba con
+`Next.js inferred your workspace root... couldn't find the Next.js package from the project
+directory`. Causa: `apps/web/node_modules` no existía — nunca se había corrido `pnpm install`
+ahí — mientras que en la raíz del repo (`Orbita-Frontend/`) hay un `node_modules`/`.next`/
+`next-env.d.ts` **huérfanos** (sin `package.json` que los acompañe), aparentemente restos de una
+versión anterior del proyecto antes de moverse a la estructura `apps/api` + `apps/web`. Turbopack
+se confundía intentando resolver `next` desde esos restos. Fix: `pnpm install` dentro de
+`apps/web` (crea su propio `node_modules`, consistente con `apps/api`). **Pendiente para el
+equipo**: confirmar si los restos en la raíz del repo (`node_modules/`, `.next/`, `next-env.d.ts`,
+`tsconfig.tsbuildinfo`) se pueden borrar con seguridad — no se tocaron en esta sesión por las
+dudas de que fueran necesarios para algo que no se investigó a fondo.
+
+### [2026-07-16] Bug de infraestructura: el navegador de prueba (Browser pane) no hidrata NINGUNA página del frontend
+**Estado:** ABIERTO — bloqueó la verificación interactiva de RBT-293
+Al intentar probar el wizard completo en el navegador integrado de esta sesión, ninguna página
+—ni siquiera la landing (`/`), sin tocar en esta tarea— hidrata: los elementos del DOM no tienen
+`__reactFiber$`/`__reactProps$`, por lo que ningún handler de React (`onClick`, `onChange`,
+`onSubmit`) se dispara y los formularios caen al comportamiento nativo del navegador (`GET` con
+query string vacía). La consola muestra un error recurrente de Next.js en modo dev:
+`TypeError: Cannot read properties of undefined (reading 'components')` dentro de
+`handleStaticIndicator`, disparado por un mensaje HMR (`isrManifest`) que el cliente no sabe
+interpretar — plausiblemente esto aborta la hidratación antes de que corra. No se pudo confirmar
+si esto es específico del navegador integrado de esta sesión (posible interferencia con el
+websocket de HMR) o un bug real de esta versión de Next/Turbopack (`next@16.2.6` — un número de
+versión inusualmente alto, posiblemente una build de este entorno). **Recomendación**: probar
+`pnpm run dev` de `apps/web` en un Chrome real antes de asumir que el código está roto. Todo lo
+construido en RBT-293 del lado del frontend se verificó por: TypeScript (`tsc --noEmit` limpio) +
+simulación manual de cada request que dispara el código (vía `curl`, reproduciendo exactamente los
+payloads que arma `apps/web/src/lib/api.ts`) — pero no por click real en la UI.

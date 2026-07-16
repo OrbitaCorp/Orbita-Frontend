@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '@/design-system/components/Skeleton'
 import { OrbiChat } from '@/components/OrbiChat'
+import { updateOnboardingBusiness, getOnboardingSession } from '@/lib/api'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ const RUBROS: Rubro[] = [
   { key: 'tienda',       Icon: ShoppingBag,    label: 'Tienda Online',             descripcion: 'Catálogo, carrito y ventas online',          categoria: 'tienda',    disponible: true,  href: '/onboarding/tienda/setup' },
 
   // ── Turnos & Agenda ──────────────────────────────────────────────────────
-  { key: 'barberia',     Icon: Scissors,       label: 'Barbería / Peluquería',     descripcion: 'Múltiples profesionales y agenda',            categoria: 'turnos',    disponible: true,  href: '/onboarding/turnos/setup' },
+  { key: 'barberia',     Icon: Scissors,       label: 'Barbería / Peluquería',     descripcion: 'Múltiples profesionales y agenda',            categoria: 'turnos',    disponible: false },
   { key: 'estetica',     Icon: Sparkles,       label: 'Estética / Spa',            descripcion: 'Cabinas y salas disponibles',                 categoria: 'turnos',    disponible: false },
   { key: 'clinica',      Icon: Hospital,       label: 'Clínica / Consultorio',     descripcion: 'Historias clínicas y turnos médicos',         categoria: 'turnos',    disponible: false },
   { key: 'odonto',       Icon: Smile,          label: 'Odontología',               descripcion: 'Tratamientos por etapas',                     categoria: 'turnos',    disponible: false },
@@ -121,12 +122,14 @@ export function ElegirRubro() {
   const [orbiAbierto,    setOrbiAbierto]    = useState(false)
   const [tooltipVisible, setTooltipVisible] = useState(false)
   const [cargando,       setCargando]       = useState(true)
+  const [guardando,      setGuardando]      = useState(false)
 
   useEffect(() => {
+    if (!getOnboardingSession()) { router.push('/registro'); return }
     const t1 = setTimeout(() => setCargando(false),       750)
     const t2 = setTimeout(() => setTooltipVisible(true), 3500)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
+  }, [router])
 
   const visibles = (filtro === 'todos' ? RUBROS : RUBROS.filter(r => r.categoria === filtro))
     .slice()
@@ -137,9 +140,16 @@ export function ElegirRubro() {
     setSeleccionado(prev => prev === r.key ? '' : r.key)
   }
 
-  function continuar() {
+  async function continuar() {
     const rubro = RUBROS.find(r => r.key === seleccionado)
-    router.push(rubro?.href ?? '/onboarding/proximamente')
+    if (!rubro?.href) { router.push('/onboarding/proximamente'); return }
+    setGuardando(true)
+    try {
+      await updateOnboardingBusiness({ industry: rubro.key })
+      router.push(rubro.href)
+    } finally {
+      setGuardando(false)
+    }
   }
 
   const rubroSelec = RUBROS.find(r => r.key === seleccionado)
@@ -393,20 +403,21 @@ export function ElegirRubro() {
           </div>
           <button
             onClick={continuar}
+            disabled={guardando}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 22px',
               borderRadius: 10, border: 'none',
-              background: '#2563EB', color: 'white',
+              background: guardando ? 'var(--color-surface-alt)' : '#2563EB', color: 'white',
               fontSize: 14, fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(37,99,235,0.35)',
+              cursor: guardando ? 'default' : 'pointer',
+              boxShadow: guardando ? 'none' : '0 4px 16px rgba(37,99,235,0.35)',
               transition: 'background 150ms',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1D4ED8' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#2563EB' }}
+            onMouseEnter={e => { if (!guardando) e.currentTarget.style.background = '#1D4ED8' }}
+            onMouseLeave={e => { if (!guardando) e.currentTarget.style.background = '#2563EB' }}
           >
-            Continuar <ChevronRight size={16} strokeWidth={2.5} />
+            {guardando ? 'Guardando…' : 'Continuar'} <ChevronRight size={16} strokeWidth={2.5} />
           </button>
         </div>
       )}

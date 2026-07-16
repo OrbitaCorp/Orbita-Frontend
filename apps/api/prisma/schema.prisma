@@ -24,6 +24,13 @@ model Business {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  // Datos del wizard de onboarding (RBT-293) — se completan progresivamente
+  // mientras isActive: false, vía PUT /onboarding/business.
+  subrubros        String[] @default([]) @map("subrubros") // ej: ["indumentaria","calzado"]
+  teamSize         String?  @map("team_size") // informativo: solo | mini | medio | grande
+  operatesPhysical Boolean  @default(false) @map("operates_physical")
+  operatesOnline   Boolean  @default(false) @map("operates_online")
+
   // Relaciones inversas — Prisma EXIGE declarar la inversa de CADA tabla que
   // referencia businessId, o el schema no compila. Lista completa:
   branches            Branch[]
@@ -67,6 +74,8 @@ model Branch {
   businessId String   @map("business_id")
   name       String   @default("Principal")
   address    String?
+  latitude   Decimal? @db.Decimal(9, 6)
+  longitude  Decimal? @db.Decimal(9, 6)
   isDefault  Boolean  @default(false) @map("is_default") // la sucursal auto-creada
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -98,6 +107,7 @@ model BusinessConfig {
   acceptsCash        Boolean @default(true) @map("accepts_cash")
   acceptsTransfer    Boolean @default(true) @map("accepts_transfer")
   acceptsPickup      Boolean @default(true) @map("accepts_pickup")
+  acceptsCard        Boolean @default(false) @map("accepts_card") // "Tarjeta" del wizard — distinto de acceptsMercadopago (QR/checkout)
 
   // Transferencia: alias/CBU único del negocio donde reciben transferencias (POS)
   transferAlias String? @map("transfer_alias") // alias fijo del negocio (ej: "rama.indumentaria.mp")

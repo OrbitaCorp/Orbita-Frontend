@@ -30,16 +30,7 @@ export class BusinessesService {
   async getMe(businessId: string) {
     const business = await this.prisma.business.findUnique({ where: { id: businessId } });
     if (!business) throw new NotFoundException('Negocio no encontrado');
-    return {
-      id: business.id,
-      name: business.name,
-      industry: business.industry,
-      description: business.description,
-      subdomain: business.subdomain,
-      mode: business.mode,
-      isActive: business.isActive,
-      isPaused: business.isPaused,
-    };
+    return this.toBusinessResponse(business);
   }
 
   async updateMe(businessId: string, dto: UpdateBusinessDto) {
@@ -51,6 +42,25 @@ export class BusinessesService {
         description: dto.description,
       },
     });
+    return this.toBusinessResponse(business);
+  }
+
+  // Incluye los campos del wizard (RBT-293) para que el frontend pueda
+  // rehidratar el estado si el usuario abandona y retoma el onboarding.
+  private toBusinessResponse(business: {
+    id: string;
+    name: string;
+    industry: string;
+    description: string | null;
+    subdomain: string;
+    mode: string;
+    isActive: boolean;
+    isPaused: boolean;
+    subrubros: string[];
+    teamSize: string | null;
+    operatesPhysical: boolean;
+    operatesOnline: boolean;
+  }) {
     return {
       id: business.id,
       name: business.name,
@@ -60,6 +70,10 @@ export class BusinessesService {
       mode: business.mode,
       isActive: business.isActive,
       isPaused: business.isPaused,
+      subrubros: business.subrubros,
+      teamSize: business.teamSize,
+      operatesPhysical: business.operatesPhysical,
+      operatesOnline: business.operatesOnline,
     };
   }
 

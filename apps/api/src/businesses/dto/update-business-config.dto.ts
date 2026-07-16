@@ -8,6 +8,7 @@ export class UpdateBusinessConfigDto {
   @IsOptional() @IsBoolean() acceptsCash?: boolean;
   @IsOptional() @IsBoolean() acceptsTransfer?: boolean;
   @IsOptional() @IsBoolean() acceptsPickup?: boolean;
+  @IsOptional() @IsBoolean() acceptsCard?: boolean;
   @IsOptional() @IsString() transferAlias?: string;
   @IsOptional() @IsNumber() shippingBase?: number;
   @IsOptional() @IsNumber() freeShippingFrom?: number;

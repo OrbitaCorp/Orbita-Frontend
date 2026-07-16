@@ -12,6 +12,10 @@ import {
 import { Skeleton } from '@/design-system/components/Skeleton'
 import { OrbiChat } from '@/components/OrbiChat'
 import { MapPicker } from '@/components/MapPicker'
+import {
+  getOnboardingSession, updateOnboardingBusiness, updateBranch, updateBusinessConfig,
+  getBusiness, getBusinessConfig,
+} from '@/lib/api'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -522,7 +526,10 @@ function StepUbicacion({ negocio, setNegocio }: { negocio: Negocio; setNegocio: 
   )
 }
 
-function StepPagos({ pagos, setPagos }: { pagos: string[]; setPagos: Dispatch<SetStateAction<string[]>> }) {
+function StepPagos({ pagos, setPagos, transferAlias, setTransferAlias }: {
+  pagos: string[]; setPagos: Dispatch<SetStateAction<string[]>>
+  transferAlias: string; setTransferAlias: (v: string) => void
+}) {
   function toggle(key: string) {
     setPagos(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
   }
@@ -541,6 +548,24 @@ function StepPagos({ pagos, setPagos }: { pagos: string[]; setPagos: Dispatch<Se
           <SelectCard key={m.key} sel={pagos.includes(m.key)} Icon={m.Icon} label={m.label} desc={m.desc} onClick={() => toggle(m.key)} />
         ))}
       </div>
+
+      {pagos.includes('transferencia') && (
+        <div style={{ marginTop: 20, animation: 'fadeSlideDown 220ms ease' }}>
+          <Field label="Alias o CBU para transferencias" required>
+            <Input value={transferAlias} onChange={setTransferAlias} placeholder="mi.negocio.mp" />
+          </Field>
+          <p style={{ fontSize: 11, color: 'var(--color-muted)', margin: '5px 0 0' }}>
+            Se lo vamos a mostrar a tus clientes cuando elijan pagar por transferencia.
+          </p>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeSlideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }
@@ -671,8 +696,44 @@ export function SetupUnificado({
     direccion: '', logo: '', latLng: BA, subdominio: '', tipoLocal: [], modoVenta: '',
   })
   const [pagos,       setPagos]       = useState<string[]>([])
+  const [transferAlias, setTransferAlias] = useState('')
   const [tamano,      setTamano]      = useState('')
   const [orbiAbierto, setOrbiAbierto] = useState(false)
+  const [guardando,   setGuardando]   = useState(false)
+  const [errorGuardado, setErrorGuardado] = useState('')
+
+  // Redirige si no hay sesión de onboarding, y rehidrata el estado si el
+  // usuario ya había cargado datos antes (RBT-293 — retomar el wizard).
+  useEffect(() => {
+    if (!getOnboardingSession()) { router.push('/registro'); return }
+    Promise.all([getBusiness(), getBusinessConfig()])
+      .then(([business, config]) => {
+        setSeleccion(business.subrubros)
+        setNegocio(prev => ({
+          ...prev,
+          nombre: business.name,
+          descripcion: business.description ?? '',
+          subdominio: business.subdomain,
+          modoVenta: business.mode === 'SHOWCASE' ? 'vidriera' : 'ecommerce',
+          tipoLocal: [
+            ...(business.operatesPhysical ? ['fisico' as const] : []),
+            ...(business.operatesOnline ? ['online' as const] : []),
+          ],
+          email: config.email ?? '',
+          telefono: config.whatsapp ?? '',
+        }))
+        setTamano(business.teamSize ?? '')
+        setPagos([
+          ...(config.acceptsCash ? ['efectivo'] : []),
+          ...(config.acceptsTransfer ? ['transferencia'] : []),
+          ...(config.acceptsMercadopago ? ['mercadopago'] : []),
+          ...(config.acceptsCard ? ['tarjeta'] : []),
+        ])
+        setTransferAlias(config.transferAlias ?? '')
+      })
+      .catch(() => {}) // best-effort: si falla, el wizard arranca en blanco
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setCargandoPaso(false), 450)
@@ -688,11 +749,69 @@ export function SetupUnificado({
   const puedeAvanzar =
     paso === 0        ? seleccion.length > 0 :
     paso === 2        ? negocio.tipoLocal.length > 0 :
+    paso === 3        ? (!pagos.includes('transferencia') || transferAlias.trim().length > 0) :
     true
 
-  function avanzar() {
-    if (paso < lastPaso) { setCargandoPaso(true); setPaso(p => p + 1) }
-    else router.push(successPath)
+  // Persiste los datos del paso actual en el backend (RBT-293 — cada paso se
+  // guarda de inmediato, no solo al finalizar, para poder retomar el wizard).
+  async function guardarPaso() {
+    const session = getOnboardingSession()
+    if (!session) return
+
+    if (paso === 0) {
+      await updateOnboardingBusiness({ subrubros: seleccion })
+    } else if (paso === 1) {
+      await Promise.all([
+        updateOnboardingBusiness({
+          name: negocio.nombre,
+          description: negocio.descripcion,
+          subdomain: negocio.subdominio || undefined,
+          ...(conModoVenta && negocio.modoVenta
+            ? { mode: negocio.modoVenta === 'vidriera' ? 'SHOWCASE' : 'FULL' }
+            : {}),
+        }),
+        updateBusinessConfig({ email: negocio.email || undefined, whatsapp: negocio.telefono || undefined }),
+      ])
+    } else if (paso === 2) {
+      const tareas: Promise<unknown>[] = [
+        updateOnboardingBusiness({
+          operatesPhysical: negocio.tipoLocal.includes('fisico'),
+          operatesOnline: negocio.tipoLocal.includes('online'),
+        }),
+      ]
+      if (negocio.tipoLocal.includes('fisico')) {
+        tareas.push(updateBranch(session.branchId, {
+          address: negocio.direccion || undefined,
+          latitude: negocio.latLng[0],
+          longitude: negocio.latLng[1],
+        }))
+      }
+      await Promise.all(tareas)
+    } else if (paso === 3) {
+      await updateBusinessConfig({
+        acceptsCash: pagos.includes('efectivo'),
+        acceptsTransfer: pagos.includes('transferencia'),
+        acceptsMercadopago: pagos.includes('mercadopago'),
+        acceptsCard: pagos.includes('tarjeta'),
+        ...(pagos.includes('transferencia') ? { transferAlias } : {}),
+      })
+    } else if (paso === pasoEquipo && tamano) {
+      await updateOnboardingBusiness({ teamSize: tamano })
+    }
+  }
+
+  async function avanzar() {
+    setErrorGuardado('')
+    setGuardando(true)
+    try {
+      await guardarPaso()
+      if (paso < lastPaso) { setCargandoPaso(true); setPaso(p => p + 1) }
+      else router.push(successPath)
+    } catch {
+      setErrorGuardado('No se pudo guardar este paso. Revisá tu conexión e intentá de nuevo.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   function retroceder() {
@@ -711,7 +830,7 @@ export function SetupUnificado({
     if (paso === 0) return <PrimerPaso seleccion={seleccion} toggle={toggle} />
     if (paso === 1) return <StepNegocio  negocio={negocio}  setNegocio={setNegocio} conModoVenta={conModoVenta} />
     if (paso === 2) return <StepUbicacion negocio={negocio} setNegocio={setNegocio} />
-    if (paso === 3) return <StepPagos    pagos={pagos}      setPagos={setPagos}     />
+    if (paso === 3) return <StepPagos    pagos={pagos}      setPagos={setPagos}     transferAlias={transferAlias} setTransferAlias={setTransferAlias} />
     if (paso === pasoEquipo) return <StepEquipo tamano={tamano} setTamano={setTamano} />
     return null
   }
@@ -852,6 +971,16 @@ export function SetupUnificado({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         boxShadow: '0 -4px 24px rgba(0,0,0,0.07)', zIndex: 1000,
       }}>
+        {errorGuardado && (
+          <div style={{
+            position: 'absolute', bottom: '100%', left: 0, right: 0,
+            padding: '8px 32px', textAlign: 'center',
+            background: 'rgba(239,68,68,0.08)', borderTop: '1px solid rgba(239,68,68,0.25)',
+            fontSize: 12.5, color: 'var(--color-error)',
+          }}>
+            {errorGuardado}
+          </div>
+        )}
         <button
           onClick={retroceder}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: 'var(--color-body)', fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms' }}
@@ -875,25 +1004,25 @@ export function SetupUnificado({
           )}
           <button
             onClick={avanzar}
-            disabled={!puedeAvanzar}
+            disabled={!puedeAvanzar || guardando}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 22px', borderRadius: 10, border: 'none',
-              background:  puedeAvanzar ? '#2563EB' : 'var(--color-surface-alt)',
-              color:       puedeAvanzar ? 'white'   : 'var(--color-subtle)',
+              background:  (puedeAvanzar && !guardando) ? '#2563EB' : 'var(--color-surface-alt)',
+              color:       (puedeAvanzar && !guardando) ? 'white'   : 'var(--color-subtle)',
               fontSize: 14, fontWeight: 700,
-              cursor:    puedeAvanzar ? 'pointer' : 'default',
-              boxShadow: puedeAvanzar ? '0 4px 16px rgba(37,99,235,0.35)' : 'none',
+              cursor:    (puedeAvanzar && !guardando) ? 'pointer' : 'default',
+              boxShadow: (puedeAvanzar && !guardando) ? '0 4px 16px rgba(37,99,235,0.35)' : 'none',
               transition: 'all 150ms',
             }}
-            onMouseEnter={e => { if (puedeAvanzar) e.currentTarget.style.background = '#1D4ED8' }}
-            onMouseLeave={e => { if (puedeAvanzar) e.currentTarget.style.background = '#2563EB' }}
+            onMouseEnter={e => { if (puedeAvanzar && !guardando) e.currentTarget.style.background = '#1D4ED8' }}
+            onMouseLeave={e => { if (puedeAvanzar && !guardando) e.currentTarget.style.background = '#2563EB' }}
           >
-            {paso === lastPaso ? 'Finalizar' : 'Continuar'}
-            {paso < lastPaso
+            {guardando ? 'Guardando…' : paso === lastPaso ? 'Finalizar' : 'Continuar'}
+            {!guardando && (paso < lastPaso
               ? <ChevronRight size={16} strokeWidth={2.5} />
               : <Check        size={16} strokeWidth={2.5} />
-            }
+            )}
           </button>
         </div>
       </div>

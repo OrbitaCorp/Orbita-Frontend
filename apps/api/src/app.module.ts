@@ -12,6 +12,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
 import { BusinessModeGuard } from './common/guards/business-mode.guard';
 
 import { AuthModule } from './auth/auth.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { BranchesModule } from './branches/branches.module';
 import { MembersModule } from './members/members.module';
@@ -44,6 +45,7 @@ import { StorefrontModule } from './storefront/storefront.module';
     MailModule,
     SupabaseModule,
     AuthModule,
+    OnboardingModule,
     BusinessesModule,
     BranchesModule,
     MembersModule,
