@@ -11,36 +11,70 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { RegisterBusinessDto } from './dto/register-business.dto';
 import { UpdateOnboardingBusinessDto } from './dto/update-onboarding-business.dto';
 
-// ─── Catálogo de rubros (RBT-292) ──────────────────────────────────────────
-// "Por ahora solo Tienda" (contrato). Subrubros = los mismos 18 ya usados en
-// el wizard del frontend (TiendaSetup.tsx) — se mantiene la misma lista para
-// no introducir un segundo catálogo desincronizado.
+// ─── Catálogo de rubros (RBT-292/293) ──────────────────────────────────────
+// Única fuente de verdad para el selector de rubros del onboarding (antes
+// vivía hardcodeado en el frontend, en dos lugares que podían desincronizarse
+// — ver PENDIENTES.md). `icon` es un string (nombre de ícono de lucide-react)
+// que el frontend mapea localmente a un componente; el backend no puede
+// devolver JSX. Solo "tienda" tiene `subrubros` y `disponible: true` — el
+// resto son rubros "Próximamente" (roadmap visible, sin funcionalidad real
+// todavía), consistente con "por ahora solo Tienda" del contrato original.
+
+const CATEGORIAS = [
+  { key: 'tienda', label: 'Tienda & Stock', icon: 'ShoppingBag' },
+  { key: 'turnos', label: 'Turnos & Agenda', icon: 'CalendarDays' },
+  { key: 'gastro', label: 'Gastronomía', icon: 'UtensilsCrossed' },
+  { key: 'servicios', label: 'Servicios', icon: 'Wrench' },
+  { key: 'turismo', label: 'Turismo', icon: 'Plane' },
+  { key: 'educacion', label: 'Educación', icon: 'GraduationCap' },
+  { key: 'eventos', label: 'Eventos', icon: 'PartyPopper' },
+] as const;
+
+const TIENDA_SUBRUBROS = [
+  { key: 'indumentaria', icon: 'Shirt', label: 'Indumentaria', descripcion: 'Talles, colores y variantes', tipo: 'variantes' },
+  { key: 'calzado', icon: 'Footprints', label: 'Calzado', descripcion: 'Numeración y variantes por talle', tipo: 'variantes' },
+  { key: 'cosmetica', icon: 'Sparkles', label: 'Perfumería / Cosmética', descripcion: 'Vencimientos y control de lotes', tipo: 'simple' },
+  { key: 'electronica', icon: 'Smartphone', label: 'Electrónica', descripcion: 'N° de serie / IMEI por unidad', tipo: 'serie' },
+  { key: 'ferreteria', icon: 'Hammer', label: 'Ferretería', descripcion: 'Miles de SKUs, venta por unidad', tipo: 'simple' },
+  { key: 'corralon', icon: 'Package2', label: 'Corralón / Construcción', descripcion: 'Venta por m², kg o litro', tipo: 'volumen' },
+  { key: 'libreria', icon: 'BookOpen', label: 'Librería', descripcion: 'ISBN, editorial y autor', tipo: 'simple' },
+  { key: 'jugueteria', icon: 'Gift', label: 'Juguetería', descripcion: 'Edad recomendada por producto', tipo: 'simple' },
+  { key: 'petshop', icon: 'PawPrint', label: 'Pet Shop', descripcion: 'Alimentos por peso y accesorios', tipo: 'volumen' },
+  { key: 'repuestos', icon: 'Car', label: 'Repuestos Automotor', descripcion: 'Compatibilidad por modelo de vehículo', tipo: 'serie' },
+  { key: 'joyeria', icon: 'Gem', label: 'Joyería', descripcion: 'Materiales, peso y tasación', tipo: 'simple' },
+  { key: 'muebleria', icon: 'Sofa', label: 'Mueblería', descripcion: 'Medidas físicas y variantes de color', tipo: 'simple' },
+  { key: 'informatica', icon: 'Monitor', label: 'Informática', descripcion: 'Compatibilidades técnicas', tipo: 'serie' },
+  { key: 'mayorista', icon: 'Package', label: 'Distribuidora / Mayorista', descripcion: 'Precios escalonados por volumen', tipo: 'volumen' },
+  { key: 'limpieza', icon: 'Droplets', label: 'Limpieza', descripcion: 'Litros y concentración', tipo: 'volumen' },
+  { key: 'vivero', icon: 'Sprout', label: 'Vivero', descripcion: 'Productos vivos con cuidados especiales', tipo: 'volumen' },
+  { key: 'artistica', icon: 'Palette', label: 'Artística / Mercería', descripcion: 'Variantes de color, material y medida', tipo: 'simple' },
+  { key: 'detodo', icon: 'Store', label: 'De todo un poco', descripcion: 'Tienda variada sin un rubro fijo', tipo: 'simple' },
+] as const;
 
 const RUBROS = [
-  {
-    key: 'tienda',
-    label: 'Tienda',
-    subrubros: [
-      { key: 'indumentaria', label: 'Indumentaria' },
-      { key: 'calzado', label: 'Calzado' },
-      { key: 'cosmetica', label: 'Perfumería / Cosmética' },
-      { key: 'electronica', label: 'Electrónica' },
-      { key: 'ferreteria', label: 'Ferretería' },
-      { key: 'corralon', label: 'Corralón / Construcción' },
-      { key: 'libreria', label: 'Librería' },
-      { key: 'jugueteria', label: 'Juguetería' },
-      { key: 'petshop', label: 'Pet Shop' },
-      { key: 'repuestos', label: 'Repuestos Automotor' },
-      { key: 'joyeria', label: 'Joyería' },
-      { key: 'muebleria', label: 'Mueblería' },
-      { key: 'informatica', label: 'Informática' },
-      { key: 'mayorista', label: 'Distribuidora / Mayorista' },
-      { key: 'limpieza', label: 'Limpieza' },
-      { key: 'vivero', label: 'Vivero' },
-      { key: 'artistica', label: 'Artística / Mercería' },
-      { key: 'detodo', label: 'De todo un poco' },
-    ],
-  },
+  { key: 'tienda', icon: 'ShoppingBag', label: 'Tienda Online', descripcion: 'Catálogo, carrito y ventas online', categoria: 'tienda', disponible: true, subrubros: TIENDA_SUBRUBROS },
+  { key: 'barberia', icon: 'Scissors', label: 'Barbería / Peluquería', descripcion: 'Múltiples profesionales y agenda', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'estetica', icon: 'Sparkles', label: 'Estética / Spa', descripcion: 'Cabinas y salas disponibles', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'clinica', icon: 'Hospital', label: 'Clínica / Consultorio', descripcion: 'Historias clínicas y turnos médicos', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'odonto', icon: 'Smile', label: 'Odontología', descripcion: 'Tratamientos por etapas', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'psico', icon: 'Brain', label: 'Psicología', descripcion: 'Sesiones recurrentes fijas', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'gym', icon: 'Dumbbell', label: 'Gimnasio / Personal Trainer', descripcion: 'Cupos por clase y membresías', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'foto', icon: 'Camera', label: 'Fotografía / Producción', descripcion: 'Reservas por jornada completa', categoria: 'turnos', disponible: false, subrubros: [] },
+  { key: 'rotiseria', icon: 'UtensilsCrossed', label: 'Rotisería / Comidas', descripcion: 'Menú del día, delivery y pedidos', categoria: 'gastro', disponible: false, subrubros: [] },
+  { key: 'cafeteria', icon: 'Coffee', label: 'Cafetería / Bar', descripcion: 'Carta digital, pedidos y delivery', categoria: 'gastro', disponible: false, subrubros: [] },
+  { key: 'restaurant', icon: 'UtensilsCrossed', label: 'Restaurante', descripcion: 'Reservas de mesa, menú y pedidos', categoria: 'gastro', disponible: false, subrubros: [] },
+  { key: 'juridico', icon: 'Scale', label: 'Estudio Jurídico', descripcion: 'Gestión de clientes y casos legales', categoria: 'servicios', disponible: false, subrubros: [] },
+  { key: 'coaching', icon: 'Briefcase', label: 'Consultoría / Coaching', descripcion: 'Reuniones online y presenciales', categoria: 'servicios', disponible: false, subrubros: [] },
+  { key: 'taller', icon: 'Car', label: 'Taller Mecánico', descripcion: 'Registro de vehículos por cliente', categoria: 'servicios', disponible: false, subrubros: [] },
+  { key: 'gomeria', icon: 'Disc3', label: 'Gomería', descripcion: 'Atención rápida y alta rotación', categoria: 'servicios', disponible: false, subrubros: [] },
+  { key: 'vet', icon: 'PawPrint', label: 'Veterinaria', descripcion: 'Múltiples mascotas por cliente', categoria: 'servicios', disponible: false, subrubros: [] },
+  { key: 'inmobiliaria', icon: 'Home', label: 'Inmobiliaria', descripcion: 'Propiedades, clientes e inquilinos', categoria: 'servicios', disponible: false, subrubros: [] },
+  { key: 'turismo', icon: 'Plane', label: 'Turismo / Excursiones', descripcion: 'Paquetes, pasajes y reservas', categoria: 'turismo', disponible: false, subrubros: [] },
+  { key: 'hospedaje', icon: 'Hotel', label: 'Hotel / Hospedaje', descripcion: 'Habitaciones, check-in y reservas', categoria: 'turismo', disponible: false, subrubros: [] },
+  { key: 'academia', icon: 'GraduationCap', label: 'Academia / Escuela', descripcion: 'Clases, cupos y seguimiento de alumnos', categoria: 'educacion', disponible: false, subrubros: [] },
+  { key: 'clases', icon: 'BookOpen', label: 'Clases Particulares', descripcion: 'Agenda de clases y seguimiento', categoria: 'educacion', disponible: false, subrubros: [] },
+  { key: 'boliche', icon: 'PartyPopper', label: 'Boliche / Eventos', descripcion: 'Entradas, lista VIP y reservas de mesa', categoria: 'eventos', disponible: false, subrubros: [] },
+  { key: 'catering', icon: 'Wine', label: 'Catering', descripcion: 'Presupuestos, fechas y menú personalizado', categoria: 'eventos', disponible: false, subrubros: [] },
 ] as const;
 
 // ─── Catálogo de permisos + roles default ──────────────────────────────────
@@ -100,7 +134,18 @@ export class OnboardingService {
   // ── RBT-292 ──────────────────────────────────────────────────────────────
 
   getRubros() {
-    return RUBROS;
+    return { categorias: CATEGORIAS, rubros: RUBROS };
+  }
+
+  // ── RBT-293 — validar subdominio antes de que exista cuenta ─────────────
+
+  async checkSubdomain(subdomain: string) {
+    const normalized = (subdomain ?? '').trim().toLowerCase();
+    if (!/^[a-z0-9-]{3,63}$/.test(normalized)) {
+      return { available: false, reason: 'Formato inválido — solo minúsculas, números y guiones (mínimo 3 caracteres)' };
+    }
+    const existing = await this.prisma.business.findUnique({ where: { subdomain: normalized } });
+    return { available: !existing };
   }
 
   // ── RBT-291 ──────────────────────────────────────────────────────────────

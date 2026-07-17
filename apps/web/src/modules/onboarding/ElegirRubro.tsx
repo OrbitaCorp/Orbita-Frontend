@@ -1,83 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import {
-  Check, ChevronRight, ChevronLeft,
-  type LucideIcon,
-  ShoppingBag, CalendarDays, UtensilsCrossed, Wrench, Plane, GraduationCap, PartyPopper,
-  Scissors, Sparkles, Brain, Dumbbell, Camera, Coffee, Hospital,
-  Scale, Briefcase, Car, PawPrint, Home, BookOpen, Wine, Hotel,
-  Smile, Disc3,
-} from 'lucide-react'
+import { Check, ChevronRight, ChevronLeft, type LucideIcon } from 'lucide-react'
 import { Skeleton } from '@/design-system/components/Skeleton'
 import { OrbiChat } from '@/components/OrbiChat'
-import { updateOnboardingBusiness, getOnboardingSession } from '@/lib/api'
+import { getRubrosCatalog, type Rubro as ApiRubro, type Categoria as ApiCategoria } from '@/lib/api'
+import { getIcon } from './iconMap'
+import { useOnboardingStore } from './useOnboardingStore'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Categoria = 'tienda' | 'turnos' | 'gastro' | 'servicios' | 'turismo' | 'educacion' | 'eventos'
-type Filtro    = 'todos' | Categoria
+type Filtro = 'todos' | string
 
-type Rubro = {
-  key:        string
-  Icon:       LucideIcon
-  label:      string
-  descripcion: string
-  categoria:  Categoria
-  disponible: boolean
-  href?:      string
+// Único rubro funcional hoy — el resto del catálogo (traído de la API) se
+// muestra como roadmap "Próximamente", sin ruta de setup propia todavía.
+const RUTA_SETUP: Record<string, string> = {
+  tienda: '/onboarding/tienda/setup',
 }
-
-// ─── Datos ────────────────────────────────────────────────────────────────────
-
-const FILTROS: { key: Filtro; label: string; Icon?: LucideIcon }[] = [
-  { key: 'todos',     label: 'Todos'            },
-  { key: 'tienda',    label: 'Tienda & Stock',   Icon: ShoppingBag    },
-  { key: 'turnos',    label: 'Turnos & Agenda',  Icon: CalendarDays   },
-  { key: 'gastro',    label: 'Gastronomía',      Icon: UtensilsCrossed},
-  { key: 'servicios', label: 'Servicios',         Icon: Wrench         },
-  { key: 'turismo',   label: 'Turismo',           Icon: Plane          },
-  { key: 'educacion', label: 'Educación',         Icon: GraduationCap  },
-  { key: 'eventos',   label: 'Eventos',           Icon: PartyPopper    },
-]
-
-const RUBROS: Rubro[] = [
-  // ── Tienda & Stock ───────────────────────────────────────────────────────
-  { key: 'tienda',       Icon: ShoppingBag,    label: 'Tienda Online',             descripcion: 'Catálogo, carrito y ventas online',          categoria: 'tienda',    disponible: true,  href: '/onboarding/tienda/setup' },
-
-  // ── Turnos & Agenda ──────────────────────────────────────────────────────
-  { key: 'barberia',     Icon: Scissors,       label: 'Barbería / Peluquería',     descripcion: 'Múltiples profesionales y agenda',            categoria: 'turnos',    disponible: false },
-  { key: 'estetica',     Icon: Sparkles,       label: 'Estética / Spa',            descripcion: 'Cabinas y salas disponibles',                 categoria: 'turnos',    disponible: false },
-  { key: 'clinica',      Icon: Hospital,       label: 'Clínica / Consultorio',     descripcion: 'Historias clínicas y turnos médicos',         categoria: 'turnos',    disponible: false },
-  { key: 'odonto',       Icon: Smile,          label: 'Odontología',               descripcion: 'Tratamientos por etapas',                     categoria: 'turnos',    disponible: false },
-  { key: 'psico',        Icon: Brain,          label: 'Psicología',                descripcion: 'Sesiones recurrentes fijas',                  categoria: 'turnos',    disponible: false },
-  { key: 'gym',          Icon: Dumbbell,       label: 'Gimnasio / Personal Trainer',descripcion: 'Cupos por clase y membresías',               categoria: 'turnos',    disponible: false },
-  { key: 'foto',         Icon: Camera,         label: 'Fotografía / Producción',   descripcion: 'Reservas por jornada completa',               categoria: 'turnos',    disponible: false },
-
-  // ── Gastronomía ──────────────────────────────────────────────────────────
-  { key: 'rotiseria',    Icon: UtensilsCrossed,label: 'Rotisería / Comidas',       descripcion: 'Menú del día, delivery y pedidos',            categoria: 'gastro',    disponible: false },
-  { key: 'cafeteria',    Icon: Coffee,         label: 'Cafetería / Bar',           descripcion: 'Carta digital, pedidos y delivery',           categoria: 'gastro',    disponible: false },
-  { key: 'restaurant',   Icon: UtensilsCrossed,label: 'Restaurante',               descripcion: 'Reservas de mesa, menú y pedidos',            categoria: 'gastro',    disponible: false },
-
-  // ── Servicios ────────────────────────────────────────────────────────────
-  { key: 'juridico',     Icon: Scale,          label: 'Estudio Jurídico',          descripcion: 'Gestión de clientes y casos legales',         categoria: 'servicios', disponible: false },
-  { key: 'coaching',     Icon: Briefcase,      label: 'Consultoría / Coaching',    descripcion: 'Reuniones online y presenciales',             categoria: 'servicios', disponible: false },
-  { key: 'taller',       Icon: Car,            label: 'Taller Mecánico',           descripcion: 'Registro de vehículos por cliente',           categoria: 'servicios', disponible: false },
-  { key: 'gomeria',      Icon: Disc3,          label: 'Gomería',                   descripcion: 'Atención rápida y alta rotación',             categoria: 'servicios', disponible: false },
-  { key: 'vet',          Icon: PawPrint,       label: 'Veterinaria',               descripcion: 'Múltiples mascotas por cliente',              categoria: 'servicios', disponible: false },
-  { key: 'inmobiliaria', Icon: Home,           label: 'Inmobiliaria',              descripcion: 'Propiedades, clientes e inquilinos',          categoria: 'servicios', disponible: false },
-
-  // ── Turismo ──────────────────────────────────────────────────────────────
-  { key: 'turismo',      Icon: Plane,          label: 'Turismo / Excursiones',     descripcion: 'Paquetes, pasajes y reservas',                categoria: 'turismo',   disponible: false },
-  { key: 'hospedaje',    Icon: Hotel,          label: 'Hotel / Hospedaje',         descripcion: 'Habitaciones, check-in y reservas',           categoria: 'turismo',   disponible: false },
-
-  // ── Educación ────────────────────────────────────────────────────────────
-  { key: 'academia',     Icon: GraduationCap,  label: 'Academia / Escuela',        descripcion: 'Clases, cupos y seguimiento de alumnos',      categoria: 'educacion', disponible: false },
-  { key: 'clases',       Icon: BookOpen,       label: 'Clases Particulares',       descripcion: 'Agenda de clases y seguimiento',              categoria: 'educacion', disponible: false },
-
-  // ── Eventos ──────────────────────────────────────────────────────────────
-  { key: 'boliche',      Icon: PartyPopper,    label: 'Boliche / Eventos',         descripcion: 'Entradas, lista VIP y reservas de mesa',      categoria: 'eventos',   disponible: false },
-  { key: 'catering',     Icon: Wine,           label: 'Catering',                  descripcion: 'Presupuestos, fechas y menú personalizado',   categoria: 'eventos',   disponible: false },
-]
 
 const PASOS = ['Rubro', 'Negocio', 'Listo']
 
@@ -116,43 +54,43 @@ function OrbitaLogo({ size = 24 }: { size?: number }) {
 
 export function ElegirRubro() {
   const router = useRouter()
+  const setWizard = useOnboardingStore(s => s.setWizard)
 
   const [filtro,         setFiltro]         = useState<Filtro>('todos')
   const [seleccionado,   setSeleccionado]   = useState<string>('')
   const [orbiAbierto,    setOrbiAbierto]    = useState(false)
   const [tooltipVisible, setTooltipVisible] = useState(false)
   const [cargando,       setCargando]       = useState(true)
-  const [guardando,      setGuardando]      = useState(false)
+  const [error,          setError]          = useState('')
+  const [categorias,     setCategorias]     = useState<ApiCategoria[]>([])
+  const [rubros,         setRubros]         = useState<ApiRubro[]>([])
 
   useEffect(() => {
-    if (!getOnboardingSession()) { router.push('/registro'); return }
-    const t1 = setTimeout(() => setCargando(false),       750)
-    const t2 = setTimeout(() => setTooltipVisible(true), 3500)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [router])
+    getRubrosCatalog()
+      .then(({ categorias, rubros }) => { setCategorias(categorias); setRubros(rubros) })
+      .catch(() => setError('No pudimos cargar los rubros. Recargá la página.'))
+      .finally(() => setCargando(false))
+    const t = setTimeout(() => setTooltipVisible(true), 3500)
+    return () => clearTimeout(t)
+  }, [])
 
-  const visibles = (filtro === 'todos' ? RUBROS : RUBROS.filter(r => r.categoria === filtro))
+  const visibles = (filtro === 'todos' ? rubros : rubros.filter(r => r.categoria === filtro))
     .slice()
     .sort((a, b) => Number(b.disponible) - Number(a.disponible))
 
-  function elegirRubro(r: Rubro) {
+  function elegirRubro(r: ApiRubro) {
     if (!r.disponible) return
     setSeleccionado(prev => prev === r.key ? '' : r.key)
   }
 
-  async function continuar() {
-    const rubro = RUBROS.find(r => r.key === seleccionado)
-    if (!rubro?.href) { router.push('/onboarding/proximamente'); return }
-    setGuardando(true)
-    try {
-      await updateOnboardingBusiness({ industry: rubro.key })
-      router.push(rubro.href)
-    } finally {
-      setGuardando(false)
-    }
+  function continuar() {
+    const rubro = rubros.find(r => r.key === seleccionado)
+    if (!rubro) return
+    setWizard({ rubro: rubro.key, subrubros: [] })
+    router.push(RUTA_SETUP[rubro.key] ?? '/onboarding/proximamente')
   }
 
-  const rubroSelec = RUBROS.find(r => r.key === seleccionado)
+  const rubroSelec = rubros.find(r => r.key === seleccionado)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
@@ -240,14 +178,25 @@ export function ElegirRubro() {
           </p>
         </div>
 
+        {error && (
+          <div style={{
+            marginBottom: 20, padding: '10px 14px', borderRadius: 10, textAlign: 'center',
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            fontSize: 13, color: 'var(--color-error)',
+          }}>
+            {error}
+          </div>
+        )}
+
         {/* ── Filtros ── */}
         <div style={{
           display: 'flex', gap: 8, overflowX: 'auto',
           paddingBottom: 4, marginBottom: 28,
           scrollbarWidth: 'none',
         }}>
-          {FILTROS.map(({ key, label, Icon: FIcon }) => {
+          {[{ key: 'todos', label: 'Todos', icon: '' }, ...categorias].map(({ key, label, icon }) => {
             const activo = filtro === key
+            const FIcon: LucideIcon | null = icon ? getIcon(icon) : null
             return (
               <button
                 key={key}
@@ -282,7 +231,8 @@ export function ElegirRubro() {
           {cargando
             ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)
             : visibles.map(rubro => {
-            const { key, Icon, label, descripcion, disponible } = rubro
+            const { key, icon, label, descripcion, disponible } = rubro
+            const Icon = getIcon(icon)
             const sel = seleccionado === key
 
             return (
@@ -390,7 +340,7 @@ export function ElegirRubro() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(59,130,246,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {rubroSelec && <rubroSelec.Icon size={18} strokeWidth={1.75} color="var(--color-primary)" />}
+              {rubroSelec && (() => { const Icon = getIcon(rubroSelec.icon); return <Icon size={18} strokeWidth={1.75} color="var(--color-primary)" /> })()}
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', marginBottom: 1 }}>
@@ -403,21 +353,20 @@ export function ElegirRubro() {
           </div>
           <button
             onClick={continuar}
-            disabled={guardando}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 22px',
               borderRadius: 10, border: 'none',
-              background: guardando ? 'var(--color-surface-alt)' : '#2563EB', color: 'white',
+              background: '#2563EB', color: 'white',
               fontSize: 14, fontWeight: 700,
-              cursor: guardando ? 'default' : 'pointer',
-              boxShadow: guardando ? 'none' : '0 4px 16px rgba(37,99,235,0.35)',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(37,99,235,0.35)',
               transition: 'background 150ms',
             }}
-            onMouseEnter={e => { if (!guardando) e.currentTarget.style.background = '#1D4ED8' }}
-            onMouseLeave={e => { if (!guardando) e.currentTarget.style.background = '#2563EB' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1D4ED8' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#2563EB' }}
           >
-            {guardando ? 'Guardando…' : 'Continuar'} <ChevronRight size={16} strokeWidth={2.5} />
+            Continuar <ChevronRight size={16} strokeWidth={2.5} />
           </button>
         </div>
       )}

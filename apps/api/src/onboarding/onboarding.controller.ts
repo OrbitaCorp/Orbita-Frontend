@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Query } from '@nestjs/common';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentBusiness } from '../common/decorators/current-business.decorator';
 import { AuthContext } from '../common/types/auth-context.type';
@@ -15,6 +15,14 @@ export class OnboardingController {
   @Public()
   getRubros() {
     return this.onboardingService.getRubros();
+  }
+
+  // Público: se usa DURANTE el wizard, antes de que exista una cuenta/token
+  // (ver PENDIENTES.md — el registro se corrió al final del onboarding).
+  @Get('check-subdomain')
+  @Public()
+  checkSubdomain(@Query('subdomain') subdomain: string) {
+    return this.onboardingService.checkSubdomain(subdomain);
   }
 
   @Post('register-business')

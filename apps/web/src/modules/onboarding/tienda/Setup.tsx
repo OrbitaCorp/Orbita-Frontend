@@ -1,44 +1,11 @@
-import {
-  Check, type LucideIcon,
-  Shirt, Footprints, Sparkles, Smartphone, Hammer, Package2, BookOpen, Gift,
-  PawPrint, Car, Gem, Sofa, Monitor, Package, Droplets, Sprout, Palette, Store,
-} from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Check } from 'lucide-react'
 import { SetupUnificado, type PrimerPasoProps } from '@/modules/onboarding/SetupUnificado'
+import { getRubrosCatalog, type Subrubro as ApiSubrubro } from '@/lib/api'
+import { getIcon } from '@/modules/onboarding/iconMap'
+import { Skeleton } from '@/design-system/components/Skeleton'
 
-// ─── Data del primer paso (específico de tienda) ──────────────────────────────
-
-type Tipo = 'variantes' | 'serie' | 'volumen' | 'simple'
-
-type Subrubro = {
-  key:         string
-  Icon:        LucideIcon
-  label:       string
-  descripcion: string
-  tipo:        Tipo
-}
-
-const SUBRUBROS: Subrubro[] = [
-  { key: 'indumentaria', Icon: Shirt,      label: 'Indumentaria',              descripcion: 'Talles, colores y variantes',                tipo: 'variantes' },
-  { key: 'calzado',      Icon: Footprints, label: 'Calzado',                   descripcion: 'Numeración y variantes por talle',           tipo: 'variantes' },
-  { key: 'cosmetica',    Icon: Sparkles,   label: 'Perfumería / Cosmética',    descripcion: 'Vencimientos y control de lotes',            tipo: 'simple'    },
-  { key: 'electronica',  Icon: Smartphone, label: 'Electrónica',               descripcion: 'N° de serie / IMEI por unidad',              tipo: 'serie'     },
-  { key: 'ferreteria',   Icon: Hammer,     label: 'Ferretería',                descripcion: 'Miles de SKUs, venta por unidad',            tipo: 'simple'    },
-  { key: 'corralon',     Icon: Package2,   label: 'Corralón / Construcción',   descripcion: 'Venta por m², kg o litro',                   tipo: 'volumen'   },
-  { key: 'libreria',     Icon: BookOpen,   label: 'Librería',                  descripcion: 'ISBN, editorial y autor',                    tipo: 'simple'    },
-  { key: 'jugueteria',   Icon: Gift,       label: 'Juguetería',                descripcion: 'Edad recomendada por producto',              tipo: 'simple'    },
-  { key: 'petshop',      Icon: PawPrint,   label: 'Pet Shop',                  descripcion: 'Alimentos por peso y accesorios',            tipo: 'volumen'   },
-  { key: 'repuestos',    Icon: Car,        label: 'Repuestos Automotor',        descripcion: 'Compatibilidad por modelo de vehículo',      tipo: 'serie'     },
-  { key: 'joyeria',      Icon: Gem,        label: 'Joyería',                   descripcion: 'Materiales, peso y tasación',                tipo: 'simple'    },
-  { key: 'muebleria',    Icon: Sofa,       label: 'Mueblería',                 descripcion: 'Medidas físicas y variantes de color',       tipo: 'simple'    },
-  { key: 'informatica',  Icon: Monitor,    label: 'Informática',               descripcion: 'Compatibilidades técnicas',                  tipo: 'serie'     },
-  { key: 'mayorista',    Icon: Package,    label: 'Distribuidora / Mayorista', descripcion: 'Precios escalonados por volumen',            tipo: 'volumen'   },
-  { key: 'limpieza',     Icon: Droplets,   label: 'Limpieza',                  descripcion: 'Litros y concentración',                     tipo: 'volumen'   },
-  { key: 'vivero',       Icon: Sprout,     label: 'Vivero',                    descripcion: 'Productos vivos con cuidados especiales',    tipo: 'volumen'   },
-  { key: 'artistica',    Icon: Palette,    label: 'Artística / Mercería',      descripcion: 'Variantes de color, material y medida',      tipo: 'simple'    },
-  { key: 'detodo',       Icon: Store,      label: 'De todo un poco',           descripcion: 'Tienda variada sin un rubro fijo',           tipo: 'simple'    },
-]
-
-const TIPO_BADGE: Record<Tipo, string | null> = {
+const TIPO_BADGE: Record<string, string | null> = {
   variantes: '✦ Matriz de talles / variantes',
   serie:     '✦ N° de serie / IMEI',
   volumen:   '✦ Cantidad variable',
@@ -47,7 +14,9 @@ const TIPO_BADGE: Record<Tipo, string | null> = {
 
 // ─── Primer paso ──────────────────────────────────────────────────────────────
 
-function StepTipo({ seleccion, toggle }: PrimerPasoProps) {
+type StepTipoProps = PrimerPasoProps & { subrubros: ApiSubrubro[]; cargando: boolean }
+
+function StepTipo({ seleccion, toggle, subrubros, cargando }: StepTipoProps) {
   return (
     <div>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -60,9 +29,18 @@ function StepTipo({ seleccion, toggle }: PrimerPasoProps) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 10 }}>
-        {SUBRUBROS.map(s => {
+        {cargando
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} style={{ padding: '13px 13px 12px', borderRadius: 14, border: '1.5px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                <Skeleton width={38} height={38} radius={10} style={{ display: 'block', marginBottom: 9 }} />
+                <Skeleton width="70%" height={13} radius={4} style={{ display: 'block', marginBottom: 6 }} />
+                <Skeleton width="90%" height={11} radius={4} style={{ display: 'block' }} />
+              </div>
+            ))
+          : subrubros.map(s => {
           const sel   = seleccion.includes(s.key)
-          const badge = TIPO_BADGE[s.tipo]
+          const badge = TIPO_BADGE[s.tipo] ?? null
+          const Icon  = getIcon(s.icon)
           return (
             <button
               key={s.key}
@@ -83,7 +61,7 @@ function StepTipo({ seleccion, toggle }: PrimerPasoProps) {
                 </div>
               )}
               <div style={{ width: 38, height: 38, borderRadius: 10, marginBottom: 9, background: sel ? 'rgba(59,130,246,0.12)' : 'rgba(59,130,246,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <s.Icon size={19} strokeWidth={1.75} color={sel ? 'var(--color-primary)' : '#3B82F6'} />
+                <Icon size={19} strokeWidth={1.75} color={sel ? 'var(--color-primary)' : '#3B82F6'} />
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 3 }}>{s.label}</div>
               <div style={{ fontSize: 11, color: 'var(--color-muted)', lineHeight: 1.4, marginBottom: badge ? 8 : 0 }}>{s.descripcion}</div>
@@ -112,10 +90,26 @@ function toggleTienda(prev: string[], key: string): string[] {
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 export function TiendaSetup() {
+  const [subrubros, setSubrubros] = useState<ApiSubrubro[]>([])
+  const [cargando,  setCargando]  = useState(true)
+
+  useEffect(() => {
+    getRubrosCatalog()
+      .then(({ rubros }) => setSubrubros(rubros.find(r => r.key === 'tienda')?.subrubros ?? []))
+      .catch(() => {})
+      .finally(() => setCargando(false))
+  }, [])
+
+  // Identidad estable del componente (solo cambia cuando llegan los datos)
+  // para no perder el estado de `seleccion` que vive en SetupUnificado.
+  const PrimerPasoConectado = useMemo(() => {
+    return (props: PrimerPasoProps) => <StepTipo {...props} subrubros={subrubros} cargando={cargando} />
+  }, [subrubros, cargando])
+
   return (
     <SetupUnificado
       primerPasoLabel="Tipo de tienda"
-      PrimerPaso={StepTipo}
+      PrimerPaso={PrimerPasoConectado}
       toggleFn={toggleTienda}
       conEquipo={true}
       conModoVenta={true}

@@ -1,15 +1,15 @@
 # Guía de prueba manual — Onboarding (RBT-291 / RBT-292 / RBT-293)
 
-> Cubre el registro inicial del dueño de un negocio (sin sesión previa), el catálogo de
-> rubros/subrubros, y la persistencia completa de los pasos del wizard (RBT-293). No requiere
-> las guías de Fases 1–6 como prerrequisito — este flujo es el paso *anterior* a todo lo demás
-> (crea la cuenta y el negocio desde cero).
+> Flujo real (corregido 2026-07-17, ver PENDIENTES.md): **"Crear tu espacio" → elegir rubro →
+> completar el wizard paso a paso (sin pedir cuenta) → recién en el ÚLTIMO paso se crea la
+> cuenta y se guarda todo junto → pago (diferido, mockeado)**. No requiere las guías de
+> Fases 1–6 como prerrequisito.
 >
-> **Nota sobre el frontend (RBT-293):** lo de abajo se verificó con `curl` reproduciendo
-> exactamente los payloads que arma `apps/web/src/lib/api.ts`, y con `tsc --noEmit` limpio. No
-> se pudo verificar con clicks reales en el navegador integrado de la sesión de desarrollo por un
-> bug de hidratación de React que afecta a *todas* las páginas del frontend (no solo onboarding)
-> — ver `PENDIENTES.md`. Antes de dar por buena la UI, probarla en un Chrome real corriendo
+> **Nota sobre el frontend:** lo de abajo se verificó con `curl` reproduciendo exactamente los
+> payloads que arma `apps/web/src/lib/api.ts`, y con `tsc --noEmit` limpio. No se pudo verificar
+> con clicks reales en el navegador integrado de la sesión de desarrollo por un bug de
+> hidratación de React que afecta a *todas* las páginas del frontend (no solo onboarding) — ver
+> `PENDIENTES.md`. Antes de dar por buena la UI, probarla en un Chrome real corriendo
 > `pnpm install && pnpm run dev` desde `apps/web/`.
 
 ---
@@ -18,9 +18,11 @@
 
 | Pieza | Endpoint | Autenticación |
 |-------|----------|----------------|
-| Owner completa `registro.tsx` (nombre, email, password, nombre del negocio) | `POST /onboarding/register-business` | `@Public()` — no requiere token |
-| Frontend pide el catálogo de rubros para `onboarding/rubro.tsx` | `GET /onboarding/rubros` | `@Public()` — no requiere token |
-| Wizard (`SetupUnificado.tsx`) completa rubro/subdominio/modo mientras el negocio sigue en borrador | `PUT /onboarding/business` | Requiere token de member (devuelto por `register-business`) |
+| Landing → "Crear tu espacio" → `/onboarding/rubro` | — | — |
+| `ElegirRubro.tsx` pide el catálogo completo (rubros + categorías + subrubros de tienda) | `GET /onboarding/rubros` | `@Public()` |
+| `StepNegocio` (dentro del wizard) valida el subdominio en tiempo real, sin cuenta todavía | `GET /onboarding/check-subdomain?subdomain=x` | `@Public()` |
+| El wizard (`SetupUnificado.tsx`) acumula todo client-side (zustand + localStorage) — **no llama al backend hasta el último paso** | — | — |
+| Último paso del wizard, "Tu cuenta" → `completeOnboarding()` crea la cuenta y encadena el guardado de todo lo acumulado | `POST /onboarding/register-business` + `PUT /onboarding/business` + `PUT /business/config` + `PUT /branches/:id` | El primero público; los 3 siguientes con el token recién emitido |
 | Activación final del negocio (fuera de este alcance, ya existente) | `POST /business/publish` | Requiere token de member (owner) |
 
 ---
@@ -31,7 +33,8 @@
 BASE="http://localhost:3000/api/v1"
 ```
 
-No hace falta login previo — el primer paso crea la cuenta.
+No hace falta login previo para ninguno de los pasos 1–3 — la cuenta recién se crea en el
+paso 4 ("Tu cuenta", el último del wizard).
 
 ---
 
@@ -43,25 +46,58 @@ curl -s "$BASE/onboarding/rubros" | jq
 
 **Response esperada (200)**:
 ```jsonc
-[
-  {
-    "key": "tienda",
-    "label": "Tienda",
-    "subrubros": [
-      { "key": "indumentaria", "label": "Indumentaria" },
-      { "key": "calzado", "label": "Calzado" }
-      // ... 18 subrubros en total, mismos que TiendaSetup.tsx
-    ]
-  }
-]
+{
+  "categorias": [
+    { "key": "tienda", "label": "Tienda & Stock", "icon": "ShoppingBag" },
+    { "key": "turnos", "label": "Turnos & Agenda", "icon": "CalendarDays" }
+    // ... 7 categorías en total
+  ],
+  "rubros": [
+    {
+      "key": "tienda", "icon": "ShoppingBag", "label": "Tienda Online",
+      "descripcion": "Catálogo, carrito y ventas online", "categoria": "tienda",
+      "disponible": true,
+      "subrubros": [
+        { "key": "indumentaria", "icon": "Shirt", "label": "Indumentaria", "descripcion": "Talles, colores y variantes", "tipo": "variantes" }
+        // ... 18 subrubros en total
+      ]
+    },
+    { "key": "barberia", "icon": "Scissors", "label": "Barbería / Peluquería", "categoria": "turnos", "disponible": false, "subrubros": [] }
+    // ... 23 rubros en total, 22 con disponible:false (roadmap) y subrubros:[]
+  ]
+}
 ```
 
-**Qué verificar**: por ahora un único rubro (`tienda`) con 18 subrubros — no hay otros rubros
-todavía (contrato: "por ahora solo Tienda"). No requiere `Authorization` header.
+**Qué verificar**: única fuente de verdad del selector — el frontend (`ElegirRubro.tsx`,
+`TiendaSetup.tsx`) no tiene ningún dato hardcodeado, todo viene de acá. Solo `tienda` tiene
+`disponible: true` y `subrubros` no vacío. `icon` es un string (nombre de ícono de
+lucide-react) — el frontend lo traduce vía `apps/web/src/modules/onboarding/iconMap.ts`. No
+requiere `Authorization` header.
+
+### 1.1 Validar subdominio en tiempo real (sin cuenta) — `GET /onboarding/check-subdomain`
+
+```bash
+curl -s "$BASE/onboarding/check-subdomain?subdomain=mi-negocio-2026" | jq
+# Esperado: { "available": true } (o false si ya existe)
+
+curl -s "$BASE/onboarding/check-subdomain?subdomain=AB" | jq
+# Esperado: { "available": false, "reason": "Formato inválido — ..." } (formato: [a-z0-9-]{3,63})
+```
+
+Lo usa `StepNegocio` del wizard mientras el usuario escribe — antes de que exista cuenta, así
+que tiene que ser público. No confundir con el `409` que tira `PUT /onboarding/business` si se
+intenta guardar un subdominio duplicado (esa es la validación dura, esta es solo para feedback
+en vivo mientras se escribe).
 
 ---
 
-## 2. Registro del dueño + negocio — `POST /onboarding/register-business`
+## 2. Crear la cuenta con TODO lo acumulado — `POST /onboarding/register-business` (último paso del wizard)
+
+> En el flujo real esto pasa al FINAL, después de completar rubro, subrubros, negocio,
+> ubicación, pagos y equipo — no al principio. `completeOnboarding()` en
+> `apps/web/src/lib/api.ts` hace este POST y encadena de inmediato, con el token recién
+> emitido, los tres PUT de la sección 4. Acá se prueba cada llamada por separado para que sea
+> más fácil de depurar.
 
 ```bash
 TS=$(date +%s)

@@ -543,6 +543,71 @@ equipo**: confirmar si los restos en la raíz del repo (`node_modules/`, `.next/
 `tsconfig.tsbuildinfo`) se pueden borrar con seguridad — no se tocaron en esta sesión por las
 dudas de que fueran necesarios para algo que no se investigó a fondo.
 
+### [2026-07-17] RBT-293 corrección de flujo — la cuenta se crea AL FINAL del onboarding, no al principio
+**Estado:** RESUELTO (2026-07-17) — corrige un error de diseño de la entrega anterior (2026-07-16)
+El usuario marcó que la primera versión de RBT-293 estaba mal: el botón "Crear tu espacio" del
+header ya apuntaba correctamente a `/onboarding/rubro` (no a `/registro`), pero `ElegirRubro.tsx`
+tenía un guard (agregado por error en la entrega anterior) que redirigía a `/registro` si no
+había sesión — forzando de hecho la creación de cuenta antes de ver el wizard. El flujo correcto
+es: **"Crear tu espacio" → todo el onboarding sin pedir cuenta → recién al final se crea la
+cuenta con todo lo ya cargado → después, pago (diferido)**.
+
+Cambios:
+- Se sacó el guard de `ElegirRubro.tsx` y el guardado progresivo por paso contra el backend en
+  `SetupUnificado.tsx` (ya no hay token durante el wizard).
+- Nuevo store `apps/web/src/modules/onboarding/useOnboardingStore.ts` (zustand + `persist` en
+  localStorage) acumula todo el wizard (rubro, subrubros, negocio, ubicación, pagos, equipo)
+  sin autenticación. Permite retomar el wizard si se recarga la página a mitad de camino, igual
+  que antes, pero del lado del cliente en vez de contra la base.
+- Nuevo último paso del wizard, **"Tu cuenta"** (`StepCuenta` en `SetupUnificado.tsx`): nombre,
+  email, contraseña, términos. Al enviarlo, `apps/web/src/lib/api.ts#completeOnboarding()` llama
+  `POST /onboarding/register-business` y ENCADENA de inmediato, con el token recién emitido, los
+  mismos tres endpoints que ya existían (`PUT /onboarding/business`, `PUT /business/config`,
+  `PUT /branches/:id`) con TODO lo acumulado durante el wizard. No se tocó el backend de
+  `registerBusiness()` — se decidió reusar los endpoints ya probados en vez de extender el DTO
+  de registro para aceptar el payload completo (menos riesgo, mismo resultado final).
+- `pages/registro.tsx` y `pages/signup.tsx` (este último era un stub vacío, `return null`, al
+  que apuntaban dos botones "Crear tu espacio" de la landing sin que nadie lo hubiera notado)
+  ahora son simples redirects a `/onboarding/rubro`, por compatibilidad con links viejos.
+  `pages/login.tsx` ("¿No tenés cuenta?") también se actualizó para apuntar ahí en vez de a
+  `/registro`.
+- **"Omitir por ahora"** se sacó de la barra de navegación: ya no tiene sentido saltear el
+  último paso, porque ahí es donde se crea la cuenta — no hay a dónde "saltear".
+
+### [2026-07-17] RBT-293 — catálogo de rubros/subrubros y validación de subdominio, 100% desde la BD
+**Estado:** RESUELTO (2026-07-17)
+El usuario pidió explícitamente que no quedara ningún dato mock en el onboarding. Se encontraron
+dos casos:
+- **`ElegirRubro.tsx`** tenía un array hardcodeado de 23 rubros en 7 categorías (con íconos,
+  descripciones y flags `disponible`) que nunca llamaba a `GET /onboarding/rubros` — ese endpoint
+  (RBT-292) solo devolvía "tienda", completamente desconectado del selector visual real.
+  **Fix**: se extendió el catálogo del backend (`onboarding.service.ts` → `RUBROS`/`CATEGORIAS`)
+  para que sea la única fuente de verdad de TODO lo que se muestra (los 23 rubros, con
+  `disponible: false` para los 22 que siguen siendo roadmap). Como el backend no puede serializar
+  íconos de React, cada rubro manda un string (`icon: "Scissors"`) que el frontend traduce a un
+  componente real vía un mapa nuevo, `apps/web/src/modules/onboarding/iconMap.ts` — si se agrega
+  un rubro con un ícono nuevo, hay que sumarlo ahí también.
+- **`TiendaSetup.tsx`** (`StepTipo`) tenía su propio array hardcodeado de 18 subrubros, duplicado
+  del que ya vivía en el backend para RBT-292. **Fix**: ahora pide `GET /onboarding/rubros` y usa
+  los `subrubros` del rubro `tienda` que devuelve la API (con su propio `icon`/`tipo`/`descripcion`).
+- **Validación de subdominio**: `StepNegocio` chequeaba contra un array hardcodeado
+  (`SUBDOMINIOS_OCUPADOS`). Como ahora el wizard corre sin cuenta, no había forma de reusar los
+  endpoints autenticados existentes para esto — se agregó `GET /onboarding/check-subdomain?
+  subdomain=x` (`@Public()`, sin auth) que valida formato y unicidad contra la base real.
+
+### [2026-07-17] `RegisterBusinessDto` no acepta el payload completo del wizard — decisión de no extenderlo
+**Estado:** DIFERIDO — revisar si conviene atomizar en el futuro
+`completeOnboarding()` (frontend) hace 1 POST + hasta 3 PUT en paralelo, todos contra endpoints
+ya existentes y probados. Esto significa que si el POST de registro tiene éxito pero alguno de
+los PUT posteriores falla (ej. corte de red a mitad de camino), el usuario queda con una cuenta
+y un negocio creados pero con datos parcialmente guardados — no es atómico. Mitigación actual:
+el negocio real ya existe (`isActive: false`), así que el usuario puede reintentar desde el
+panel sin perder lo que sí se guardó. Alternativa más robusta (no implementada): extender
+`RegisterBusinessDto`/`OnboardingService.registerBusiness()` para aceptar todo el payload y
+hacerlo atómico dentro de la misma transacción de Prisma — se evitó en este pase para no volver
+a tocar código de `registerBusiness()` ya extensivamente probado (incluye el fix del bug P2028
+de timeout documentado arriba) bajo presión de tiempo. Revisar si vale la pena antes de producción.
+
 ### [2026-07-16] Bug de infraestructura: el navegador de prueba (Browser pane) no hidrata NINGUNA página del frontend
 **Estado:** ABIERTO — bloqueó la verificación interactiva de RBT-293
 Al intentar probar el wizard completo en el navegador integrado de esta sesión, ninguna página

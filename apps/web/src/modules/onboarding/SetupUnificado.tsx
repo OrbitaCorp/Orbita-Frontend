@@ -12,10 +12,8 @@ import {
 import { Skeleton } from '@/design-system/components/Skeleton'
 import { OrbiChat } from '@/components/OrbiChat'
 import { MapPicker } from '@/components/MapPicker'
-import {
-  getOnboardingSession, updateOnboardingBusiness, updateBranch, updateBusinessConfig,
-  getBusiness, getBusinessConfig,
-} from '@/lib/api'
+import { checkSubdomain, completeOnboarding, ApiError } from '@/lib/api'
+import { useOnboardingStore } from './useOnboardingStore'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -76,7 +74,6 @@ const TAMANOS: { key: string; Icon: LucideIcon; label: string; desc: string }[] 
   { key: 'grande', Icon: Building2,  label: 'Más de 10',       desc: 'Salón o clínica de gran escala'       },
 ]
 
-const SUBDOMINIOS_OCUPADOS = ['orbita', 'admin', 'app', 'tienda', 'test', 'demo', 'api', 'shop', 'store', 'mail']
 type EstadoSub = 'idle' | 'checking' | 'disponible' | 'ocupado'
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
@@ -180,7 +177,9 @@ function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; 
     if (!sub) { setEstadoSub('idle'); return }
     setEstadoSub('checking')
     const t = setTimeout(() => {
-      setEstadoSub(SUBDOMINIOS_OCUPADOS.includes(sub) ? 'ocupado' : 'disponible')
+      checkSubdomain(sub)
+        .then(r => setEstadoSub(r.available ? 'disponible' : 'ocupado'))
+        .catch(() => setEstadoSub('idle'))
     }, 700)
     return () => clearTimeout(t)
   }, [negocio.subdominio])
@@ -590,6 +589,68 @@ function StepEquipo({ tamano, setTamano }: { tamano: string; setTamano: (k: stri
   )
 }
 
+export type Cuenta = { ownerName: string; email: string; password: string; terms: boolean }
+
+// Último paso del wizard: recién acá se pide crear la cuenta — todo lo
+// completado antes (rubro, negocio, ubicación, pagos, equipo) se guarda de
+// una vez cuando se envía este paso (ver PENDIENTES.md).
+function StepCuenta({ cuenta, setCuenta }: { cuenta: Cuenta; setCuenta: Dispatch<SetStateAction<Cuenta>> }) {
+  const [showPw, setShowPw] = useState(false)
+  const set = (k: 'ownerName' | 'email') => (v: string) => setCuenta(prev => ({ ...prev, [k]: v }))
+
+  return (
+    <div style={{ maxWidth: 440, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '0 0 6px' }}>
+          Creá tu cuenta para guardar todo
+        </h2>
+        <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0 }}>
+          Ya configuraste tu negocio — con esto lo activamos y podés entrar a tu panel.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Field label="Tu nombre completo" required>
+          <Input value={cuenta.ownerName} onChange={set('ownerName')} placeholder="Juan García" />
+        </Field>
+        <Field label="Email" required>
+          <Input type="email" value={cuenta.email} onChange={set('email')} placeholder="tu@email.com" />
+        </Field>
+        <Field label="Contraseña" required>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={cuenta.password}
+              onChange={e => setCuenta(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Mínimo 8 caracteres"
+              style={{ ...inputBase, paddingRight: 40 }}
+            />
+            <button
+              type="button" onClick={() => setShowPw(p => !p)}
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)', display: 'flex', alignItems: 'center' }}
+            >
+              <Eye size={15} strokeWidth={1.5} />
+            </button>
+          </div>
+        </Field>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--color-body)', cursor: 'pointer' }}>
+          <input
+            type="checkbox" checked={cuenta.terms}
+            onChange={e => setCuenta(prev => ({ ...prev, terms: e.target.checked }))}
+            style={{ accentColor: 'var(--color-primary)', marginTop: 2 }}
+          />
+          <span>
+            Acepto los{' '}
+            <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>Términos y condiciones</span>
+            {' '}y la{' '}
+            <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>política de privacidad</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  )
+}
+
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
 function SkeletonTitle({ w1, w2 }: { w1: number | string; w2: number | string }) {
@@ -645,6 +706,19 @@ function SkeletonUbicacion() {
   )
 }
 
+function SkeletonCuenta() {
+  return (
+    <div style={{ maxWidth: 440, margin: '0 auto' }}>
+      <SkeletonTitle w1={260} w2={320} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <SkeletonField labelWidth={140} />
+        <SkeletonField labelWidth={50} />
+        <SkeletonField labelWidth={100} />
+      </div>
+    </div>
+  )
+}
+
 function SkeletonGrid({ cols = 2, rows = 2, tall = false }: { cols?: number; rows?: number; tall?: boolean }) {
   return (
     <div style={{ maxWidth: 540, margin: '0 auto' }}>
@@ -678,6 +752,9 @@ export function SetupUnificado({
   successPath,
 }: SetupUnificadoProps) {
   const router = useRouter()
+  const wizard      = useOnboardingStore(s => s.wizard)
+  const setWizard   = useOnboardingStore(s => s.setWizard)
+  const resetWizard = useOnboardingStore(s => s.resetWizard)
 
   const PASOS_INTERNOS = [
     primerPasoLabel,
@@ -685,8 +762,10 @@ export function SetupUnificado({
     'Ubicación',
     'Métodos de pago',
     ...(conEquipo ? ['Tu equipo'] : []),
+    'Tu cuenta',
   ]
   const lastPaso = PASOS_INTERNOS.length - 1
+  const pasoEquipo = conEquipo ? lastPaso - 1 : -1
 
   const [paso,         setPaso]        = useState(0)
   const [cargandoPaso, setCargandoPaso] = useState(true)
@@ -698,40 +777,30 @@ export function SetupUnificado({
   const [pagos,       setPagos]       = useState<string[]>([])
   const [transferAlias, setTransferAlias] = useState('')
   const [tamano,      setTamano]      = useState('')
+  const [cuenta,      setCuenta]      = useState<Cuenta>({ ownerName: '', email: '', password: '', terms: true })
   const [orbiAbierto, setOrbiAbierto] = useState(false)
   const [guardando,   setGuardando]   = useState(false)
   const [errorGuardado, setErrorGuardado] = useState('')
 
-  // Redirige si no hay sesión de onboarding, y rehidrata el estado si el
-  // usuario ya había cargado datos antes (RBT-293 — retomar el wizard).
+  // Si no eligieron rubro todavía (entraron directo a esta URL), volver al
+  // selector. Si no, rehidrata el wizard con lo que ya se cargó antes —
+  // el estado vive en localStorage (useOnboardingStore) porque todavía no
+  // existe cuenta ni negocio real en la base (eso pasa recién en "Tu cuenta").
   useEffect(() => {
-    if (!getOnboardingSession()) { router.push('/registro'); return }
-    Promise.all([getBusiness(), getBusinessConfig()])
-      .then(([business, config]) => {
-        setSeleccion(business.subrubros)
-        setNegocio(prev => ({
-          ...prev,
-          nombre: business.name,
-          descripcion: business.description ?? '',
-          subdominio: business.subdomain,
-          modoVenta: business.mode === 'SHOWCASE' ? 'vidriera' : 'ecommerce',
-          tipoLocal: [
-            ...(business.operatesPhysical ? ['fisico' as const] : []),
-            ...(business.operatesOnline ? ['online' as const] : []),
-          ],
-          email: config.email ?? '',
-          telefono: config.whatsapp ?? '',
-        }))
-        setTamano(business.teamSize ?? '')
-        setPagos([
-          ...(config.acceptsCash ? ['efectivo'] : []),
-          ...(config.acceptsTransfer ? ['transferencia'] : []),
-          ...(config.acceptsMercadopago ? ['mercadopago'] : []),
-          ...(config.acceptsCard ? ['tarjeta'] : []),
-        ])
-        setTransferAlias(config.transferAlias ?? '')
-      })
-      .catch(() => {}) // best-effort: si falla, el wizard arranca en blanco
+    if (!wizard.rubro) { router.push('/onboarding/rubro'); return }
+    setSeleccion(wizard.subrubros)
+    setNegocio({
+      nombre: wizard.nombre, descripcion: wizard.descripcion, email: wizard.email, telefono: wizard.telefono,
+      direccion: wizard.direccion, logo: '', latLng: wizard.latLng, subdominio: wizard.subdominio,
+      tipoLocal: [
+        ...(wizard.operatesPhysical ? ['fisico' as const] : []),
+        ...(wizard.operatesOnline ? ['online' as const] : []),
+      ],
+      modoVenta: wizard.modoVenta,
+    })
+    setPagos(wizard.pagos)
+    setTransferAlias(wizard.transferAlias)
+    setTamano(wizard.teamSize)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -744,71 +813,63 @@ export function SetupUnificado({
     setSeleccion(prev => toggleFn(prev, key))
   }
 
-  const pasoEquipo = conEquipo ? lastPaso : -1
-
   const puedeAvanzar =
     paso === 0        ? seleccion.length > 0 :
     paso === 2        ? negocio.tipoLocal.length > 0 :
-    paso === 3        ? (!pagos.includes('transferencia') || transferAlias.trim().length > 0) :
+    paso === 3         ? (!pagos.includes('transferencia') || transferAlias.trim().length > 0) :
+    paso === lastPaso ? (
+      cuenta.ownerName.trim().length > 0 &&
+      /\S+@\S+\.\S+/.test(cuenta.email) &&
+      cuenta.password.length >= 8 &&
+      cuenta.terms
+    ) :
     true
-
-  // Persiste los datos del paso actual en el backend (RBT-293 — cada paso se
-  // guarda de inmediato, no solo al finalizar, para poder retomar el wizard).
-  async function guardarPaso() {
-    const session = getOnboardingSession()
-    if (!session) return
-
-    if (paso === 0) {
-      await updateOnboardingBusiness({ subrubros: seleccion })
-    } else if (paso === 1) {
-      await Promise.all([
-        updateOnboardingBusiness({
-          name: negocio.nombre,
-          description: negocio.descripcion,
-          subdomain: negocio.subdominio || undefined,
-          ...(conModoVenta && negocio.modoVenta
-            ? { mode: negocio.modoVenta === 'vidriera' ? 'SHOWCASE' : 'FULL' }
-            : {}),
-        }),
-        updateBusinessConfig({ email: negocio.email || undefined, whatsapp: negocio.telefono || undefined }),
-      ])
-    } else if (paso === 2) {
-      const tareas: Promise<unknown>[] = [
-        updateOnboardingBusiness({
-          operatesPhysical: negocio.tipoLocal.includes('fisico'),
-          operatesOnline: negocio.tipoLocal.includes('online'),
-        }),
-      ]
-      if (negocio.tipoLocal.includes('fisico')) {
-        tareas.push(updateBranch(session.branchId, {
-          address: negocio.direccion || undefined,
-          latitude: negocio.latLng[0],
-          longitude: negocio.latLng[1],
-        }))
-      }
-      await Promise.all(tareas)
-    } else if (paso === 3) {
-      await updateBusinessConfig({
-        acceptsCash: pagos.includes('efectivo'),
-        acceptsTransfer: pagos.includes('transferencia'),
-        acceptsMercadopago: pagos.includes('mercadopago'),
-        acceptsCard: pagos.includes('tarjeta'),
-        ...(pagos.includes('transferencia') ? { transferAlias } : {}),
-      })
-    } else if (paso === pasoEquipo && tamano) {
-      await updateOnboardingBusiness({ teamSize: tamano })
-    }
-  }
 
   async function avanzar() {
     setErrorGuardado('')
+
+    if (paso === 0) setWizard({ subrubros: seleccion })
+    else if (paso === 1) setWizard({
+      nombre: negocio.nombre, descripcion: negocio.descripcion, email: negocio.email,
+      telefono: negocio.telefono, subdominio: negocio.subdominio, modoVenta: negocio.modoVenta,
+    })
+    else if (paso === 2) setWizard({
+      direccion: negocio.direccion, latLng: negocio.latLng,
+      operatesPhysical: negocio.tipoLocal.includes('fisico'), operatesOnline: negocio.tipoLocal.includes('online'),
+    })
+    else if (paso === 3) setWizard({ pagos, transferAlias })
+    else if (paso === pasoEquipo) setWizard({ teamSize: tamano })
+
+    if (paso < lastPaso) { setCargandoPaso(true); setPaso(p => p + 1); return }
+
+    // Último paso: recién acá se crea la cuenta y se guarda TODO lo
+    // acumulado durante el wizard, en un solo golpe.
     setGuardando(true)
     try {
-      await guardarPaso()
-      if (paso < lastPaso) { setCargandoPaso(true); setPaso(p => p + 1) }
-      else router.push(successPath)
-    } catch {
-      setErrorGuardado('No se pudo guardar este paso. Revisá tu conexión e intentá de nuevo.')
+      await completeOnboarding(
+        { ownerName: cuenta.ownerName, email: cuenta.email, password: cuenta.password, businessName: negocio.nombre },
+        {
+          rubro: wizard.rubro,
+          subrubros: seleccion,
+          nombre: negocio.nombre,
+          descripcion: negocio.descripcion,
+          email: negocio.email,
+          telefono: negocio.telefono,
+          subdominio: negocio.subdominio,
+          modoVenta: negocio.modoVenta,
+          direccion: negocio.direccion,
+          latLng: negocio.latLng,
+          operatesPhysical: negocio.tipoLocal.includes('fisico'),
+          operatesOnline: negocio.tipoLocal.includes('online'),
+          pagos,
+          transferAlias,
+          teamSize: tamano,
+        },
+      )
+      resetWizard()
+      router.push(successPath)
+    } catch (err) {
+      setErrorGuardado(err instanceof ApiError ? err.message : 'No se pudo crear tu cuenta. Intentá de nuevo.')
     } finally {
       setGuardando(false)
     }
@@ -823,6 +884,7 @@ export function SetupUnificado({
     if (paso === 0) return <SkeletonGrid cols={2} rows={3} />
     if (paso === 1) return <SkeletonNegocio   />
     if (paso === 2) return <SkeletonUbicacion />
+    if (paso === lastPaso) return <SkeletonCuenta />
     return                  <SkeletonGrid cols={2} rows={2} />
   }
 
@@ -832,6 +894,7 @@ export function SetupUnificado({
     if (paso === 2) return <StepUbicacion negocio={negocio} setNegocio={setNegocio} />
     if (paso === 3) return <StepPagos    pagos={pagos}      setPagos={setPagos}     transferAlias={transferAlias} setTransferAlias={setTransferAlias} />
     if (paso === pasoEquipo) return <StepEquipo tamano={tamano} setTamano={setTamano} />
+    if (paso === lastPaso) return <StepCuenta cuenta={cuenta} setCuenta={setCuenta} />
     return null
   }
 
@@ -992,16 +1055,6 @@ export function SetupUnificado({
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {paso === lastPaso && (
-            <button
-              onClick={() => router.push(successPath)}
-              style={{ padding: '9px 18px', borderRadius: 10, border: 'none', background: 'transparent', color: 'var(--color-muted)', fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'color 150ms' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-body)'  }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-muted)' }}
-            >
-              Omitir por ahora
-            </button>
-          )}
           <button
             onClick={avanzar}
             disabled={!puedeAvanzar || guardando}
@@ -1018,7 +1071,7 @@ export function SetupUnificado({
             onMouseEnter={e => { if (puedeAvanzar && !guardando) e.currentTarget.style.background = '#1D4ED8' }}
             onMouseLeave={e => { if (puedeAvanzar && !guardando) e.currentTarget.style.background = '#2563EB' }}
           >
-            {guardando ? 'Guardando…' : paso === lastPaso ? 'Finalizar' : 'Continuar'}
+            {guardando ? 'Creando tu cuenta…' : paso === lastPaso ? 'Finalizar' : 'Continuar'}
             {!guardando && (paso < lastPaso
               ? <ChevronRight size={16} strokeWidth={2.5} />
               : <Check        size={16} strokeWidth={2.5} />
