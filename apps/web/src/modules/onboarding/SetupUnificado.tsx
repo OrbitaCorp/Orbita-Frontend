@@ -14,6 +14,8 @@ import { OrbiChat } from '@/components/OrbiChat'
 import { MapPicker } from '@/components/MapPicker'
 import { checkSubdomain } from '@/lib/api'
 import { useOnboardingStore } from './useOnboardingStore'
+import { LegalModal } from './LegalModal'
+import type { LegalKey } from '@/modules/landing/components/ui/LegalModal'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -596,6 +598,7 @@ export type Cuenta = { ownerName: string; email: string; password: string; terms
 // una vez cuando se envía este paso (ver PENDIENTES.md).
 function StepCuenta({ cuenta, setCuenta }: { cuenta: Cuenta; setCuenta: Dispatch<SetStateAction<Cuenta>> }) {
   const [showPw, setShowPw] = useState(false)
+  const [legalAbierto, setLegalAbierto] = useState<LegalKey | null>(null)
   const set = (k: 'ownerName' | 'email') => (v: string) => setCuenta(prev => ({ ...prev, [k]: v }))
 
   return (
@@ -641,12 +644,24 @@ function StepCuenta({ cuenta, setCuenta }: { cuenta: Cuenta; setCuenta: Dispatch
           />
           <span>
             Acepto los{' '}
-            <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>Términos y condiciones</span>
+            <button
+              type="button" onClick={e => { e.preventDefault(); setLegalAbierto('terminos') }}
+              style={{ color: 'var(--color-primary)', fontWeight: 500, background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Términos y condiciones
+            </button>
             {' '}y la{' '}
-            <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>política de privacidad</span>
+            <button
+              type="button" onClick={e => { e.preventDefault(); setLegalAbierto('privacidad') }}
+              style={{ color: 'var(--color-primary)', fontWeight: 500, background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              política de privacidad
+            </button>
           </span>
         </label>
       </div>
+
+      <LegalModal contentKey={legalAbierto} onClose={() => setLegalAbierto(null)} />
     </div>
   )
 }

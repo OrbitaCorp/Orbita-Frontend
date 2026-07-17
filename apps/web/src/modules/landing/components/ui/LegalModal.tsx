@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '@/modules/landing/context/ThemeContext';
 
-type LegalKey = 'terminos' | 'privacidad' | 'cookies';
+export type LegalKey = 'terminos' | 'privacidad' | 'cookies';
 
-const LEGAL_CONTENT: Record<LegalKey, { title: string; date: string; sections: { subtitle: string; text: string }[] }> = {
+export const LEGAL_CONTENT: Record<LegalKey, { title: string; date: string; sections: { subtitle: string; text: string }[] }> = {
   terminos: {
     title: 'Términos de uso',
     date: 'Última actualización: 13 de Mayo, 2026',
