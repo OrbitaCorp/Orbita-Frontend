@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent, FileText, Printer, ArrowRight } from 'lucide-react'
-import { publishBusiness, clearOnboardingSession } from '@/lib/api'
+import { completeOnboarding, publishBusiness, ApiError } from '@/lib/api'
+import { useOnboardingStore } from '@/modules/onboarding/useOnboardingStore'
 
 const FEATURES = [
   { texto: 'Panel de administración completo'      },
@@ -487,19 +488,41 @@ function ExitoScreen({ next, router }: { next: string; router: ReturnType<typeof
 export default function PlanPage() {
   const router = useRouter()
   const next   = (router.query.next as string) ?? '/admin'
+  const wizard      = useOnboardingStore(s => s.wizard)
+  const resetWizard = useOnboardingStore(s => s.resetWizard)
   const [estado, setEstado] = useState<'plan' | 'procesando' | 'exito'>('plan')
   const [errorPago, setErrorPago] = useState('')
+
+  // Si no vino de completar el wizard (no hay rubro/credenciales cargadas),
+  // no tiene nada que pagar/guardar — volver al principio.
+  useEffect(() => {
+    if (!wizard.rubro || !wizard.ownerEmail) router.push('/onboarding/rubro')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function pagar() {
     setErrorPago('')
     setEstado('procesando')
-    // En producción: redirigir a MP y recibir callback real. Por ahora el cobro
-    // en sí sigue simulado (setTimeout), pero la activación del negocio
-    // (POST /business/publish) es real — RBT-293: si "paga", el negocio se
-    // activa de verdad en la base.
-    Promise.all([publishBusiness(), new Promise(resolve => setTimeout(resolve, 2800))])
-      .then(() => { clearOnboardingSession(); setEstado('exito') })
-      .catch(() => { setErrorPago('No se pudo activar tu negocio. Intentá de nuevo.'); setEstado('plan') })
+    // Acá es donde se retenía todo: nada de lo cargado en el wizard tocó la
+    // base hasta este momento. Recién si el pago se aprueba se crea la
+    // cuenta + el negocio con TODO lo acumulado, y se activa de una — si el
+    // usuario nunca llega a pagar, no queda ningún registro (ver PENDIENTES.md).
+    // El cobro en sí sigue simulado (setTimeout) hasta la integración real de MP.
+    const account = {
+      ownerName: wizard.ownerName,
+      email: wizard.ownerEmail,
+      password: wizard.ownerPassword,
+      businessName: wizard.nombre,
+    }
+    Promise.all([
+      completeOnboarding(account, wizard).then(() => publishBusiness()),
+      new Promise(resolve => setTimeout(resolve, 2800)),
+    ])
+      .then(() => { resetWizard(); setEstado('exito') })
+      .catch(err => {
+        setErrorPago(err instanceof ApiError ? err.message : 'No se pudo procesar tu pago. Intentá de nuevo.')
+        setEstado('plan')
+      })
   }
 
   if (estado === 'procesando') return <ProcesandoScreen />

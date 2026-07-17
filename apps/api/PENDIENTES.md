@@ -595,6 +595,34 @@ dos casos:
   endpoints autenticados existentes para esto — se agregó `GET /onboarding/check-subdomain?
   subdomain=x` (`@Public()`, sin auth) que valida formato y unicidad contra la base real.
 
+### [2026-07-18] RBT-293 corrección #2 — la cuenta se crea recién cuando el pago se aprueba, no en el paso "Tu cuenta"
+**Estado:** RESUELTO (2026-07-18) — corrige la entrega anterior del mismo día
+El usuario aclaró el criterio real de la Fase 1: **retener todos los datos del onboarding
+(incluidas las credenciales del dueño) hasta que el pago con MercadoPago se apruebe — recién
+ahí se escribe a la base**. La entrega anterior creaba la cuenta un paso antes de tiempo (en
+"Tu cuenta", justo antes de la pantalla de pago) — con eso, un usuario que abandona en la
+pantalla de pago ya había creado una cuenta real en Supabase Auth + un `Business` en la base,
+exactamente el escenario que se quería evitar.
+
+Cambios:
+- El paso "Tu cuenta" (`StepCuenta` en `SetupUnificado.tsx`) ya NO llama al backend — solo
+  guarda `ownerName/ownerEmail/ownerPassword` en el wizard store y navega a `plan.tsx`.
+- `pages/onboarding/plan.tsx` es ahora el único lugar que llama `completeOnboarding()` (crea
+  la cuenta + guarda todo el wizard) seguido de `publishBusiness()` — y solo lo hace dentro del
+  handler de "pagar", en paralelo con la demora cosmética del mock de MercadoPago. Si el pago
+  nunca se confirma, no se llamó nada de esto — cero filas en la base.
+- **Contraseña excluida de `localStorage`**: como el wizard entero (incluida la contraseña)
+  ahora vive en el cliente por más tiempo — desde que se completa "Tu cuenta" hasta que se
+  aprueba el pago, potencialmente varios minutos — se agregó `partialize` al store de zustand
+  (`useOnboardingStore.ts`) para que la contraseña NUNCA se escriba a `localStorage` (queda
+  solo en memoria de React). Si el usuario recarga la página entre "Tu cuenta" y "pagar", pierde
+  la contraseña cargada y tiene que reescribirla — trade-off aceptado a favor de no dejar una
+  contraseña en texto plano en el navegador.
+- Con este cambio, la entrada de arriba ("Limpieza de negocios sin pagar — DIFERIDO") queda
+  resuelta de raíz por diseño: no hace falta ningún job de limpieza porque nunca se crea el
+  registro si no hay pago aprobado. Se puede marcar esa entrada como no aplicable una vez que
+  el pago real de MercadoPago esté integrado (hoy sigue mockeado con `setTimeout`).
+
 ### [2026-07-17] `RegisterBusinessDto` no acepta el payload completo del wizard — decisión de no extenderlo
 **Estado:** DIFERIDO — revisar si conviene atomizar en el futuro
 `completeOnboarding()` (frontend) hace 1 POST + hasta 3 PUT en paralelo, todos contra endpoints

@@ -4,9 +4,11 @@ import type { WizardData } from '@/lib/api'
 
 // Estado acumulado durante todo el onboarding, ANTES de que exista una
 // cuenta — el flujo es: elegir rubro → completar el wizard paso a paso →
-// recién al final se crea la cuenta y se guarda todo junto (ver
-// PENDIENTES.md). `persist` en localStorage para poder retomar si se
-// recarga la página a mitad de camino.
+// pantalla de pago (MercadoPago) → recién cuando el pago se aprueba se crea
+// la cuenta y se guarda todo junto (ver PENDIENTES.md). `persist` en
+// localStorage para poder retomar si se recarga la página a mitad de
+// camino — EXCEPTO la contraseña, que se excluye de `partialize` para no
+// dejarla en texto plano en localStorage más tiempo del necesario.
 
 const initialWizard: WizardData = {
   rubro: '',
@@ -24,6 +26,9 @@ const initialWizard: WizardData = {
   pagos: [],
   transferAlias: '',
   teamSize: '',
+  ownerName: '',
+  ownerEmail: '',
+  ownerPassword: '',
 }
 
 interface OnboardingState {
@@ -39,6 +44,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       setWizard: (patch) => set((state) => ({ wizard: { ...state.wizard, ...patch } })),
       resetWizard: () => set({ wizard: initialWizard }),
     }),
-    { name: 'orbita_onboarding_wizard' },
+    {
+      name: 'orbita_onboarding_wizard',
+      partialize: (state) => ({
+        wizard: { ...state.wizard, ownerPassword: '' },
+      }),
+    },
   ),
 )

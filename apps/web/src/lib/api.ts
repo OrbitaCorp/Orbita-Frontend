@@ -116,13 +116,24 @@ export type WizardData = {
   pagos: string[]
   transferAlias: string
   teamSize: string
+  // Credenciales del dueño (paso "Tu cuenta") — NO se crea la cuenta acá.
+  // Se retienen client-side hasta que el pago se aprueba en plan.tsx. La
+  // contraseña se excluye deliberadamente de la persistencia en localStorage
+  // (ver useOnboardingStore.ts, partialize) para no dejarla en texto plano
+  // en el navegador más tiempo del necesario.
+  ownerName: string
+  ownerEmail: string
+  ownerPassword: string
 }
 
-// Crea la cuenta + el negocio, y de inmediato guarda todo lo acumulado
-// durante el wizard (subrubros, negocio, ubicación, pagos, equipo) usando el
-// token recién emitido. Si algún paso de guardado falla después de crear la
-// cuenta, no se revierte — el usuario ya tiene sesión y puede reintentar
-// desde el panel (el negocio real ya existe, ver `GET /business`).
+// Crea la cuenta + el negocio recién cuando el pago se aprobó, y de
+// inmediato guarda todo lo acumulado durante el wizard (subrubros, negocio,
+// ubicación, pagos, equipo) usando el token recién emitido. Si el usuario
+// nunca paga, nada de esto se llama — no queda ningún registro en la base
+// (ver PENDIENTES.md: "retener los datos hasta que el usuario pague").
+// Si algún paso de guardado falla después de crear la cuenta, no se
+// revierte — el usuario ya tiene sesión y puede reintentar desde el panel
+// (el negocio real ya existe, ver `GET /business`).
 export async function completeOnboarding(
   account: RegisterBusinessInput,
   wizard: WizardData,

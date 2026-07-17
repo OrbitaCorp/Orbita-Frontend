@@ -12,7 +12,7 @@ import {
 import { Skeleton } from '@/design-system/components/Skeleton'
 import { OrbiChat } from '@/components/OrbiChat'
 import { MapPicker } from '@/components/MapPicker'
-import { checkSubdomain, completeOnboarding, ApiError } from '@/lib/api'
+import { checkSubdomain } from '@/lib/api'
 import { useOnboardingStore } from './useOnboardingStore'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -754,7 +754,6 @@ export function SetupUnificado({
   const router = useRouter()
   const wizard      = useOnboardingStore(s => s.wizard)
   const setWizard   = useOnboardingStore(s => s.setWizard)
-  const resetWizard = useOnboardingStore(s => s.resetWizard)
 
   const PASOS_INTERNOS = [
     primerPasoLabel,
@@ -779,8 +778,6 @@ export function SetupUnificado({
   const [tamano,      setTamano]      = useState('')
   const [cuenta,      setCuenta]      = useState<Cuenta>({ ownerName: '', email: '', password: '', terms: true })
   const [orbiAbierto, setOrbiAbierto] = useState(false)
-  const [guardando,   setGuardando]   = useState(false)
-  const [errorGuardado, setErrorGuardado] = useState('')
 
   // Si no eligieron rubro todavía (entraron directo a esta URL), volver al
   // selector. Si no, rehidrata el wizard con lo que ya se cargó antes —
@@ -801,6 +798,9 @@ export function SetupUnificado({
     setPagos(wizard.pagos)
     setTransferAlias(wizard.transferAlias)
     setTamano(wizard.teamSize)
+    // La contraseña no se persiste (ver useOnboardingStore.ts) — si el
+    // usuario recarga la página en este paso, la tiene que volver a escribir.
+    setCuenta({ ownerName: wizard.ownerName, email: wizard.ownerEmail, password: '', terms: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -825,9 +825,7 @@ export function SetupUnificado({
     ) :
     true
 
-  async function avanzar() {
-    setErrorGuardado('')
-
+  function avanzar() {
     if (paso === 0) setWizard({ subrubros: seleccion })
     else if (paso === 1) setWizard({
       nombre: negocio.nombre, descripcion: negocio.descripcion, email: negocio.email,
@@ -842,37 +840,12 @@ export function SetupUnificado({
 
     if (paso < lastPaso) { setCargandoPaso(true); setPaso(p => p + 1); return }
 
-    // Último paso: recién acá se crea la cuenta y se guarda TODO lo
-    // acumulado durante el wizard, en un solo golpe.
-    setGuardando(true)
-    try {
-      await completeOnboarding(
-        { ownerName: cuenta.ownerName, email: cuenta.email, password: cuenta.password, businessName: negocio.nombre },
-        {
-          rubro: wizard.rubro,
-          subrubros: seleccion,
-          nombre: negocio.nombre,
-          descripcion: negocio.descripcion,
-          email: negocio.email,
-          telefono: negocio.telefono,
-          subdominio: negocio.subdominio,
-          modoVenta: negocio.modoVenta,
-          direccion: negocio.direccion,
-          latLng: negocio.latLng,
-          operatesPhysical: negocio.tipoLocal.includes('fisico'),
-          operatesOnline: negocio.tipoLocal.includes('online'),
-          pagos,
-          transferAlias,
-          teamSize: tamano,
-        },
-      )
-      resetWizard()
-      router.push(successPath)
-    } catch (err) {
-      setErrorGuardado(err instanceof ApiError ? err.message : 'No se pudo crear tu cuenta. Intentá de nuevo.')
-    } finally {
-      setGuardando(false)
-    }
+    // Último paso del wizard: NO se crea la cuenta acá. Solo se guardan las
+    // credenciales en el store (la contraseña queda solo en memoria, no en
+    // localStorage) y se pasa a la pantalla de pago — la cuenta y el negocio
+    // recién se crean si el pago se aprueba, ver plan.tsx.
+    setWizard({ ownerName: cuenta.ownerName, ownerEmail: cuenta.email, ownerPassword: cuenta.password })
+    router.push(successPath)
   }
 
   function retroceder() {
@@ -1034,16 +1007,6 @@ export function SetupUnificado({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         boxShadow: '0 -4px 24px rgba(0,0,0,0.07)', zIndex: 1000,
       }}>
-        {errorGuardado && (
-          <div style={{
-            position: 'absolute', bottom: '100%', left: 0, right: 0,
-            padding: '8px 32px', textAlign: 'center',
-            background: 'rgba(239,68,68,0.08)', borderTop: '1px solid rgba(239,68,68,0.25)',
-            fontSize: 12.5, color: 'var(--color-error)',
-          }}>
-            {errorGuardado}
-          </div>
-        )}
         <button
           onClick={retroceder}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: 'var(--color-body)', fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms' }}
@@ -1057,25 +1020,25 @@ export function SetupUnificado({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             onClick={avanzar}
-            disabled={!puedeAvanzar || guardando}
+            disabled={!puedeAvanzar}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 22px', borderRadius: 10, border: 'none',
-              background:  (puedeAvanzar && !guardando) ? '#2563EB' : 'var(--color-surface-alt)',
-              color:       (puedeAvanzar && !guardando) ? 'white'   : 'var(--color-subtle)',
+              background:  puedeAvanzar ? '#2563EB' : 'var(--color-surface-alt)',
+              color:       puedeAvanzar ? 'white'   : 'var(--color-subtle)',
               fontSize: 14, fontWeight: 700,
-              cursor:    (puedeAvanzar && !guardando) ? 'pointer' : 'default',
-              boxShadow: (puedeAvanzar && !guardando) ? '0 4px 16px rgba(37,99,235,0.35)' : 'none',
+              cursor:    puedeAvanzar ? 'pointer' : 'default',
+              boxShadow: puedeAvanzar ? '0 4px 16px rgba(37,99,235,0.35)' : 'none',
               transition: 'all 150ms',
             }}
-            onMouseEnter={e => { if (puedeAvanzar && !guardando) e.currentTarget.style.background = '#1D4ED8' }}
-            onMouseLeave={e => { if (puedeAvanzar && !guardando) e.currentTarget.style.background = '#2563EB' }}
+            onMouseEnter={e => { if (puedeAvanzar) e.currentTarget.style.background = '#1D4ED8' }}
+            onMouseLeave={e => { if (puedeAvanzar) e.currentTarget.style.background = '#2563EB' }}
           >
-            {guardando ? 'Creando tu cuenta…' : paso === lastPaso ? 'Finalizar' : 'Continuar'}
-            {!guardando && (paso < lastPaso
+            {paso === lastPaso ? 'Ir al pago' : 'Continuar'}
+            {paso < lastPaso
               ? <ChevronRight size={16} strokeWidth={2.5} />
               : <Check        size={16} strokeWidth={2.5} />
-            )}
+            }
           </button>
         </div>
       </div>
