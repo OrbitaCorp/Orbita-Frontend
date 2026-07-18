@@ -11,28 +11,44 @@ de cada tarea, no acá.
 
 ## Infraestructura / Entorno de desarrollo
 
-### [2026-07-18] Error intermitente una vez: "new row violates row-level security policy" al subir a Storage
-**Estado:** ABIERTO — no reproducido de nuevo, causa raíz no confirmada
-Al probar por primera vez `POST /business/storefront-config/logo` contra el servidor real, el
-primer intento devolvió `400 "No se pudo subir el logo: new row violates row-level security
-policy"`. Se investigó a fondo:
-- Un script aislado (mismo `SUPABASE_SERVICE_ROLE_KEY`, cliente nuevo) subió al mismo bucket sin
-  problema — el service role key en sí bypassea RLS correctamente.
-- Se sospechó que `AuthGuard` "contamina" el `adminClient` compartido (llama
-  `adminClient.auth.getUser(token)` con el token del usuario antes de cada request) y que eso
-  degradaba las llamadas de Storage subsiguientes de "service role" a "usuario autenticado"
-  (sujeto a RLS). Se reprodujo el mismo patrón (`getUser(token)` seguido de `.storage.upload()`
-  sobre el mismo cliente) en un script aislado — **no falló**, lo cual descarta esa hipótesis.
-- Se reintentó contra el servidor real (`nest start --watch`, recién reiniciado) y funcionó
-  correctamente, de forma estable en 3 intentos seguidos.
-**Hipótesis más probable, sin confirmar**: el primer intento coincidió con un rebuild en curso
-de `nest start --watch` (se habían tocado `businesses.controller.ts`/`businesses.service.ts`
-segundos antes) — el proceso pudo haber servido código a medio recompilar. **Si vuelve a
-aparecer** este error en cualquier endpoint que suba a Supabase Storage (no solo el logo),
-revisar: (a) si coincide con un rebuild en caliente, (b) si hay requests concurrentes
-reusando el mismo `adminClient` de forma insegura (es un singleton compartido — ver
-`supabase.service.ts`), (c) las policies de RLS reales de `storage.objects` en el dashboard de
-Supabase para el bucket afectado.
+### [2026-07-18] Error intermitente: "new row violates row-level security policy" al subir a Storage — sin causa raíz confirmada, autoresuelto
+**Estado:** ABIERTO — no reproducible actualmente, causa raíz sin confirmar. Investigación
+extensa documentada acá para no repetirla desde cero si reaparece.
+`POST /business/storefront-config/logo` falló de forma reproducible con `400 "new row violates
+row-level security policy"` durante ~40 minutos de pruebas (tanto en la sesión de desarrollo
+como en el navegador real del usuario), y después empezó a funcionar de forma estable (6/6
+intentos seguidos) sin ningún cambio de código de por medio. Hipótesis descartadas, una por una,
+con evidencia:
+- **¿Service role key incorrecta/mal resuelta por NestJS?** No — se comparó el fingerprint
+  (largo, prefijo, sufijo) de la key resuelta por `ConfigService` dentro de la app corriendo
+  contra la del `.env` leído directo: idénticas.
+- **¿`AuthGuard` "contamina" el `adminClient` compartido llamando `auth.getUser(token)` antes de
+  cada request, degradando llamadas de Storage subsiguientes a "usuario autenticado" en vez de
+  "service role"?** No — se reprodujo el mismo patrón (`getUser(token)` seguido de
+  `.storage.upload()` sobre el mismo cliente) en un script aislado y no falló.
+- **¿Cliente "frío" en la primera llamada real a Storage tras un restart?** No — se probó
+  "precalentar" el cliente en `onModuleInit()` con un upload+delete real (no alcanza con
+  `listBuckets()`, que no toca el mismo path que un insert en `storage.objects`) y el error
+  siguió apareciendo en la primera request real de todos modos. Se revirtió el intento (no
+  demostró ningún efecto).
+- **¿Diferencia en las opciones del cliente (`auth: { autoRefreshToken: false, persistSession:
+  false }`) entre el `SupabaseService` real y los scripts de prueba?** No — se replicaron esas
+  opciones exactas en un script aislado contra el mismo bucket y subió sin problema.
+- **¿Iba y venía con cada restart del servidor?** Tampoco de forma consistente — hubo restarts
+  limpios donde el primer intento fallaba, y llamadas repetidas sobre el mismo proceso (mismo
+  negocio, mismo token) que siguieron fallando 2 veces seguidas antes de, más tarde, empezar a
+  funcionar sin ningún cambio identificable.
+
+**Hipótesis más plausible, sin poder confirmarla desde acá**: algo transitorio del lado de
+Supabase específico al bucket `business-logos` (creado ese mismo día, a diferencia de
+`product-images` que nunca mostró este problema y tiene varios días de antigüedad) — posible
+demora de propagación de metadata/políticas para un bucket nuevo, o flakiness puntual de su
+infraestructura de Storage. **Si reaparece**: (a) confirmar si coincide con un bucket recién
+creado, (b) revisar el dashboard de Supabase (Storage → Logs, o el status page de Supabase) por
+si hay incidentes reportados, (c) como mitigación pragmática (no implementada — se decidió no
+agregar retries especulativos para un bug que no se pudo reproducir de forma confiable),
+envolver el upload en un retry con backoff corto (1-2 reintentos) ya que empíricamente los
+reintentos eventualmente funcionaron.
 
 ### [2026-07-13] Bug de infraestructura: `@supabase/supabase-js` no funciona en Node 20 sin polyfill de WebSocket
 **Estado:** RESUELTO (2026-07-13)
