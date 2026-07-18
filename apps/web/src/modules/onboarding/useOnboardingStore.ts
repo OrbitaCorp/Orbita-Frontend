@@ -7,8 +7,10 @@ import type { WizardData } from '@/lib/api'
 // pantalla de pago (MercadoPago) → recién cuando el pago se aprueba se crea
 // la cuenta y se guarda todo junto (ver PENDIENTES.md). `persist` en
 // localStorage para poder retomar si se recarga la página a mitad de
-// camino — EXCEPTO la contraseña, que se excluye de `partialize` para no
-// dejarla en texto plano en localStorage más tiempo del necesario.
+// camino — EXCEPTO la contraseña y el preview del logo, que se excluyen de
+// `partialize`: la contraseña por seguridad (no dejarla en texto plano), el
+// logo porque un data-URI en base64 puede pesar varios MB y no tiene
+// sentido inflar localStorage con eso en cada tecla que escribe el usuario.
 
 const initialWizard: WizardData = {
   rubro: '',
@@ -29,6 +31,7 @@ const initialWizard: WizardData = {
   ownerName: '',
   ownerEmail: '',
   ownerPassword: '',
+  logoDataUrl: '',
 }
 
 interface OnboardingState {
@@ -47,7 +50,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     {
       name: 'orbita_onboarding_wizard',
       partialize: (state) => ({
-        wizard: { ...state.wizard, ownerPassword: '' },
+        wizard: { ...state.wizard, ownerPassword: '', logoDataUrl: '' },
       }),
     },
   ),

@@ -1,9 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { UpdateBusinessConfigDto } from './dto/update-business-config.dto';
 import { UpdateStorefrontConfigDto } from './dto/update-storefront-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
+
+const BUSINESS_LOGOS_BUCKET = 'business-logos';
 
 // Set cerrado de eventos y canales válidos para notification_config.matrix.
 // No están enumerados como tabla en MODELO_DATOS_DEFINITIVO.md (es un JSON libre),
@@ -23,7 +27,10 @@ const NOTIFICATION_CHANNELS = ['panel', 'email', 'whatsapp'] as const;
 
 @Injectable()
 export class BusinessesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabase: SupabaseService,
+  ) {}
 
   // ── Negocio ──────────────────────────────────────────────────────────────
 
@@ -123,6 +130,28 @@ export class BusinessesService {
   }
 
   // ── Apariencia del storefront ────────────────────────────────────────────
+
+  async uploadLogo(businessId: string, file: { buffer: Buffer; mimetype: string; originalname: string }) {
+    const ext = file.originalname.split('.').pop() || 'png';
+    const path = `${businessId}/${randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await this.supabase.adminClient.storage
+      .from(BUSINESS_LOGOS_BUCKET)
+      .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
+    if (uploadError) {
+      throw new BadRequestException(`No se pudo subir el logo: ${uploadError.message}`);
+    }
+
+    const { data: publicUrl } = this.supabase.adminClient.storage
+      .from(BUSINESS_LOGOS_BUCKET)
+      .getPublicUrl(path);
+
+    const config = await this.prisma.storefrontConfig.update({
+      where: { businessId },
+      data: { logoUrl: publicUrl.publicUrl },
+    });
+    return { logoUrl: config.logoUrl };
+  }
 
   async getAppearance(businessId: string) {
     const config = await this.prisma.storefrontConfig.findUnique({ where: { businessId } });

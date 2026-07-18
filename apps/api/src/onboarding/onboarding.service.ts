@@ -148,6 +148,21 @@ export class OnboardingService {
     return { available: !existing };
   }
 
+  // Idem para el email del dueño — se valida mientras se escribe, en el paso
+  // "Tu cuenta", antes de llegar al pago. `auth.users` no está modelada en
+  // Prisma (la administra Supabase Auth), así que se consulta con SQL crudo
+  // sobre la misma conexión de Postgres que ya usa la app.
+  async checkEmail(email: string) {
+    const normalized = (email ?? '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      return { available: false, reason: 'Formato de email inválido' };
+    }
+    const rows = await this.prisma.$queryRaw<Array<{ exists: boolean }>>`
+      SELECT EXISTS(SELECT 1 FROM auth.users WHERE lower(email) = ${normalized}) as exists
+    `;
+    return { available: !rows[0]?.exists };
+  }
+
   // ── RBT-291 ──────────────────────────────────────────────────────────────
 
   async registerBusiness(dto: RegisterBusinessDto) {

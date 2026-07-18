@@ -329,6 +329,48 @@ curl -s -X POST "$BASE/business/publish" -H "Authorization: Bearer $TOKEN" | jq
 
 ---
 
+## 5. Logo del negocio y validación de email en tiempo real (2026-07-18)
+
+> Nota de flujo: hoy la cuenta se crea recién cuando se "paga" (ver sección de arriba y
+> PENDIENTES.md), así que para probar la subida de logo primero hay que tener un `$TOKEN` real
+> (repetir el registro de la sección 2, o simular el pago igual que en 4.5).
+
+### 5.1 Validar email en tiempo real (sin cuenta) — `GET /onboarding/check-email`
+
+```bash
+curl -s "$BASE/onboarding/check-email?email=nuevo@test.com" | jq
+# Esperado: { "available": true }
+
+curl -s "$BASE/onboarding/check-email?email=no-es-email" | jq
+# Esperado: { "available": false, "reason": "Formato de email inválido" }
+
+# Con un email ya registrado (repetir el mismo del registro):
+curl -s "$BASE/onboarding/check-email?email=<email-ya-usado>" | jq
+# Esperado: { "available": false }
+```
+
+Lo usa `StepCuenta` del wizard mientras se escribe el email, antes de llegar al pago — mismo
+patrón visual (✓/✗) que el chequeo de subdominio de la sección 1.1.
+
+### 5.2 Subir el logo — `POST /business/storefront-config/logo`
+
+```bash
+curl -s -X POST "$BASE/business/storefront-config/logo" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/ruta/a/un/logo.png;type=image/png" | jq
+# Esperado (200): { "logoUrl": "https://.../storage/v1/object/public/business-logos/..." }
+```
+
+**Validar que se guardó**:
+```bash
+curl -s "$BASE/business/storefront-config" -H "Authorization: Bearer $TOKEN" | jq '.logoUrl'
+```
+
+**Límites del bucket** (`business-logos`, igual que `product-images`): 5MB máx.,
+`image/png|jpeg|webp|gif`. Un archivo más grande o de otro tipo debe devolver `400`.
+
+---
+
 ## Resumen — checklist de prueba
 
 | # | Test | Método | Qué verificar |
@@ -346,6 +388,8 @@ curl -s -X POST "$BASE/business/publish" -H "Authorization: Bearer $TOKEN" | jq
 | 4.3 | Métodos de pago + validación de alias (RBT-293) | `PUT /business/config` | acceptsCard nuevo; 400 si falta transferAlias con transferencia activa |
 | 4.4 | Retomar wizard (RBT-293) | `GET /business` + `/business/config` + `/branches/:id` | Todo lo guardado se puede releer para rehidratar |
 | 4.5 | Activación real al pagar (RBT-293) | `POST /business/publish` | Negocio pasa a `isActive: true` de verdad |
+| 5.1 | Email en tiempo real (2026-07-18) | `GET /onboarding/check-email` | Formato inválido, disponible, ya registrado — sin auth |
+| 5.2 | Subida de logo (2026-07-18) | `POST /business/storefront-config/logo` | 200 con URL pública; se refleja en `storefrontConfig.logoUrl` |
 
 Todos los pasos de esta guía fueron verificados en esta sesión contra el servidor real
 (`pnpm run dev`) y la base de Supabase real. Los negocios y usuarios de prueba creados durante

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent, FileText, Printer, ArrowRight } from 'lucide-react'
-import { completeOnboarding, publishBusiness, ApiError } from '@/lib/api'
+import { completeOnboarding, publishBusiness, uploadLogo, dataUrlToBlob, ApiError } from '@/lib/api'
 import { useOnboardingStore } from '@/modules/onboarding/useOnboardingStore'
 
 const FEATURES = [
@@ -515,7 +515,9 @@ export default function PlanPage() {
       businessName: wizard.nombre,
     }
     Promise.all([
-      completeOnboarding(account, wizard).then(() => publishBusiness()),
+      completeOnboarding(account, wizard)
+        .then(() => wizard.logoDataUrl ? uploadLogo(dataUrlToBlob(wizard.logoDataUrl), 'logo.png') : null)
+        .then(() => publishBusiness()),
       new Promise(resolve => setTimeout(resolve, 2800)),
     ])
       .then(() => { resetWizard(); setEstado('exito') })

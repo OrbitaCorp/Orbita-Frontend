@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentBusiness } from '../common/decorators/current-business.decorator';
 import { AuthContext } from '../common/types/auth-context.type';
@@ -54,6 +55,17 @@ export class BusinessesController {
   ) {
     const member = assertMemberContext(ctx);
     return this.businessesService.updateAppearance(member.businessId, dto);
+  }
+
+  // Sube el archivo a Supabase Storage y guarda la URL en storefrontConfig.logoUrl
+  // — mismo patrón que POST /products/:id/images (ver products.service.ts).
+  @Post('storefront-config/logo')
+  @Roles('owner', 'admin')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadLogo(@CurrentBusiness() ctx: AuthContext, @UploadedFile() file?: Express.Multer.File) {
+    const member = assertMemberContext(ctx);
+    if (!file) throw new BadRequestException('Falta el archivo "file"');
+    return this.businessesService.uploadLogo(member.businessId, file);
   }
 
   @Get('notification-config')

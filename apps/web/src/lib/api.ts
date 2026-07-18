@@ -76,6 +76,42 @@ export async function checkSubdomain(subdomain: string) {
   )
 }
 
+export async function checkEmail(email: string) {
+  return request<{ available: boolean; reason?: string }>(
+    `/onboarding/check-email?email=${encodeURIComponent(email)}`,
+  )
+}
+
+// Multipart — no puede pasar por request() porque el navegador necesita
+// setear el Content-Type con el boundary correcto, no application/json.
+export async function uploadLogo(file: Blob, filename: string) {
+  const session = getOnboardingSession()
+  const form = new FormData()
+  form.append('file', file, filename)
+  const res = await fetch(`${API_BASE}/business/storefront-config/logo`, {
+    method: 'POST',
+    headers: session?.token ? { Authorization: `Bearer ${session.token}` } : {},
+    body: form,
+  })
+  const body = await res.json().catch(() => null)
+  if (!res.ok) {
+    const message = body?.message ?? body?.error ?? `Error ${res.status}`
+    throw new ApiError(res.status, Array.isArray(message) ? message.join(', ') : message)
+  }
+  return body as { logoUrl: string }
+}
+
+// El logo se guarda en el wizard como data-URI (preview local) — hay que
+// convertirlo a Blob recién al subirlo, cuando el pago se aprueba.
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',')
+  const mime = header.match(/data:(.*);base64/)?.[1] ?? 'image/png'
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new Blob([bytes], { type: mime })
+}
+
 export type RegisterBusinessInput = {
   ownerName: string
   email: string
@@ -124,6 +160,10 @@ export type WizardData = {
   ownerName: string
   ownerEmail: string
   ownerPassword: string
+  // Preview local del logo (data-URI) — igual que la contraseña, se excluye
+  // de la persistencia en localStorage (puede pesar varios MB en base64).
+  // Se sube recién si el pago se aprueba, ver plan.tsx.
+  logoDataUrl: string
 }
 
 // Crea la cuenta + el negocio recién cuando el pago se aprobó, y de

@@ -25,6 +25,12 @@ export class OnboardingController {
     return this.onboardingService.checkSubdomain(subdomain);
   }
 
+  @Get('check-email')
+  @Public()
+  checkEmail(@Query('email') email: string) {
+    return this.onboardingService.checkEmail(email);
+  }
+
   @Post('register-business')
   @Public()
   register(@Body() dto: RegisterBusinessDto) {

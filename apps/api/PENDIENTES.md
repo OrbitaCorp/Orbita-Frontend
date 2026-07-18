@@ -11,6 +11,29 @@ de cada tarea, no acá.
 
 ## Infraestructura / Entorno de desarrollo
 
+### [2026-07-18] Error intermitente una vez: "new row violates row-level security policy" al subir a Storage
+**Estado:** ABIERTO — no reproducido de nuevo, causa raíz no confirmada
+Al probar por primera vez `POST /business/storefront-config/logo` contra el servidor real, el
+primer intento devolvió `400 "No se pudo subir el logo: new row violates row-level security
+policy"`. Se investigó a fondo:
+- Un script aislado (mismo `SUPABASE_SERVICE_ROLE_KEY`, cliente nuevo) subió al mismo bucket sin
+  problema — el service role key en sí bypassea RLS correctamente.
+- Se sospechó que `AuthGuard` "contamina" el `adminClient` compartido (llama
+  `adminClient.auth.getUser(token)` con el token del usuario antes de cada request) y que eso
+  degradaba las llamadas de Storage subsiguientes de "service role" a "usuario autenticado"
+  (sujeto a RLS). Se reprodujo el mismo patrón (`getUser(token)` seguido de `.storage.upload()`
+  sobre el mismo cliente) en un script aislado — **no falló**, lo cual descarta esa hipótesis.
+- Se reintentó contra el servidor real (`nest start --watch`, recién reiniciado) y funcionó
+  correctamente, de forma estable en 3 intentos seguidos.
+**Hipótesis más probable, sin confirmar**: el primer intento coincidió con un rebuild en curso
+de `nest start --watch` (se habían tocado `businesses.controller.ts`/`businesses.service.ts`
+segundos antes) — el proceso pudo haber servido código a medio recompilar. **Si vuelve a
+aparecer** este error en cualquier endpoint que suba a Supabase Storage (no solo el logo),
+revisar: (a) si coincide con un rebuild en caliente, (b) si hay requests concurrentes
+reusando el mismo `adminClient` de forma insegura (es un singleton compartido — ver
+`supabase.service.ts`), (c) las policies de RLS reales de `storage.objects` en el dashboard de
+Supabase para el bucket afectado.
+
 ### [2026-07-13] Bug de infraestructura: `@supabase/supabase-js` no funciona en Node 20 sin polyfill de WebSocket
 **Estado:** RESUELTO (2026-07-13)
 Al correr la guía de prueba manual (fases 1 y 2) contra la base real de Supabase por primera
@@ -633,6 +656,50 @@ dos casos:
   (`SUBDOMINIOS_OCUPADOS`). Como ahora el wizard corre sin cuenta, no había forma de reusar los
   endpoints autenticados existentes para esto — se agregó `GET /onboarding/check-subdomain?
   subdomain=x` (`@Public()`, sin auth) que valida formato y unicidad contra la base real.
+
+### [2026-07-18] RBT-293 — logo del negocio y verificación de email en tiempo real
+**Estado:** RESUELTO (2026-07-18)
+Dos huecos que el usuario detectó probando el wizard:
+
+**1. El logo elegido en "Tu negocio" nunca se guardaba** — quedaba como preview local (base64)
+que se perdía en cualquier reload, y ni siquiera se mandaba al backend al pagar. Se resolvió
+igual que el resto de los datos del wizard: **se sube recién si el pago se aprueba**, no antes.
+- Nuevo bucket de Supabase Storage `business-logos` (público, 5MB máx.,
+  `image/png|jpeg|webp|gif` — mismos límites que `product-images`).
+- Nuevo endpoint `POST /business/storefront-config/logo` (multipart, `@Roles('owner','admin')`,
+  mismo patrón que `POST /products/:id/images`: sube el archivo, guarda la URL pública en
+  `storefrontConfig.logoUrl`). Se puso en `BusinessesController` (no en `OnboardingController`)
+  a propósito — es una operación reutilizable desde el panel de ajustes más adelante, no
+  específica de onboarding.
+- El wizard sigue guardando el logo como data-URI en el store de zustand mientras se completa
+  el onboarding, pero **excluido de `localStorage`** (`partialize`, igual que la contraseña) —
+  un data-URI en base64 puede pesar varios MB y no tiene sentido inflar localStorage con eso
+  en cada campo que cambia. `plan.tsx` lo convierte a `Blob` y lo sube recién dentro del
+  handler de "pagar", encadenado después de `completeOnboarding()` y antes de `publishBusiness()`.
+- Al probar el endpoint por primera vez apareció un error intermitente de RLS que no se pudo
+  reproducir de nuevo — ver entrada en "Infraestructura / Entorno de desarrollo" más arriba.
+
+**2. No había aviso de email duplicado hasta después de "pagar"** — el subdominio ya se
+validaba en vivo mientras se escribía (`GET /onboarding/check-subdomain`, RBT-293 original),
+pero el email del dueño (paso "Tu cuenta") solo se validaba al final, vía el `409` que tira
+`registerBusiness()` si el email ya tiene cuenta en Supabase Auth — el usuario se enteraba
+recién después de completar todo el flujo de pago.
+- Nuevo endpoint `GET /onboarding/check-email?email=x` (`@Public()`), mismo patrón visual que
+  el subdominio (chequeo mientras escribe, con debounce, ✓/✗ inline).
+- **Decisión técnica**: `auth.users` es de Supabase Auth, no está modelada en Prisma. Se
+  decidió consultarla con `$queryRaw` (`SELECT EXISTS(... FROM auth.users WHERE lower(email) =
+  ...)`) sobre la misma conexión de Postgres que ya usa la app, en vez de iterar
+  `admin.listUsers()` (la API de administración de Supabase Auth no expone un filtro por email
+  directo). Verificado que la conexión (`DATABASE_URL`) tiene permiso de lectura sobre el
+  schema `auth`.
+- **Nota de seguridad** (no bloqueante, dejar constancia): esto es enumeración de usuarios por
+  diseño — cualquiera puede consultar si un email ya tiene cuenta. Es el mismo patrón que ya
+  usan la gran mayoría de formularios de registro (incluido el propio `registerBusiness()`, que
+  ya revela lo mismo con el `409 "Ese email ya tiene una cuenta"`), así que no es una superficie
+  nueva de riesgo — solo se adelantó el momento en que se informa.
+- El check de email, igual que el de subdominio, **no bloquea el avance del paso** si da
+  "ocupado" — es feedback visual, no una validación dura. El bloqueo real sigue siendo el `409`
+  de `registerBusiness()` al momento de pagar.
 
 ### [2026-07-18] RBT-293 corrección #2 — la cuenta se crea recién cuando el pago se aprueba, no en el paso "Tu cuenta"
 **Estado:** RESUELTO (2026-07-18) — corrige la entrega anterior del mismo día

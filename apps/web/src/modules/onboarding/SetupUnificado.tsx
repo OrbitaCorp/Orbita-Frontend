@@ -12,7 +12,7 @@ import {
 import { Skeleton } from '@/design-system/components/Skeleton'
 import { OrbiChat } from '@/components/OrbiChat'
 import { MapPicker } from '@/components/MapPicker'
-import { checkSubdomain } from '@/lib/api'
+import { checkSubdomain, checkEmail } from '@/lib/api'
 import { useOnboardingStore } from './useOnboardingStore'
 import { LegalModal } from './LegalModal'
 import type { LegalKey } from '@/modules/landing/components/ui/LegalModal'
@@ -599,7 +599,20 @@ export type Cuenta = { ownerName: string; email: string; password: string; terms
 function StepCuenta({ cuenta, setCuenta }: { cuenta: Cuenta; setCuenta: Dispatch<SetStateAction<Cuenta>> }) {
   const [showPw, setShowPw] = useState(false)
   const [legalAbierto, setLegalAbierto] = useState<LegalKey | null>(null)
+  const [estadoEmail, setEstadoEmail] = useState<EstadoSub>('idle')
   const set = (k: 'ownerName' | 'email') => (v: string) => setCuenta(prev => ({ ...prev, [k]: v }))
+
+  useEffect(() => {
+    const email = cuenta.email.trim()
+    if (!/\S+@\S+\.\S+/.test(email)) { setEstadoEmail('idle'); return }
+    setEstadoEmail('checking')
+    const t = setTimeout(() => {
+      checkEmail(email)
+        .then(r => setEstadoEmail(r.available ? 'disponible' : 'ocupado'))
+        .catch(() => setEstadoEmail('idle'))
+    }, 700)
+    return () => clearTimeout(t)
+  }, [cuenta.email])
 
   return (
     <div style={{ maxWidth: 440, margin: '0 auto' }}>
@@ -617,7 +630,24 @@ function StepCuenta({ cuenta, setCuenta }: { cuenta: Cuenta; setCuenta: Dispatch
           <Input value={cuenta.ownerName} onChange={set('ownerName')} placeholder="Juan García" />
         </Field>
         <Field label="Email" required>
-          <Input type="email" value={cuenta.email} onChange={set('email')} placeholder="tu@email.com" />
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            border: `1.5px solid ${
+              estadoEmail === 'disponible' ? 'var(--color-success)' :
+              estadoEmail === 'ocupado'    ? 'var(--color-error)'   :
+              estadoEmail === 'checking'   ? 'var(--color-primary)' :
+              'var(--color-border)'
+            }`,
+            borderRadius: 10, background: 'var(--color-surface)', overflow: 'hidden', transition: 'border-color 200ms',
+          }}>
+            <input
+              type="email" value={cuenta.email} onChange={e => set('email')(e.target.value)} placeholder="tu@email.com"
+              style={{ ...inputBase, border: 'none', background: 'transparent', borderRadius: 0, flex: 1, outline: 'none' }}
+            />
+            {estadoEmail === 'checking'   && <span style={{ width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginRight: 12, border: '2px solid var(--color-primary)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 600ms linear infinite' }} />}
+            {estadoEmail === 'disponible' && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-success)', marginRight: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>✓ Disponible</span>}
+            {estadoEmail === 'ocupado'    && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-error)',   marginRight: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>✗ Ya tiene cuenta</span>}
+          </div>
         </Field>
         <Field label="Contraseña" required>
           <div style={{ position: 'relative' }}>
@@ -803,7 +833,7 @@ export function SetupUnificado({
     setSeleccion(wizard.subrubros)
     setNegocio({
       nombre: wizard.nombre, descripcion: wizard.descripcion, email: wizard.email, telefono: wizard.telefono,
-      direccion: wizard.direccion, logo: '', latLng: wizard.latLng, subdominio: wizard.subdominio,
+      direccion: wizard.direccion, logo: wizard.logoDataUrl, latLng: wizard.latLng, subdominio: wizard.subdominio,
       tipoLocal: [
         ...(wizard.operatesPhysical ? ['fisico' as const] : []),
         ...(wizard.operatesOnline ? ['online' as const] : []),
@@ -845,6 +875,7 @@ export function SetupUnificado({
     else if (paso === 1) setWizard({
       nombre: negocio.nombre, descripcion: negocio.descripcion, email: negocio.email,
       telefono: negocio.telefono, subdominio: negocio.subdominio, modoVenta: negocio.modoVenta,
+      logoDataUrl: negocio.logo,
     })
     else if (paso === 2) setWizard({
       direccion: negocio.direccion, latLng: negocio.latLng,
