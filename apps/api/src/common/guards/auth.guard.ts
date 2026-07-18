@@ -34,7 +34,6 @@ export class AuthGuard implements CanActivate {
     const token = this.extractToken(request);
     if (!token) throw new UnauthorizedException('Token requerido');
 
-    // Validación delegada a Supabase Auth (detecta tokens revocados).
     let supabaseUser: { id: string } | null = null;
     try {
       const { data, error } = await this.supabase.adminClient.auth.getUser(token);
@@ -46,17 +45,64 @@ export class AuthGuard implements CanActivate {
     }
     const { id: authUserId } = supabaseUser;
 
-    // Prioridad incondicional: member > customer.
-    // Buscar siempre en members primero, sin importar si el header X-Business-Slug
-    // está presente — el header lo controla el llamador y no debe poder forzar
-    // que un member sea tratado como customer.
+    const slug = request.headers['x-business-slug'];
+
+    if (slug) {
+      // Con slug: resolver el negocio y buscar SOLO en ese negocio.
+      const business = await this.prisma.business.findUnique({
+        where: { subdomain: slug },
+      });
+      if (!business) throw new UnauthorizedException('Negocio no encontrado');
+
+      // Buscar como member de ESTE negocio primero.
+      const member = await this.prisma.member.findFirst({
+        where: { authUserId, businessId: business.id },
+        include: {
+          role: {
+            include: { rolePermissions: { include: { permission: true } } },
+          },
+        },
+      });
+
+      if (member) {
+        request.user = {
+          authUserId,
+          type: 'member',
+          memberId: member.id,
+          businessId: business.id,
+          businessMode: business.mode,
+          roleId: member.roleId,
+          roleName: member.role.name,
+          permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
+        };
+        return true;
+      }
+
+      // No es member de este negocio → buscar como customer de ESTE negocio.
+      const customer = await this.prisma.customer.findFirst({
+        where: { authUserId, businessId: business.id, deletedAt: null },
+      });
+      if (!customer) {
+        throw new UnauthorizedException('No tenés cuenta en este negocio');
+      }
+
+      request.user = {
+        authUserId,
+        type: 'customer',
+        customerId: customer.id,
+        businessId: business.id,
+        businessMode: business.mode,
+      };
+      return true;
+    }
+
+    // Sin slug: solo buscar como member (acceso al panel).
+    // authUserId es @unique en members, así que como máximo hay uno.
     const member = await this.prisma.member.findUnique({
       where: { authUserId },
       include: {
         role: {
-          include: {
-            rolePermissions: { include: { permission: true } },
-          },
+          include: { rolePermissions: { include: { permission: true } } },
         },
         business: { select: { id: true, mode: true } },
       },
@@ -73,37 +119,12 @@ export class AuthGuard implements CanActivate {
         roleName: member.role.name,
         permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
       };
-    } else {
-      // No es member → buscar como customer. El header es obligatorio para
-      // saber en qué negocio buscar (un mismo authUserId puede ser customer
-      // en múltiples negocios).
-      const slug = request.headers['x-business-slug'];
-      if (!slug) {
-        throw new UnauthorizedException(
-          'Usuario sin acceso a ningún negocio. Para acceso como cliente enviá el header X-Business-Slug.',
-        );
-      }
-
-      const business = await this.prisma.business.findUnique({
-        where: { subdomain: slug },
-      });
-      if (!business) throw new UnauthorizedException('Negocio no encontrado');
-
-      const customer = await this.prisma.customer.findFirst({
-        where: { authUserId, businessId: business.id, deletedAt: null },
-      });
-      if (!customer) throw new UnauthorizedException('Cliente no registrado en este negocio');
-
-      request.user = {
-        authUserId,
-        type: 'customer',
-        customerId: customer.id,
-        businessId: business.id,
-        businessMode: business.mode,
-      };
+      return true;
     }
 
-    return true;
+    throw new UnauthorizedException(
+      'Usuario sin acceso. Para acceso como cliente enviá el header X-Business-Slug.',
+    );
   }
 
   private extractToken(request: RequestWithUser): string | undefined {

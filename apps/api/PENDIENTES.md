@@ -368,6 +368,45 @@ criterio no se aplicó a `entry` (siempre suma, no puede dar negativo por diseñ
 
 ---
 
+## Fase 1 — Auth (corrección crítica)
+
+### [2026-07-17] Aislamiento multi-tenant en AuthGuard y login/register
+**Estado:** RESUELTO (2026-07-17)
+Se detectó que `AuthGuard` y `AuthService.login()` buscaban en `members` por `authUserId` sin
+filtrar por `businessId` cuando el header `X-Business-Slug` estaba presente. Esto permitía que
+un miembro de negocio A fuera resuelto como miembro autenticado al acceder al subdominio de
+negocio B — vulnerabilidad de cross-tenant.
+
+Cambios:
+- **`auth.guard.ts`**: reescrito con branching por slug. Con slug: resuelve el business, busca
+  member y luego customer filtrados por ESE `businessId`. Sin slug: busca member globalmente
+  (acceso al panel, `authUserId` es `@unique`).
+- **`auth.service.ts` → `login()`**: misma lógica de branching. Con slug: devuelve
+  `ForbiddenException({ error: 'NO_ACCOUNT_IN_BUSINESS' })` si el usuario no es ni member ni
+  customer de ese negocio. Sin slug: devuelve `ForbiddenException({ error: 'NO_BUSINESS' })`
+  si no es member de ningún negocio.
+- **`auth.service.ts` → `register()`**: nuevo helper `getOrCreateSupabaseUser()` que reutiliza
+  usuarios de Supabase Auth existentes en vez de fallar con "email ya registrado". Permite que
+  el dueño de negocio A se registre como cliente en negocio B.
+- **Guards downstream** (`RolesGuard`, `PermissionsGuard`, `BusinessModeGuard`): verificados
+  limpios — no hacen queries propias a la BD, solo leen de `req.user`.
+- **Auditoría del codebase**: grep de `findFirst|findUnique|findMany` sobre `member`/`customer`
+  — todos los demás usos filtran por `businessId` o usan IDs ya resueltos por el guard.
+
+### [2026-07-17] `register()` verifica la contraseña implícitamente al hacer `signInWithPassword`
+**Estado:** ABIERTO
+Cuando un usuario de Supabase Auth ya existente (ej. dueño de negocio A) se registra como
+cliente en negocio B, `getOrCreateSupabaseUser()` reutiliza su `authUserId` correctamente. Pero
+al final de `register()`, se llama `signInWithPassword(email, dto.password)` para obtener un
+token de sesión — y esto falla si la contraseña que el usuario puso en el formulario de registro
+del negocio B no coincide con la que ya tiene en Supabase (la del negocio A). El spec original
+decía "NO verificar la contraseña" en este caso. Opciones: (a) usar `admin.generateLink()` para
+emitir un token sin verificar contraseña, (b) saltear el signIn y usar otro mecanismo para
+devolver una sesión, (c) dejar como está y documentar que el usuario debe usar la misma
+contraseña. **Pendiente de decisión del equipo.**
+
+---
+
 ## Fase 6 — Clientes (Customers/Addresses)
 
 ### [2026-07-14] Análisis pre-implementación: 7 fallas detectadas, 4 resueltas
