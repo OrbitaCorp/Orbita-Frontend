@@ -17,7 +17,6 @@ const initialWizard: WizardData = {
   subrubros: [],
   nombre: '',
   descripcion: '',
-  email: '',
   telefono: '',
   subdominio: '',
   modoVenta: '',

@@ -10,8 +10,16 @@ async function bootstrap(): Promise<void> {
   // origen) al backend por CORS. FRONTEND_URL ya se usaba para armar links
   // de email (ver members.service.ts / auth.service.ts) — se reusa acá.
   // localhost:3001 queda siempre permitido para no romper el dev local.
+  // orbita.local y sus subdominios (tienda1.orbita.local, etc.) se permiten
+  // vía regex porque el subdominio de cada negocio es dinámico.
+  const ORBITA_LOCAL_ORIGIN = /^http:\/\/([a-z0-9-]+\.)?orbita\.local:3001$/;
   app.enableCors({
-    origin: [process.env.FRONTEND_URL ?? 'http://localhost:3001', 'http://localhost:3001',"http://localhost:3000" ],
+    origin: [
+      process.env.FRONTEND_URL ?? 'http://localhost:3001',
+      'http://localhost:3001',
+      'http://localhost:3000',
+      ORBITA_LOCAL_ORIGIN,
+    ],
     credentials: true,
   });
 

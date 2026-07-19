@@ -50,7 +50,6 @@ type ModoVenta = 'ecommerce' | 'vidriera' | ''
 type Negocio = {
   nombre:     string
   descripcion:string
-  email:      string
   telefono:   string
   direccion:  string
   logo:       string
@@ -186,7 +185,7 @@ function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; 
     return () => clearTimeout(t)
   }, [negocio.subdominio])
 
-  const set = (k: 'nombre' | 'descripcion' | 'email' | 'telefono') => (v: string) =>
+  const set = (k: 'nombre' | 'descripcion' | 'telefono') => (v: string) =>
     setNegocio(prev => ({ ...prev, [k]: v }))
 
   const setModoVenta = (v: ModoVenta) => setNegocio(prev => ({ ...prev, modoVenta: v }))
@@ -243,8 +242,8 @@ function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; 
       }}>
         <Info size={15} color="var(--color-primary)" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
         <span>
-          El <strong>email</strong> y el <strong>teléfono</strong> son tus medios de contacto públicos —
-          tus clientes los van a usar para comunicarse con vos.
+          El <strong>teléfono</strong> es tu medio de contacto público —
+          tus clientes lo van a usar para comunicarse con vos por WhatsApp.
         </span>
       </div>
 
@@ -255,14 +254,9 @@ function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; 
         <Field label="Descripción">
           <Textarea value={negocio.descripcion} onChange={set('descripcion')} placeholder="Breve descripción de tu negocio..." />
         </Field>
-        <div className="ob-email-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Field label="Email de contacto" required>
-            <Input type="email" value={negocio.email} onChange={set('email')} placeholder="hola@minegocio.com" />
-          </Field>
-          <Field label="Teléfono" required>
-            <Input type="tel" value={negocio.telefono} onChange={set('telefono')} placeholder="+54 11 1234-5678" />
-          </Field>
-        </div>
+        <Field label="Teléfono" required>
+          <Input type="tel" value={negocio.telefono} onChange={set('telefono')} placeholder="+54 11 1234-5678" />
+        </Field>
         <Field label="Subdominio de tu negocio">
           <div style={{
             display: 'flex', alignItems: 'center',
@@ -783,8 +777,6 @@ function SkeletonGrid({ cols = 2, rows = 2, tall = false }: { cols?: number; row
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const PASOS_GLOBALES = ['Rubro', 'Configuración', 'Listo']
-
 const defaultToggle = (prev: string[], key: string) =>
   prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
 
@@ -811,11 +803,20 @@ export function SetupUnificado({
   const lastPaso = PASOS_INTERNOS.length - 1
   const pasoEquipo = conEquipo ? lastPaso - 1 : -1
 
+  // Solo para la barra de progreso: agrega el pago como último ítem visible
+  // desde el arranque del wizard, para que el total de pasos mostrado sea el
+  // real (wizard + pago) y no solo el tramo de "Configuración" — evita la
+  // sensación de "se agregan pasos" que daba la barra global de 3 pasos que
+  // reemplaza esta (Rubro/Configuración/Listo, sacada — ver PENDIENTES.md).
+  // `lastPaso`/`pasoEquipo` de arriba NO usan este array — siguen atados a
+  // PASOS_INTERNOS, que es el que controla la navegación real del wizard.
+  const PASOS_MOSTRADOS = [...PASOS_INTERNOS, 'Pago']
+
   const [paso,         setPaso]        = useState(0)
   const [cargandoPaso, setCargandoPaso] = useState(true)
   const [seleccion,    setSeleccion]   = useState<string[]>([])
   const [negocio,      setNegocio]     = useState<Negocio>({
-    nombre: '', descripcion: '', email: '', telefono: '',
+    nombre: '', descripcion: '', telefono: '',
     direccion: '', logo: '', latLng: BA, subdominio: '', tipoLocal: [], modoVenta: '',
   })
   const [pagos,       setPagos]       = useState<string[]>([])
@@ -832,7 +833,7 @@ export function SetupUnificado({
     if (!wizard.rubro) { router.push('/onboarding/rubro'); return }
     setSeleccion(wizard.subrubros)
     setNegocio({
-      nombre: wizard.nombre, descripcion: wizard.descripcion, email: wizard.email, telefono: wizard.telefono,
+      nombre: wizard.nombre, descripcion: wizard.descripcion, telefono: wizard.telefono,
       direccion: wizard.direccion, logo: wizard.logoDataUrl, latLng: wizard.latLng, subdominio: wizard.subdominio,
       tipoLocal: [
         ...(wizard.operatesPhysical ? ['fisico' as const] : []),
@@ -873,7 +874,7 @@ export function SetupUnificado({
   function avanzar() {
     if (paso === 0) setWizard({ subrubros: seleccion })
     else if (paso === 1) setWizard({
-      nombre: negocio.nombre, descripcion: negocio.descripcion, email: negocio.email,
+      nombre: negocio.nombre, descripcion: negocio.descripcion,
       telefono: negocio.telefono, subdominio: negocio.subdominio, modoVenta: negocio.modoVenta,
       logoDataUrl: negocio.logo,
     })
@@ -931,50 +932,23 @@ export function SetupUnificado({
           <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>Órbita</span>
         </a>
 
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {PASOS_GLOBALES.map((label, i) => {
-            const done    = i === 0
-            const current = i === 1
-            return (
-              <Fragment key={label}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700,
-                    background: done ? '#10B981' : current ? '#2563EB' : 'var(--color-surface-alt)',
-                    color:      (done || current) ? 'white' : 'var(--color-subtle)',
-                  }}>
-                    {done ? <Check size={11} strokeWidth={3} /> : i + 1}
-                  </div>
-                  <span className="ob-step-label" style={{ fontSize: 13, fontWeight: 600, color: current ? 'var(--color-text)' : done ? '#10B981' : 'var(--color-subtle)' }}>
-                    {label}
-                  </span>
-                </div>
-                {i < PASOS_GLOBALES.length - 1 && (
-                  <div style={{ width: 24, height: 1, background: done ? '#10B981' : 'var(--color-border)' }} />
-                )}
-              </Fragment>
-            )
-          })}
-        </div>
-
         <a href="/login" className="ob-login-link" style={{ marginLeft: 'auto', textDecoration: 'none', fontSize: 13, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
           ¿Ya tenés cuenta?{' '}
           <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Iniciá sesión</span>
         </a>
       </div>
 
-      {/* ── Inner step progress ── */}
+      {/* ── Inner step progress — única barra de progreso del wizard, incluye
+           "Pago" desde el principio para que el total mostrado sea el real. */}
       <div className="ob-inner-progress" style={{
         borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)',
         padding: '0 28px', overflowX: 'auto', scrollbarWidth: 'none',
       }}>
         <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', minWidth: 480 }}>
-          {PASOS_INTERNOS.map((label, i) => {
+          {PASOS_MOSTRADOS.map((label, i) => {
             const done    = i < paso
             const current = i === paso
-            const isLast  = i === PASOS_INTERNOS.length - 1
+            const isLast  = i === PASOS_MOSTRADOS.length - 1
             return (
               <Fragment key={label}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 0', flexShrink: 0, opacity: (done || current) ? 1 : 0.45 }}>
@@ -1020,10 +994,10 @@ export function SetupUnificado({
           {paso + 1}
         </div>
         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
-          {PASOS_INTERNOS[paso]}
+          {PASOS_MOSTRADOS[paso]}
         </span>
         <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-          · {paso + 1} de {PASOS_INTERNOS.length}
+          · {paso + 1} de {PASOS_MOSTRADOS.length}
         </span>
       </div>
 

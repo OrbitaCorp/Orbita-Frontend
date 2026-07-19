@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent, FileText, Printer, ArrowRight } from 'lucide-react'
 import { completeOnboarding, publishBusiness, uploadLogo, dataUrlToBlob, ApiError } from '@/lib/api'
 import { useOnboardingStore } from '@/modules/onboarding/useOnboardingStore'
+import { useAuth } from '@/hooks/useAuth'
+import { tenantUrl } from '@/lib/tenant'
 
 const FEATURES = [
   { texto: 'Panel de administración completo'      },
@@ -12,7 +14,11 @@ const FEATURES = [
   { texto: 'Cancelá cuando quieras, sin penalidad' },
 ]
 
-const PASOS = ['Rubro', 'Configuración', 'Listo']
+// Resumen de alto nivel, NO una re-lista de los pasos granulares del wizard
+// (esos ya se mostraron en SetupUnificado.tsx, incluyendo "Pago" como último
+// ítem desde el principio — ver PENDIENTES.md). Acá solo queda un paso real:
+// confirmar el pago.
+const PASOS = ['Configuración', 'Pago']
 
 const N_COMPROBANTE = 'OB-2025-004817'
 const FECHA_HOY = new Date().toLocaleDateString('es-AR', {
@@ -56,8 +62,8 @@ function Header() {
       </a>
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
         {PASOS.map((paso, i) => {
-          const done    = i < 2
-          const current = i === 2
+          const done    = i < 1
+          const current = i === 1
           return (
             <div key={paso} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -318,7 +324,7 @@ function ProcesandoScreen() {
 
 // ─── Pantalla 3: Pago exitoso ────────────────────────────────────────────────
 
-function ExitoScreen({ next, router }: { next: string; router: ReturnType<typeof useRouter> }) {
+function ExitoScreen({ irAlPanel }: { irAlPanel: () => void }) {
   const DETALLES: [string, string][] = [
     ['Plan',    'Órbita Starter'],
     ['Monto',   '$5.000 ARS'],
@@ -462,7 +468,7 @@ function ExitoScreen({ next, router }: { next: string; router: ReturnType<typeof
 
         {/* CTA continuar */}
         <button
-          onClick={() => router.push(next)}
+          onClick={irAlPanel}
           style={{
             width: '100%', height: 52, borderRadius: 12, border: 'none',
             background: 'var(--color-primary)', color: 'white',
@@ -490,8 +496,10 @@ export default function PlanPage() {
   const next   = (router.query.next as string) ?? '/admin'
   const wizard      = useOnboardingStore(s => s.wizard)
   const resetWizard = useOnboardingStore(s => s.resetWizard)
+  const { login } = useAuth()
   const [estado, setEstado] = useState<'plan' | 'procesando' | 'exito'>('plan')
   const [errorPago, setErrorPago] = useState('')
+  const [subdominioListo, setSubdominioListo] = useState('')
 
   // Si no vino de completar el wizard (no hay rubro/credenciales cargadas),
   // no tiene nada que pagar/guardar — volver al principio.
@@ -517,7 +525,14 @@ export default function PlanPage() {
     Promise.all([
       completeOnboarding(account, wizard)
         .then(() => wizard.logoDataUrl ? uploadLogo(dataUrlToBlob(wizard.logoDataUrl), 'logo.png') : null)
-        .then(() => publishBusiness()),
+        .then(() => publishBusiness())
+        // El registro de onboarding emite su propio token de un solo uso (sin
+        // refresh) — para dejar al dueño con la MISMA sesión que usa el resto
+        // del panel (access en memoria + refresh httpOnly cross-subdominio),
+        // logueamos acá con las credenciales recién creadas vía el flujo
+        // estándar de auth (RBT-285/290), no con el token de onboarding.
+        .then(() => login(account.email, account.password))
+        .then(user => { if (user.type === 'member') setSubdominioListo(user.business.subdomain) }),
       new Promise(resolve => setTimeout(resolve, 2800)),
     ])
       .then(() => { resetWizard(); setEstado('exito') })
@@ -527,7 +542,11 @@ export default function PlanPage() {
       })
   }
 
+  function irAlPanel() {
+    window.location.href = subdominioListo ? tenantUrl(subdominioListo, '/panel') : next
+  }
+
   if (estado === 'procesando') return <ProcesandoScreen />
-  if (estado === 'exito')      return <ExitoScreen next={next} router={router} />
+  if (estado === 'exito')      return <ExitoScreen irAlPanel={irAlPanel} />
   return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} error={errorPago} />
 }

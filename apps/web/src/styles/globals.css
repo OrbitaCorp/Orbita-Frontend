@@ -268,11 +268,6 @@ html.light body { background: #eef4ff; color: #0f172a; }
   .ob-plan-content { padding: 28px 16px 64px !important; }
 }
 
-@media (max-width: 480px) {
-  /* Email/phone two-column grid → single column on narrow screens */
-  .ob-email-grid { grid-template-columns: 1fr !important; }
-}
-
 /* Stop suave SOLO en la sección Rubros (desktop): pin corto que da tiempo a
    que las partículas del fondo se reagrupen en el núcleo antes de continuar. */
 @media (min-width: 1024px) {
