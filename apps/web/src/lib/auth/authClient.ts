@@ -1,0 +1,70 @@
+// ─── Cliente de auth (bajo nivel) ───────────────────────────────────────────
+//
+// Access token EN MEMORIA (nunca localStorage/sessionStorage — RBT-290): vive
+// en este módulo mientras dura la pestaña. En un reload se pierde y se recupera
+// desde la cookie httpOnly de refresh vía tryRefresh().
+//
+// Todas las llamadas van al BFF (mismo origen, `/api/auth/*`), no al backend
+// directo — así se evita CORS bajo subdominios y el refresh token queda httpOnly.
+
+import { currentSlug } from '@/lib/tenant'
+
+let accessToken: string | null = null
+
+export const tokenStore = {
+  get: (): string | null => accessToken,
+  set: (t: string | null): void => {
+    accessToken = t
+  },
+}
+
+export class AuthError extends Error {
+  status: number
+  code?: string
+  constructor(status: number, body: { error?: string; message?: string } | null) {
+    const msg = Array.isArray(body?.message) ? body?.message.join(', ') : body?.message
+    super(msg ?? body?.error ?? `Error ${status}`)
+    this.status = status
+    this.code = body?.error
+  }
+}
+
+/** fetch a una ruta del BFF inyectando Authorization (memoria) + X-Business-Slug (host). */
+export async function bffFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers)
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+  const slug = currentSlug()
+  if (slug) headers.set('X-Business-Slug', slug)
+  return fetch(path, { ...init, headers })
+}
+
+/** Intenta recuperar un access token desde la cookie de refresh. */
+export async function tryRefresh(): Promise<boolean> {
+  const res = await fetch('/api/auth/refresh', { method: 'POST' })
+  if (!res.ok) {
+    accessToken = null
+    return false
+  }
+  const data = (await res.json().catch(() => null)) as { token?: string } | null
+  if (data?.token) {
+    accessToken = data.token
+    return true
+  }
+  accessToken = null
+  return false
+}
+
+/**
+ * Interceptor para llamadas autenticadas: inyecta auth y, si el backend
+ * responde 401, intenta refrescar UNA vez y reintenta. Si el refresh falla,
+ * devuelve la respuesta 401 para que el llamador decida (típicamente logout).
+ */
+export async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  let res = await bffFetch(path, init)
+  if (res.status === 401) {
+    const refreshed = await tryRefresh()
+    if (refreshed) res = await bffFetch(path, init)
+  }
+  return res
+}

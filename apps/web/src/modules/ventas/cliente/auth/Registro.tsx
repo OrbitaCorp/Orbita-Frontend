@@ -2,18 +2,74 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { User, Mail, Phone, Lock, Eye } from 'lucide-react'
 import { TIENDA } from '@/lib/storefront/mock'
+import { useAuth } from '@/hooks/useAuth'
+import { AuthError } from '@/lib/auth/authClient'
+import { currentSlug, storefrontBase } from '@/lib/tenant'
 
 export default function Registro() {
   const router = useRouter()
-  const { slug } = router.query as { slug: string }
-  const base = `/tienda/${slug}`
+  const { register } = useAuth()
 
-  const [showPw, setShowPw] = useState(false)
-  const [pw,     setPw]     = useState('mariaf2026')
+  // Slug del negocio: en subdominio viene del host; en path legacy del route param.
+  const slug = (router.query.slug as string | undefined) ?? currentSlug() ?? ''
+  const base = storefrontBase(slug)
+  // RBT-351 — a dónde volver después de autenticarse (checkout, home, etc.).
+  const returnTo = typeof router.query.returnTo === 'string' ? router.query.returnTo : ''
 
-  const strength      = pw.length < 6 ? 1 : pw.length < 10 ? 2 : pw.length < 14 ? 3 : 4
+  const [nombre,   setNombre]   = useState('')
+  const [email,    setEmail]    = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [pw,       setPw]       = useState('')
+  const [acepta,   setAcepta]   = useState(true)
+  const [showPw,   setShowPw]   = useState(false)
+  const [error,    setError]    = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [ok,       setOk]       = useState(false)
+
+  const strength      = pw.length === 0 ? 0 : pw.length < 6 ? 1 : pw.length < 10 ? 2 : pw.length < 14 ? 3 : 4
   const strengthLabel = ['', 'Débil', 'Regular', 'Buena', 'Excelente'][strength]
   const strengthColor = ['', 'var(--color-error)', 'var(--color-warning)', 'var(--color-warning)', 'var(--color-success)'][strength]
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!nombre.trim() || !email.trim() || pw.length < 8) {
+      setError('Completá nombre, email y una contraseña de al menos 8 caracteres.')
+      return
+    }
+    if (!acepta) {
+      setError('Necesitás aceptar los términos y la política de privacidad.')
+      return
+    }
+
+    const [first, ...rest] = nombre.trim().split(/\s+/)
+    setEnviando(true)
+    try {
+      await register({
+        firstName: first,
+        lastName: rest.join(' ') || undefined,
+        email: email.trim(),
+        phone: telefono.trim() || undefined,
+        password: pw,
+      })
+      setOk(true)
+      // Éxito → NO logea automáticamente (el backend no devuelve token en register).
+      // Redirige al login del storefront preservando returnTo (RBT-351).
+      // window.location (navegación dura) para que el middleware reescriba el
+      // subdominio correctamente.
+      const qs = new URLSearchParams({ registered: '1' })
+      if (returnTo) qs.set('returnTo', returnTo)
+      setTimeout(() => { window.location.href = `${base}/login?${qs.toString()}` }, 1200)
+    } catch (err) {
+      if (err instanceof AuthError && err.status === 400) {
+        // El backend devuelve 400 con "Ya tenés cuenta en esta tienda. Iniciá sesión."
+        setError(err.message || 'Ya tenés cuenta en esta tienda.')
+      } else {
+        setError('No se pudo crear la cuenta. Intentá de nuevo.')
+      }
+      setEnviando(false)
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)', display: 'grid', placeItems: 'center' }}>
@@ -36,6 +92,16 @@ export default function Registro() {
         </p>
         <div style={{ height: 1, background: 'var(--color-border)', marginBottom: 20 }} />
 
+        {ok ? (
+          <div style={{
+            background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.30)',
+            borderRadius: 10, padding: '16px 14px', textAlign: 'center',
+            fontSize: 14, color: 'var(--color-success)', fontWeight: 600,
+          }}>
+            Cuenta creada. Iniciá sesión para continuar…
+          </div>
+        ) : (
+        <>
         <button type="button" style={{
           width: '100%', height: 44, borderRadius: 10, marginBottom: 20,
           background: 'var(--color-bg)', border: '1.5px solid var(--color-border)',
@@ -51,20 +117,26 @@ export default function Registro() {
           <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
         </div>
 
-        <form
-          onSubmit={e => { e.preventDefault(); router.push(`${base}/pedido/ORB-2847`) }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-        >
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {error && (
+            <div style={{
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 8, padding: '10px 12px', fontSize: 12.5, color: 'var(--color-error)',
+            }}>
+              {error}
+            </div>
+          )}
+
           <Field label="Nombre completo">
-            <Input placeholder="María Fernández" icon={<User size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
+            <Input value={nombre} onChange={setNombre} placeholder="María Fernández" icon={<User size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Email">
-              <Input type="email" placeholder="tu@email.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
+              <Input type="email" value={email} onChange={setEmail} placeholder="tu@email.com" icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
             </Field>
             <Field label="Teléfono">
-              <Input type="tel" placeholder="+54 9 11..." icon={<Phone size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
+              <Input type="tel" value={telefono} onChange={setTelefono} placeholder="+54 9 11..." icon={<Phone size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
             </Field>
           </div>
 
@@ -78,6 +150,7 @@ export default function Registro() {
                 type={showPw ? 'text' : 'password'}
                 value={pw}
                 onChange={e => setPw(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
                 style={{
                   width: '100%', height: 44, padding: '0 40px',
                   borderRadius: 8, border: '1px solid var(--color-border)',
@@ -108,7 +181,7 @@ export default function Registro() {
           </div>
 
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--color-body)', cursor: 'pointer' }}>
-            <input type="checkbox" defaultChecked style={{ accentColor: 'var(--color-primary)', marginTop: 2 }} />
+            <input type="checkbox" checked={acepta} onChange={e => setAcepta(e.target.checked)} style={{ accentColor: 'var(--color-primary)', marginTop: 2 }} />
             <span>
               Acepto los{' '}
               <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>Términos y condiciones</span>
@@ -117,13 +190,13 @@ export default function Registro() {
             </span>
           </label>
 
-          <button type="submit" style={{
+          <button type="submit" disabled={enviando} style={{
             width: '100%', height: 48, borderRadius: 10, marginTop: 8,
-            background: 'var(--color-primary)', color: '#fff',
-            fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(59,130,246,0.25)',
+            background: enviando ? 'var(--color-surface-alt)' : 'var(--color-primary)', color: '#fff',
+            fontSize: 14, fontWeight: 700, border: 'none', cursor: enviando ? 'default' : 'pointer',
+            boxShadow: enviando ? 'none' : '0 4px 16px rgba(59,130,246,0.25)',
           }}>
-            Crear mi cuenta
+            {enviando ? 'Creando cuenta…' : 'Crear mi cuenta'}
           </button>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
@@ -140,6 +213,8 @@ export default function Registro() {
             ))}
           </div>
         </form>
+        </>
+        )}
 
         <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--color-muted)' }}>
           ¿Ya tenés cuenta?{' '}
@@ -172,11 +247,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Input({ type = 'text', placeholder, icon }: { type?: string; placeholder?: string; icon?: React.ReactNode }) {
+function Input({ type = 'text', value, onChange, placeholder, icon }: {
+  type?: string; value: string; onChange: (v: string) => void; placeholder?: string; icon?: React.ReactNode
+}) {
   return (
     <div style={{ position: 'relative' }}>
       {icon && <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>{icon}</span>}
-      <input type={type} placeholder={placeholder} style={{
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{
         width: '100%', height: 44, padding: `0 14px 0 ${icon ? 40 : 14}px`,
         borderRadius: 8, border: '1px solid var(--color-border)',
         background: 'var(--color-bg)', color: 'var(--color-text)',

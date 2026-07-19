@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css'
 import { PageLoader } from '@/components/PageLoader'
 import { StorefrontLoader } from '@/components/storefront/StorefrontLoader'
 import { TIENDA } from '@/lib/storefront/mock'
+import { AuthProvider } from '@/lib/auth/AuthContext'
 
 const queryClient = new QueryClient()
 
@@ -38,11 +39,13 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         })();
       `}} />
-      {isStorefront
-        ? <StorefrontLoader visible={loading} nombre={TIENDA.nombre} />
-        : <PageLoader visible={loading} />
-      }
-      <Component {...pageProps} />
+      <AuthProvider>
+        {isStorefront
+          ? <StorefrontLoader visible={loading} nombre={TIENDA.nombre} />
+          : <PageLoader visible={loading} />
+        }
+        <Component {...pageProps} />
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
