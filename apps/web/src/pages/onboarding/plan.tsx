@@ -502,20 +502,22 @@ export default function PlanPage() {
   const [subdominioListo, setSubdominioListo] = useState('')
 
   // Si no vino de completar el wizard (no hay rubro/credenciales cargadas),
-  // no tiene nada que pagar/guardar — volver al principio.
+  // no tiene nada que pagar/guardar — volver al principio. La contraseña NO
+  // se persiste en localStorage (seguridad): si el usuario recargó esta
+  // página, está vacía y necesita volver a ingresarla en el paso anterior.
+  const passwordLost = !wizard.ownerPassword
   useEffect(() => {
     if (!wizard.rubro || !wizard.ownerEmail) router.push('/onboarding/rubro')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function pagar() {
+    if (passwordLost) {
+      setErrorPago('Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.')
+      return
+    }
     setErrorPago('')
     setEstado('procesando')
-    // Acá es donde se retenía todo: nada de lo cargado en el wizard tocó la
-    // base hasta este momento. Recién si el pago se aprueba se crea la
-    // cuenta + el negocio con TODO lo acumulado, y se activa de una — si el
-    // usuario nunca llega a pagar, no queda ningún registro (ver PENDIENTES.md).
-    // El cobro en sí sigue simulado (setTimeout) hasta la integración real de MP.
     const account = {
       ownerName: wizard.ownerName,
       email: wizard.ownerEmail,
@@ -537,7 +539,13 @@ export default function PlanPage() {
     ])
       .then(() => { resetWizard(); setEstado('exito') })
       .catch(err => {
-        setErrorPago(err instanceof ApiError ? err.message : 'No se pudo procesar tu pago. Intentá de nuevo.')
+        let msg = 'No se pudo procesar tu pago. Intentá de nuevo.'
+        if (err instanceof ApiError) {
+          if (err.message.includes('password')) msg = 'La contraseña no es válida. Volvé al paso anterior.'
+          else if (err.status === 409) msg = 'Este email ya tiene un negocio registrado.'
+          else msg = err.message
+        }
+        setErrorPago(msg)
         setEstado('plan')
       })
   }
@@ -548,5 +556,5 @@ export default function PlanPage() {
 
   if (estado === 'procesando') return <ProcesandoScreen />
   if (estado === 'exito')      return <ExitoScreen irAlPanel={irAlPanel} />
-  return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} error={errorPago} />
+  return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} error={errorPago || (passwordLost ? 'Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.' : '')} />
 }
