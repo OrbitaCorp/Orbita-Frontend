@@ -19,12 +19,18 @@ Estas reglas aplican a **todos** los endpoints salvo que se indique lo contrario
 Todas las rutas cuelgan de `/api/v1/`.
 
 ### Autenticación
-- **Bearer token** (JWT de Supabase Auth) en header `Authorization: Bearer <token>`.
+- **Bearer token** (JWT propio, HS256, firmado por el backend) en header
+  `Authorization: Bearer <token>`.
 - Toda ruta requiere token **salvo** las marcadas como **Pública** (storefront público + auth).
-- El token identifica al usuario de Supabase (`auth.users`). El backend resuelve el contexto:
-  - Si el `auth_user_id` corresponde a un `members.auth_user_id` → contexto **panel** (staff).
-  - Si corresponde a un `customers.auth_user_id` → contexto **storefront** (cliente).
-  - Si corresponde a un `platform_admins.auth_user_id` → contexto **super-admin**.
+- Cada negocio gestiona sus propias credenciales de forma **aislada**: no existe un concepto de
+  usuario global. Un mismo email puede tener contraseñas distintas (o ninguna) en cada negocio —
+  `passwordHash` vive en `members`/`customers`, no en una tabla de auth compartida.
+- El JWT lleva el payload `{ sub: userId, type: 'member' | 'customer', businessId }`. El backend
+  valida el token localmente (sin llamada de red) y resuelve el contexto directamente del
+  payload — no hace falta buscar en otra tabla para saber si es member o customer.
+- Los requests con header `X-Business-Slug` son validados contra el `businessId` del token: si no
+  coinciden, `401`. Esto impide reusar un token emitido para el negocio A en requests dirigidos
+  al negocio B.
 
 ### Multi-tenant
 - `business_id` **se extrae del token** (vía el `member`/`customer` asociado). **Nunca** viaja en
@@ -97,24 +103,29 @@ KPIs de reportes, totales de carrito. El backend los computa; no se persisten.
 
 ## Módulo: Auth
 
-Hay **dos contextos de login** que comparten el mismo mecanismo de Supabase (un solo login que
-valida credenciales y emite JWT), pero difieren en el `/me`:
-- **Storefront** → busca en `customers`.
-- **Panel** → busca en `members`, y el frontend redirige según rol (owner/admin → dashboard,
-  cajero → POS).
+Auth propio, aislado por negocio (no hay usuario global ni proveedor externo). Hashing con
+**argon2id**, tokens con **JWT HS256** firmados con un secret propio del backend
+(`JWT_SECRET`), y **refresh tokens** con rotación (hasheados con SHA-256 en `refresh_tokens`,
+revocados al usarse). Hay **dos tipos de sujeto**: `member` (staff, login sin `X-Business-Slug`
+resuelve contra cualquier negocio donde tenga cuenta) y `customer` (cliente de storefront,
+siempre requiere `X-Business-Slug`). Un mismo email puede ser member de un negocio y customer
+de otro, con contraseñas independientes — ver "Aislamiento multi-tenant" más abajo.
 
-Se exponen **rutas `/me` separadas** por contexto para evitar ambigüedad.
+**Protección de fuerza bruta**: 5 intentos fallidos consecutivos bloquean la cuenta (member o
+customer, por separado en cada negocio) durante 15 minutos (`423`/`403` con mensaje
+"bloqueada"). Además, `POST /auth/login` tiene rate limiting por IP (20 requests/minuto).
 
 ### Registrar cliente (storefront)
 - **Método**: POST
 - **Ruta**: `/api/v1/auth/register`
 - **Auth**: Pública
+- **Headers**: `X-Business-Slug` **requerido**
 - **Modo**: FULL + SHOWCASE (en SHOWCASE puede registrarse pero sin checkout)
-- **Descripción**: alta de cuenta de cliente en el storefront de un negocio.
+- **Descripción**: alta de cuenta de cliente en el storefront de un negocio. **No loguea
+  automáticamente** — el frontend debe llamar a `POST /auth/login` después.
 - **Request body**:
 ```typescript
 {
-  slug: string          // subdominio del negocio donde se registra
   firstName: string
   lastName?: string
   email: string
@@ -124,100 +135,159 @@ Se exponen **rutas `/me` separadas** por contexto para evitar ambigüedad.
 ```
 - **Response (201)**:
 ```typescript
-{
-  token: string,
-  customer: { id: string, firstName: string, lastName: string | null, email: string }
-}
+{ message: string }   // ej. "Cuenta creada. Ya podés iniciar sesión."
 ```
-- **Errores**: 400 (email inválido/password débil), 409 (email ya registrado en ese negocio).
-- **Tabla(s)**: `customers` (crea con `auth_user_id` seteado). Crea también el usuario en
-  `auth.users` de Supabase.
+- **Errores**: 400 (sin `X-Business-Slug`, email inválido/password débil, "Ya tenés cuenta en
+  esta tienda"), 404 (slug no existe).
+- **Tabla(s)**: `customers` (crea o vincula, con `passwordHash`).
 - **Notas**: **vinculación POS↔storefront** — si ya existe un `customer` con ese email en el
-  negocio (creado en POS, `auth_user_id = null`), **no duplica**: setea `auth_user_id` sobre el
+  negocio (creado en POS, `passwordHash = null`), **no duplica**: setea `passwordHash` sobre el
   registro existente. `@@unique([businessId, email])` lo garantiza.
 
 ### Login
 - **Método**: POST
 - **Ruta**: `/api/v1/auth/login`
 - **Auth**: Pública
-- **Descripción**: valida credenciales contra Supabase Auth y devuelve JWT. Sirve a los 3
-  contextos (customer, member, platform_admin); el contexto se resuelve en `/me`.
+- **Rate limit**: 20 req/min por IP
+- **Descripción**: valida credenciales y emite JWT + refresh token.
+  - **Con header `X-Business-Slug`**: busca primero como `member` de ese negocio, luego como
+    `customer` de ese negocio. Si no encuentra ninguno → `403 NO_ACCOUNT_IN_BUSINESS`.
+  - **Sin header** (login de panel, `orbita.com/panel`): busca como `member` en cualquier
+    negocio (por email). No devuelve nunca `type: customer` en este modo.
 - **Request body**:
 ```typescript
-{ email: string, password: string, slug?: string }  // slug requerido para login de cliente storefront
+{ email: string, password: string }
 ```
-- **Response (200)**:
+- **Response (201)** — `type: 'member'`:
 ```typescript
-{ token: string, context: 'customer' | 'member' | 'platform_admin' }
+{
+  type: 'member',
+  token: string,
+  refreshToken: string,
+  member: { id: string, name: string, email: string, status: string },
+  role: string,
+  permissions: string[],
+  business: { id: string, name: string, subdomain: string, mode: string }
+}
 ```
-- **Errores**: 400, 401 (credenciales inválidas).
-- **Tabla(s)**: lee `auth.users`; resuelve contexto contra `members` / `customers` / `platform_admins`.
+- **Response (201)** — `type: 'customer'`:
+```typescript
+{
+  type: 'customer',
+  token: string,
+  refreshToken: string,
+  customer: { id: string, firstName: string, lastName: string | null, email: string | null },
+  business: { id: string, name: string, subdomain: string, mode: string }
+}
+```
+- **Errores**: `401` credenciales inválidas (incluye email inexistente y `passwordHash = null` —
+  no se distingue el motivo, para no revelar si el email existe), `403 NO_ACCOUNT_IN_BUSINESS`
+  (con slug, no hay member ni customer en ese negocio), `403`/mensaje "bloqueada" (lockout por 5
+  intentos fallidos).
+- **Tabla(s)**: `members` / `customers`; crea fila en `refresh_tokens`.
+
+### Refrescar token
+- **Método**: POST
+- **Ruta**: `/api/v1/auth/refresh`
+- **Auth**: Pública (el refresh token reemplaza al access token vencido)
+- **Descripción**: rota el refresh token (revoca el usado, emite uno nuevo) y devuelve un JWT
+  nuevo. Vigencia del refresh token: **7 días para member, 30 días para customer**.
+- **Request body**: `{ refreshToken: string }`
+- **Response (201)**: `{ token: string, refreshToken: string }`
+- **Errores**: 401 (refresh token inválido, revocado o expirado).
+- **Tabla(s)**: `refresh_tokens` (revoca el viejo, crea uno nuevo).
 
 ### Logout
 - **Método**: POST
 - **Ruta**: `/api/v1/auth/logout`
-- **Auth**: Requerida
-- **Descripción**: invalida la sesión (revoca refresh token en Supabase).
-- **Response (200)**: `{ ok: true }`
+- **Auth**: Pública (no requiere `Authorization` — opera sobre el refresh token del body)
+- **Descripción**: revoca el refresh token recibido. Si no se manda `refreshToken`, es un no-op
+  silencioso (siempre `201`).
+- **Request body**: `{ refreshToken?: string }`
+- **Response (201)**: sin body relevante.
+- **Tabla(s)**: `refresh_tokens` (marca `revokedAt`).
 
 ### Recuperar contraseña
 - **Método**: POST
 - **Ruta**: `/api/v1/auth/forgot-password`
 - **Auth**: Pública
-- **Descripción**: dispara el email de recuperación de Supabase.
-- **Request body**: `{ email: string, slug?: string }`
-- **Response (200)**: `{ ok: true }`  // siempre 200 aunque el email no exista (no revelar)
+- **Headers**: `X-Business-Slug` **requerido** — la recuperación es siempre por negocio, ya que
+  las credenciales están aisladas por tienda.
+- **Descripción**: crea un token de recuperación (hasheado en DB) y envía el email con el link.
+- **Request body**: `{ email: string }`
+- **Response (201)**: sin body relevante — siempre `201` aunque el negocio o el email no
+  existan (no revela información).
+- **Errores**: 400 (sin `X-Business-Slug`).
+- **Tabla(s)**: `password_reset_tokens` (expira a la hora).
 
 ### Resetear contraseña
 - **Método**: POST
 - **Ruta**: `/api/v1/auth/reset-password`
 - **Auth**: Pública (con token de recuperación en el body)
-- **Request body**: `{ token: string, password: string }`
-- **Response (200)**: `{ ok: true }`
-- **Errores**: 400 (token inválido/expirado).
+- **Request body**: `{ token: string, newPassword: string }`
+- **Response (201)**: sin body relevante.
+- **Errores**: 400 (token inválido, ya usado, o expirado).
+- **Tabla(s)**: `password_reset_tokens` (marca `usedAt`), `members`/`customers` (nuevo
+  `passwordHash`, resetea `failedLoginAttempts`/`lockedUntil`).
 
 ### Aceptar invitación de miembro (contraseña temporal)
 - **Método**: POST
 - **Ruta**: `/api/v1/auth/accept-invitation`
 - **Auth**: Pública (con token de invitación)
-- **Descripción**: el miembro invitado setea su contraseña definitiva y activa su cuenta.
+- **Descripción**: el miembro invitado setea su contraseña definitiva (hasheada con argon2) y
+  activa su cuenta.
 - **Request body**: `{ token: string, password: string }`
-- **Response (200)**: `{ token: string, member: { id, name, email, role } }`
-- **Tabla(s)**: `members` (pasa `status` de `PENDING` a `ACTIVE`, `has_temp_password` a `false`,
-  setea `auth_user_id`).
+- **Response (201)**: `{ token: string, member: { id, name, email, role } }`
+- **Tabla(s)**: `members` (pasa `status` de `PENDING` a `ACTIVE`, `hasTempPassword` a `false`,
+  setea `passwordHash`, quema `invitationToken`).
 - **Notas**: ver el POST `/members/invite` que origina la invitación.
 
-### Contexto de cliente (storefront)
+### Contexto del usuario logueado
 - **Método**: GET
-- **Ruta**: `/api/v1/auth/me/customer`
-- **Auth**: Requerida (contexto customer)
-- **Modo**: FULL + SHOWCASE
-- **Descripción**: devuelve el perfil del cliente logueado (para el header del storefront y el Perfil).
-- **Response (200)**:
+- **Ruta**: `/api/v1/auth/me`
+- **Auth**: Requerida
+- **Descripción**: devuelve el perfil del sujeto autenticado — member o customer, según el
+  `type` del JWT. **Ruta única** (no hay `/me/customer` ni `/me/member` separadas); el
+  frontend distingue por el campo `type` de la respuesta.
+- **Response (200)** — member:
 ```typescript
 {
-  id: string, firstName: string, lastName: string | null,
-  email: string | null, phone: string | null, dni: string | null,
-  createdAt: string   // "miembro desde"
+  type: 'member',
+  member: { id: string, name: string, email: string },
+  role: string,
+  permissions: string[],
+  business: { id: string, name: string, subdomain: string, mode: string }
 }
 ```
-- **Tabla(s)**: `customers`.
+- **Response (200)** — customer:
+```typescript
+{
+  type: 'customer',
+  customer: { id: string, firstName: string, lastName: string | null, email: string | null },
+  business: { id: string, name: string, subdomain: string, mode: string }
+}
+```
+- **Tabla(s)**: `members` o `customers` según `type`.
 
-### Contexto de miembro (panel)
-- **Método**: GET
-- **Ruta**: `/api/v1/auth/me/member`
-- **Auth**: Requerida (contexto member)
-- **Descripción**: devuelve el miembro logueado + su rol + permisos, para armar el menú del panel
-  y decidir el redirect (owner/admin → dashboard, cajero → POS).
-- **Response (200)**:
-```typescript
-{
-  id: string, name: string, email: string, status: 'ACTIVE' | 'PENDING',
-  business: { id: string, name: string, mode: 'FULL' | 'SHOWCASE' },
-  role: { id: string, name: string, isDefault: boolean },
-  permissions: string[]   // codes, ej. ["orders.view", "pos.edit_price"]
-}
-```
+### Aislamiento multi-tenant
+- Las credenciales son **por negocio**: el mismo email puede tener contraseñas distintas (o
+  ninguna) como member de un negocio y como customer de otro. No existe una tabla de usuarios
+  global — `passwordHash`, `failedLoginAttempts` y `lockedUntil` viven directamente en
+  `members`/`customers`.
+- Un JWT emitido para el negocio A es **rechazado** (`401`) si se usa en un request que declara
+  `X-Business-Slug` de un negocio B — el guard compara el `businessId` del payload contra el
+  negocio resuelto por el slug.
+- El lockout por fuerza bruta es también por negocio: 5 intentos fallidos contra la cuenta de un
+  negocio no afectan la cuenta del mismo email en otro negocio.
+- **Excepción explícita — `POST /onboarding/register-business`**: a diferencia de todo lo
+  anterior, el **registro de un negocio nuevo** (alta de owner vía onboarding) valida el email
+  de forma **global**, no por negocio: si ese email ya es member de *cualquier* negocio de la
+  plataforma, el registro devuelve `409 "Este email ya tiene un negocio registrado en
+  Orbita"`, aunque el schema (`@@unique([businessId, email])`) permitiría técnicamente
+  credenciales independientes por negocio. Es una **decisión de producto para V1** —
+  "un email = un negocio" en el flujo de autoservicio — no una limitación del modelo de datos.
+  `login()` y el resto de auth siguen aislados por negocio sin excepción; esta regla aplica
+  únicamente al alta de un negocio nuevo. Ver `PENDIENTES.md` → "Onboarding" para el detalle.
 - **Tabla(s)**: `members`, `roles`, `role_permissions`, `permissions`, `businesses`.
 
 ---
@@ -741,7 +811,7 @@ Se exponen **rutas `/me` separadas** por contexto para evitar ambigüedad.
 ```typescript
 {
   id: string, firstName: string, lastName: string | null, email: string | null,
-  phone: string | null, dni: string | null, hasAccount: boolean,  // hasAccount = auth_user_id != null
+  phone: string | null, dni: string | null, hasAccount: boolean,  // hasAccount = passwordHash != null
   orderCount: number,      // calculado
   totalSpent: number,      // calculado
   avgTicket: number,       // calculado
@@ -770,7 +840,7 @@ Se exponen **rutas `/me` separadas** por contexto para evitar ambigüedad.
 - **Tabla(s)**: `customers`.
 - **Notas**: **vinculación POS↔storefront** — si se crea con un `email` que ya existe en el
   negocio, **no duplica**: devuelve/actualiza el cliente existente (`@@unique([businessId, email])`).
-  Los clientes POS se crean con `auth_user_id = null`.
+  Los clientes POS se crean con `passwordHash = null`.
 
 ### Email a clientes (individual/masivo)
 - **Método**: POST
@@ -1860,8 +1930,9 @@ En modo SHOWCASE (vidriera digital) devuelven `403 { error: "SHOWCASE_MODE" }`:
 
 ## Endpoints públicos (sin auth)
 
-- **Auth**: `POST /auth/register`, `POST /auth/login`, `POST /auth/forgot-password`,
-  `POST /auth/reset-password`, `POST /auth/accept-invitation`
+- **Auth**: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`,
+  `POST /auth/logout`, `POST /auth/forgot-password`, `POST /auth/reset-password`,
+  `POST /auth/accept-invitation`
 - **Storefront**: `GET /storefront/:slug`, `/storefront/:slug/products`,
   `/storefront/:slug/products/:id`, `/storefront/:slug/categories`, `/storefront/:slug/coupons`,
   `/storefront/:slug/exclusive-discount/:code`, `POST /storefront/:slug/checkout`,

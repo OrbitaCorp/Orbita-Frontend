@@ -60,6 +60,8 @@ model Business {
   auditLogs           AuditLog[]
   subscription        Subscription?
   customDomains       CustomDomain[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("businesses")
 }
@@ -202,13 +204,16 @@ model Member {
   // uso (se limpia al aceptar) y expira a los 7 días.
   invitationToken           String?   @unique @map("invitation_token")
   invitationTokenExpiresAt  DateTime? @map("invitation_token_expires_at")
-  lastAccessAt    DateTime?    @map("last_access_at")
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  passwordHash        String?   @map("password_hash")
+  emailVerified       Boolean   @default(false) @map("email_verified")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  lastAccessAt        DateTime? @map("last_access_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   business         Business        @relation(fields: [businessId], references: [id])
   role             Role            @relation(fields: [roleId], references: [id])
-  // Inversas: un miembro aparece como cajero, autor de movimientos y verificador de pagos
   cashSessions     CashSession[]
   cashMovements    CashMovement[]
   stockMovements   StockMovement[]
@@ -268,12 +273,16 @@ model RolePermission {
 model Customer {
   id         String    @id @default(uuid())
   businessId String    @map("business_id")
-  authUserId String?   @map("auth_user_id") // FK → Supabase auth.users. NULL = sin cuenta (POS-only)
+  authUserId String?   @map("auth_user_id") // FK → Supabase auth.users. NULL = sin cuenta (POS-only). Coexistencia temporal.
   firstName  String    @map("first_name")
   lastName   String?   @map("last_name")
   email      String? // campo de vinculación POS ↔ storefront
   phone      String? // indexado para futura vinculación
   dni        String? // facturación
+  passwordHash        String?   @map("password_hash")
+  emailVerified       Boolean   @default(false) @map("email_verified")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
   deletedAt  DateTime? @map("deleted_at") // soft-delete
@@ -284,7 +293,7 @@ model Customer {
   reviews       Review[]
   conversations Conversation[]
 
-  @@unique([businessId, email]) // no dos clientes con mismo email en el mismo negocio
+  @@unique([businessId, email])
   @@index([businessId])
   @@index([phone])
   @@map("customers")
@@ -307,6 +316,47 @@ model Address {
 
   @@index([customerId])
   @@map("addresses")
+}
+
+// ─── Auth propio: tokens ────────────────────────────────────────────────────
+
+enum UserType {
+  MEMBER
+  CUSTOMER
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique @map("token_hash") // SHA-256 del token real
+  userId     String    @map("user_id")
+  userType   UserType  @map("user_type")
+  businessId String    @map("business_id")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  deviceInfo Json?     @map("device_info")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([userId, userType])
+  @@index([businessId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique @map("token_hash") // SHA-256
+  email      String
+  userType   UserType  @map("user_type")
+  businessId String    @map("business_id")
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId])
+  @@map("password_reset_tokens")
 }
 
 model Category {

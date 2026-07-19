@@ -1,4 +1,4 @@
-// Seed de datos de prueba para el flujo de Auth (Fase 1).
+// Seed de datos de prueba para el flujo de Auth.
 // Idempotente: correrlo varias veces no duplica ni rompe nada.
 //
 // Uso: pnpm seed  (o: npx prisma db seed)
@@ -6,22 +6,9 @@
 process.loadEnvFile?.();
 
 import { PrismaClient } from '@prisma/client';
-import { createClient } from '@supabase/supabase-js';
+import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error(
-    'SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY son requeridos en .env para correr el seed.',
-  );
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
 
 const TEST_PASSWORD = 'Test1234!';
 
@@ -71,31 +58,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   empleado: ['orders.view', 'customers.view', 'inventory.view', 'catalog.view', 'config.team.view'],
 };
 
-// ── Helper: crear o reutilizar un usuario de Supabase Auth por email ──
-
-async function getOrCreateSupabaseUser(email: string, password: string): Promise<string> {
-  const { data: created, error: createError } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (!createError && created.user) return created.user.id;
-
-  // Ya existe: buscarlo paginando (la Admin API no filtra por email directamente).
-  for (let page = 1; page <= 20; page++) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) throw error;
-    const found = data.users.find((u) => u.email === email);
-    if (found) return found.id;
-    if (data.users.length < 200) break; // última página
-  }
-
-  throw new Error(
-    `No se pudo crear ni encontrar el usuario de Supabase para ${email}: ${createError?.message}`,
-  );
-}
-
 async function main() {
+  const passwordHash = await argon2.hash(TEST_PASSWORD, { type: argon2.argon2id });
   // ── 1. Negocio ─────────────────────────────────────────────────────────────
 
   const business = await prisma.business.upsert({
@@ -223,52 +187,52 @@ async function main() {
   // ── 3. Member owner ──────────────────────────────────────────────────────────
 
   const ownerEmail = 'dueno@zapatoslorena.test';
-  const ownerAuthUserId = await getOrCreateSupabaseUser(ownerEmail, TEST_PASSWORD);
   await prisma.member.upsert({
     where: { businessId_email: { businessId: business.id, email: ownerEmail } },
-    update: { authUserId: ownerAuthUserId, status: 'ACTIVE', hasTempPassword: false },
+    update: { passwordHash: passwordHash, status: 'ACTIVE', hasTempPassword: false, emailVerified: true },
     create: {
       businessId: business.id,
-      authUserId: ownerAuthUserId,
       name: 'Lorena Dueña',
       email: ownerEmail,
       roleId: roles.owner.id,
       status: 'ACTIVE',
       hasTempPassword: false,
+      passwordHash: passwordHash,
+      emailVerified: true,
     },
   });
 
   // ── 4. Member cajero ─────────────────────────────────────────────────────────
 
   const cajeroEmail = 'cajero@zapatoslorena.test';
-  const cajeroAuthUserId = await getOrCreateSupabaseUser(cajeroEmail, TEST_PASSWORD);
   await prisma.member.upsert({
     where: { businessId_email: { businessId: business.id, email: cajeroEmail } },
-    update: { authUserId: cajeroAuthUserId, status: 'ACTIVE', hasTempPassword: false },
+    update: { passwordHash: passwordHash, status: 'ACTIVE', hasTempPassword: false, emailVerified: true },
     create: {
       businessId: business.id,
-      authUserId: cajeroAuthUserId,
       name: 'Carlos Cajero',
       email: cajeroEmail,
       roleId: roles.cajero.id,
       status: 'ACTIVE',
       hasTempPassword: false,
+      passwordHash: passwordHash,
+      emailVerified: true,
     },
   });
 
   // ── 5. Customer con cuenta ───────────────────────────────────────────────────
 
   const clienteEmail = 'cliente@zapatoslorena.test';
-  const clienteAuthUserId = await getOrCreateSupabaseUser(clienteEmail, TEST_PASSWORD);
   await prisma.customer.upsert({
     where: { businessId_email: { businessId: business.id, email: clienteEmail } },
-    update: { authUserId: clienteAuthUserId },
+    update: { passwordHash: passwordHash, emailVerified: true },
     create: {
       businessId: business.id,
-      authUserId: clienteAuthUserId,
       firstName: 'Ana',
       lastName: 'García',
       email: clienteEmail,
+      passwordHash: passwordHash,
+      emailVerified: true,
     },
   });
 
@@ -277,10 +241,9 @@ async function main() {
   const sinCuentaEmail = 'sinregistrar@zapatoslorena.test';
   await prisma.customer.upsert({
     where: { businessId_email: { businessId: business.id, email: sinCuentaEmail } },
-    update: {},
+    update: { passwordHash: null, emailVerified: false, failedLoginAttempts: 0, lockedUntil: null },
     create: {
       businessId: business.id,
-      authUserId: null,
       firstName: 'Pedro',
       lastName: 'Martínez',
       email: sinCuentaEmail,
@@ -289,17 +252,13 @@ async function main() {
   });
 
   // ── 6b. Customer sin cuenta #2 (fixture reutilizable para pruebas manuales) ─
-  // El de arriba (sinregistrar@) ya se vinculó a una cuenta real de Supabase en
-  // pruebas anteriores. Este segundo customer permite repetir el flujo de
-  // vinculación POS→storefront sin depender de un dato ya "gastado".
 
   const sinCuentaEmail2 = 'sinregistrar2@zapatoslorena.test';
   await prisma.customer.upsert({
     where: { businessId_email: { businessId: business.id, email: sinCuentaEmail2 } },
-    update: {},
+    update: { passwordHash: null, emailVerified: false, failedLoginAttempts: 0, lockedUntil: null },
     create: {
       businessId: business.id,
-      authUserId: null,
       firstName: 'Laura',
       lastName: 'Fernández',
       email: sinCuentaEmail2,
@@ -329,18 +288,15 @@ async function main() {
   console.log(`│   email: ${clienteEmail}`);
   console.log(`│   password: ${TEST_PASSWORD}`);
   console.log('├─────────────────────────────────────────────────────────┤');
-  console.log('│ Cliente SIN cuenta (creado desde POS, sin auth todavía)  │');
+  console.log('│ Cliente SIN cuenta (creado desde POS, sin passwordHash)  │');
   console.log(`│   email: ${sinCuentaEmail}`);
-  console.log('│   (ya está vinculado a una cuenta real de Supabase por   │');
-  console.log('│   pruebas anteriores — usalo para loguearte, no para     │');
-  console.log('│   registrarte de nuevo)                                  │');
+  console.log('│   (no tiene password — usar /auth/register para darle   │');
+  console.log('│   una cuenta)                                            │');
   console.log('├─────────────────────────────────────────────────────────┤');
-  console.log('│ Cliente SIN cuenta #2 (fixture reutilizable para pruebas │');
-  console.log('│ manuales repetidas de vinculación POS→storefront)        │');
+  console.log('│ Cliente SIN cuenta #2 (fixture reutilizable)             │');
   console.log(`│   email: ${sinCuentaEmail2}`);
-  console.log('│   (usar este email en /auth/register cuando quieras      │');
-  console.log('│   repetir la prueba — el primero, sinregistrar@, ya está │');
-  console.log('│   vinculado y no sirve más para este caso)               │');
+  console.log('│   (mismo caso que arriba — para pruebas repetidas de    │');
+  console.log('│   vinculación POS→storefront)                            │');
   console.log('└─────────────────────────────────────────────────────────┘');
   console.log('');
 }

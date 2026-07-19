@@ -93,7 +93,7 @@ describe('Auth (e2e)', () => {
   describe('POST /api/v1/auth/register', () => {
     const uniqueEmail = `test-e2e-${Date.now()}@example.com`;
 
-    it('registro exitoso con email nuevo → 201, devuelve customer + token', async () => {
+    it('registro exitoso con email nuevo → 201, devuelve message (sin token)', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/register')
         .set('x-business-slug', SEED_BUSINESS_SLUG)
@@ -104,9 +104,7 @@ describe('Auth (e2e)', () => {
         });
 
       expect(res.status).toBe(201);
-      expect(res.body.token).toBeDefined();
-      expect(res.body.customer).toBeDefined();
-      expect(res.body.customer.email).toBe(uniqueEmail);
+      expect(res.body.message).toContain('Cuenta creada');
     });
 
     it('registro sin header X-Business-Slug → 400', async () => {
@@ -135,9 +133,6 @@ describe('Auth (e2e)', () => {
     });
 
     it('registro con email de customerWithoutAccount vincula al existente (no duplica)', async () => {
-      // This test only works on the FIRST run after a fresh seed (Supabase user
-      // doesn't exist yet). On subsequent runs, Supabase returns "User already
-      // registered" → 400. We test both scenarios:
       const { PrismaClient } = require('@prisma/client');
       const prisma = new PrismaClient();
       try {
@@ -155,17 +150,14 @@ describe('Auth (e2e)', () => {
             firstName: 'Vinculado',
           });
 
-        if (res.status === 201) {
-          // First run: Supabase user created, customer linked
-          expect(res.body.customer).toBeDefined();
-          const countAfter = await prisma.customer.count({
-            where: { email: SEED_USERS.customerWithoutAccount.email, deletedAt: null },
-          });
-          expect(countAfter).toBe(1);
-        } else {
-          // Subsequent runs: Supabase already has this user → 400
-          expect(res.status).toBe(400);
-        }
+        expect(res.status).toBe(201);
+        expect(res.body.message).toContain('Cuenta creada');
+
+        // No debe crear un customer duplicado — vinculó al existente
+        const countAfter = await prisma.customer.count({
+          where: { email: SEED_USERS.customerWithoutAccount.email, deletedAt: null },
+        });
+        expect(countAfter).toBe(1);
       } finally {
         await prisma.$disconnect();
       }
@@ -245,17 +237,23 @@ describe('Auth (e2e)', () => {
   // ── POST /auth/logout ───────────────────────────────────────────────────
 
   describe('POST /api/v1/auth/logout', () => {
-    it('con token válido → 201', async () => {
-      // Login fresh to get a disposable token
+    it('con refreshToken válido → 201, revoca el token', async () => {
+      // Login fresh to get a disposable refresh token
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email: SEED_USERS.owner.email, password: SEED_USERS.owner.password });
 
-      const freshToken = loginRes.body.token;
-
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
-        .set('Authorization', `Bearer ${freshToken}`);
+        .send({ refreshToken: loginRes.body.refreshToken });
+
+      expect([200, 201]).toContain(res.status);
+    });
+
+    it('sin refreshToken → 201 (no-op silencioso)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/logout')
+        .send({});
 
       expect([200, 201]).toContain(res.status);
     });
@@ -264,20 +262,30 @@ describe('Auth (e2e)', () => {
   // ── POST /auth/forgot-password ──────────────────────────────────────────
 
   describe('POST /api/v1/auth/forgot-password', () => {
-    it('con email existente → 201', async () => {
+    it('con email existente + slug → 201', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/forgot-password')
+        .set('x-business-slug', SEED_BUSINESS_SLUG)
         .send({ email: SEED_USERS.owner.email });
 
       expect(res.status).toBe(201);
     });
 
-    it('con email inexistente → 201 (no filtra información)', async () => {
+    it('con email inexistente + slug → 201 (no filtra información)', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/forgot-password')
+        .set('x-business-slug', SEED_BUSINESS_SLUG)
         .send({ email: 'noexiste-forgot@example.com' });
 
       expect(res.status).toBe(201);
+    });
+
+    it('sin header X-Business-Slug → 400', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: SEED_USERS.owner.email });
+
+      expect(res.status).toBe(400);
     });
   });
 

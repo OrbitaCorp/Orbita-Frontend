@@ -11,7 +11,7 @@ async function bootstrap(): Promise<void> {
   // de email (ver members.service.ts / auth.service.ts) — se reusa acá.
   // localhost:3001 queda siempre permitido para no romper el dev local.
   app.enableCors({
-    origin: [process.env.FRONTEND_URL ?? 'http://localhost:3001', 'http://localhost:3001'],
+    origin: [process.env.FRONTEND_URL ?? 'http://localhost:3001', 'http://localhost:3001',"http://localhost:3000" ],
     credentials: true,
   });
 

@@ -5,8 +5,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { SupabaseService } from '../supabase/supabase.service';
 import { MailService } from '../mail/mail.service';
 import { AuthContext } from '../common/types/auth-context.type';
 import { RegisterDto } from './dto/register.dto';
@@ -15,18 +15,40 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { LoginResponse } from './auth.types';
+import * as argon2 from 'argon2';
+import * as jwt from 'jsonwebtoken';
+import { createHash, randomBytes } from 'crypto';
+
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
+const MEMBER_REFRESH_DAYS = 7;
+const CUSTOMER_REFRESH_DAYS = 30;
+
+export interface JwtPayload {
+  sub: string;
+  type: 'member' | 'customer';
+  businessId: string;
+  iat?: number;
+  exp?: number;
+}
 
 @Injectable()
 export class AuthService {
+  private readonly jwtSecret: string;
+  private readonly jwtExpiresIn: string;
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly supabase: SupabaseService,
     private readonly mail: MailService,
-  ) {}
+    private readonly config: ConfigService,
+  ) {
+    this.jwtSecret = this.config.getOrThrow<string>('JWT_SECRET');
+    this.jwtExpiresIn = this.config.get<string>('JWT_EXPIRES_IN') ?? '15m';
+  }
 
   // ── Register (storefront) ─────────────────────────────────────────────────
 
-  async register(dto: RegisterDto, businessSlug: string): Promise<{ token: string; customer: object }> {
+  async register(dto: RegisterDto, businessSlug: string): Promise<{ message: string }> {
     if (!businessSlug) throw new BadRequestException('Header X-Business-Slug requerido');
 
     const business = await this.prisma.business.findUnique({
@@ -35,117 +57,89 @@ export class AuthService {
     });
     if (!business) throw new NotFoundException('Negocio no encontrado');
 
-    // Verificar que no exista ya un customer con este email en ESTE negocio.
     const existingCustomer = await this.prisma.customer.findFirst({
       where: { businessId: business.id, email: dto.email, deletedAt: null },
     });
-    if (existingCustomer?.authUserId) {
+    if (existingCustomer?.passwordHash) {
       throw new BadRequestException('Ya tenés cuenta en esta tienda. Iniciá sesión.');
     }
 
-    // getOrCreate en Supabase Auth: si el email ya existe (ej. es dueño de otro
-    // negocio), reusar su auth_user_id en vez de fallar.
-    const authUserId = await this.getOrCreateSupabaseUser(dto.email, dto.password);
+    const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
 
-    // Vincular con customer existente (creado desde POS, sin cuenta) o crear nuevo.
-    const customer = existingCustomer
-      ? await this.prisma.customer.update({
-          where: { id: existingCustomer.id },
-          data: { authUserId, firstName: dto.firstName, lastName: dto.lastName, phone: dto.phone },
-        })
-      : await this.prisma.customer.create({
-          data: {
-            businessId: business.id,
-            authUserId,
-            firstName: dto.firstName,
-            lastName: dto.lastName ?? null,
-            email: dto.email,
-            phone: dto.phone ?? null,
-          },
-        });
-
-    // Obtener session token.
-    let signInData: Awaited<ReturnType<typeof this.supabase.adminClient.auth.signInWithPassword>>;
-    try {
-      signInData = await this.supabase.adminClient.auth.signInWithPassword({
-        email: dto.email,
-        password: dto.password,
+    if (existingCustomer) {
+      await this.prisma.customer.update({
+        where: { id: existingCustomer.id },
+        data: { passwordHash, firstName: dto.firstName, lastName: dto.lastName, phone: dto.phone, emailVerified: true },
       });
-    } catch {
-      throw new BadRequestException('Error al iniciar sesión tras el registro');
-    }
-    const { data: session, error: signInError } = signInData;
-    if (signInError || !session.session) {
-      throw new BadRequestException('Error al iniciar sesión tras el registro');
+    } else {
+      await this.prisma.customer.create({
+        data: {
+          businessId: business.id,
+          firstName: dto.firstName,
+          lastName: dto.lastName ?? null,
+          email: dto.email,
+          phone: dto.phone ?? null,
+          passwordHash,
+          emailVerified: true,
+        },
+      });
     }
 
     const storeName = business.storefrontConfig?.storeName ?? business.name;
     await this.mail.sendWelcome(dto.email, { storeName });
 
-    return { token: session.session.access_token, customer };
+    return { message: 'Cuenta creada exitosamente. Iniciá sesión para continuar.' };
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
 
   async login(dto: LoginDto, businessSlug?: string): Promise<LoginResponse> {
-    let sessionData: Awaited<ReturnType<typeof this.supabase.adminClient.auth.signInWithPassword>>;
-    try {
-      sessionData = await this.supabase.adminClient.auth.signInWithPassword({
-        email: dto.email,
-        password: dto.password,
-      });
-    } catch {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-    const { data: session, error } = sessionData;
-    if (error || !session.user || !session.session) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-
-    const authUserId = session.user.id;
-    const token = session.session.access_token;
-
     if (businessSlug) {
-      // Login desde un storefront (tienda.orbita.com) — filtrar por ESTE negocio.
       const business = await this.prisma.business.findUnique({
         where: { subdomain: businessSlug },
       });
-      if (!business) throw new UnauthorizedException('Negocio no encontrado');
+      if (!business) throw new UnauthorizedException('Credenciales inválidas');
 
-      // Buscar como member de ESTE negocio.
+      // Buscar como member de ESTE negocio primero.
       const member = await this.prisma.member.findFirst({
-        where: { authUserId, businessId: business.id },
+        where: { email: dto.email, businessId: business.id },
         include: {
-          role: {
-            include: { rolePermissions: { include: { permission: true } } },
-          },
+          role: { include: { rolePermissions: { include: { permission: true } } } },
         },
       });
 
       if (member) {
+        await this.checkLockout(member.lockedUntil);
+        if (!member.passwordHash) throw new UnauthorizedException('Credenciales inválidas');
+
+        const valid = await argon2.verify(member.passwordHash, dto.password);
+        if (!valid) {
+          await this.handleFailedLogin('member', member.id, member.failedLoginAttempts);
+          throw new UnauthorizedException('Credenciales inválidas');
+        }
+
+        await this.prisma.member.update({
+          where: { id: member.id },
+          data: { failedLoginAttempts: 0, lockedUntil: null, lastAccessAt: new Date() },
+        });
+
+        const token = this.signToken({ sub: member.id, type: 'member', businessId: business.id });
+        const refreshToken = await this.createRefreshToken(member.id, 'MEMBER', business.id);
+
         return {
-          type: 'member' as const,
+          type: 'member',
           token,
-          member: {
-            id: member.id,
-            name: member.name,
-            email: member.email,
-            status: member.status,
-          },
+          refreshToken,
+          member: { id: member.id, name: member.name, email: member.email, status: member.status },
           role: member.role.name,
           permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
-          business: {
-            id: business.id,
-            name: business.name,
-            subdomain: business.subdomain,
-            mode: business.mode,
-          },
+          business: { id: business.id, name: business.name, subdomain: business.subdomain, mode: business.mode },
         };
       }
 
-      // No es member de este negocio → buscar como customer de ESTE negocio.
+      // No es member → buscar como customer de ESTE negocio.
       const customer = await this.prisma.customer.findFirst({
-        where: { authUserId, businessId: business.id, deletedAt: null },
+        where: { email: dto.email, businessId: business.id, deletedAt: null },
       });
 
       if (!customer) {
@@ -156,114 +150,177 @@ export class AuthService {
         });
       }
 
+      await this.checkLockout(customer.lockedUntil);
+      if (!customer.passwordHash) throw new UnauthorizedException('Credenciales inválidas');
+
+      const valid = await argon2.verify(customer.passwordHash, dto.password);
+      if (!valid) {
+        await this.handleFailedLogin('customer', customer.id, customer.failedLoginAttempts);
+        throw new UnauthorizedException('Credenciales inválidas');
+      }
+
+      await this.prisma.customer.update({
+        where: { id: customer.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
+
+      const token = this.signToken({ sub: customer.id, type: 'customer', businessId: business.id });
+      const refreshToken = await this.createRefreshToken(customer.id, 'CUSTOMER', business.id);
+
       return {
-        type: 'customer' as const,
+        type: 'customer',
         token,
-        customer: {
-          id: customer.id,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-        },
-        business: {
-          id: business.id,
-          name: business.name,
-          subdomain: business.subdomain,
-          mode: business.mode,
-        },
+        refreshToken,
+        customer: { id: customer.id, firstName: customer.firstName, lastName: customer.lastName, email: customer.email },
+        business: { id: business.id, name: business.name, subdomain: business.subdomain, mode: business.mode },
       };
     }
 
-    // Login sin slug (desde orbita.com/panel) — buscar como member de cualquier negocio.
-    // authUserId es @unique en members, así que como máximo hay uno.
-    const member = await this.prisma.member.findUnique({
-      where: { authUserId },
+    // Login sin slug (orbita.com/panel) — buscar member por email en cualquier negocio.
+    const member = await this.prisma.member.findFirst({
+      where: { email: dto.email },
       include: {
         business: true,
-        role: {
-          include: { rolePermissions: { include: { permission: true } } },
-        },
+        role: { include: { rolePermissions: { include: { permission: true } } } },
       },
     });
 
-    if (member) {
-      return {
-        type: 'member' as const,
-        token,
-        member: {
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          status: member.status,
-        },
-        role: member.role.name,
-        permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
-        business: {
-          id: member.business.id,
-          name: member.business.name,
-          subdomain: member.business.subdomain,
-          mode: member.business.mode,
-        },
-      };
+    if (!member || !member.passwordHash) {
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    throw new ForbiddenException({
-      error: 'NO_BUSINESS',
-      statusCode: 403,
-      message: 'No tenés un negocio registrado. Creá tu tienda para continuar.',
+    await this.checkLockout(member.lockedUntil);
+
+    const valid = await argon2.verify(member.passwordHash, dto.password);
+    if (!valid) {
+      await this.handleFailedLogin('member', member.id, member.failedLoginAttempts);
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    await this.prisma.member.update({
+      where: { id: member.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null, lastAccessAt: new Date() },
     });
+
+    const token = this.signToken({ sub: member.id, type: 'member', businessId: member.businessId });
+    const refreshToken = await this.createRefreshToken(member.id, 'MEMBER', member.businessId);
+
+    return {
+      type: 'member',
+      token,
+      refreshToken,
+      member: { id: member.id, name: member.name, email: member.email, status: member.status },
+      role: member.role.name,
+      permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
+      business: {
+        id: member.business.id,
+        name: member.business.name,
+        subdomain: member.business.subdomain,
+        mode: member.business.mode,
+      },
+    };
+  }
+
+  // ── Refresh token ─────────────────────────────────────────────────────────
+
+  async refresh(currentRefreshToken: string): Promise<{ token: string; refreshToken: string }> {
+    const tokenHash = this.hashToken(currentRefreshToken);
+    const stored = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+
+    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+      if (stored && !stored.revokedAt) {
+        await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
+      }
+      throw new UnauthorizedException('Refresh token inválido o expirado');
+    }
+
+    // Rotación: revocar el actual y emitir uno nuevo.
+    await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
+
+    const token = this.signToken({ sub: stored.userId, type: stored.userType === 'MEMBER' ? 'member' : 'customer', businessId: stored.businessId });
+    const newRefreshToken = await this.createRefreshToken(stored.userId, stored.userType, stored.businessId);
+
+    return { token, refreshToken: newRefreshToken };
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
 
-  async logout(authUserId: string): Promise<void> {
-    await this.supabase.adminClient.auth.admin.signOut(authUserId);
+  async logout(refreshToken?: string): Promise<void> {
+    if (!refreshToken) return;
+    const tokenHash = this.hashToken(refreshToken);
+    const stored = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+    if (stored && !stored.revokedAt) {
+      await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
+    }
   }
 
   // ── Forgot password ───────────────────────────────────────────────────────
 
-  async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
-    const { data, error } = await this.supabase.adminClient.auth.admin.generateLink({
-      type: 'recovery',
-      email: dto.email,
-      options: {
-        redirectTo: `${process.env.FRONTEND_URL ?? 'http://localhost:3001'}/reset-password`,
+  async forgotPassword(dto: ForgotPasswordDto, businessSlug: string): Promise<void> {
+    if (!businessSlug) throw new BadRequestException('Header X-Business-Slug requerido');
+
+    const business = await this.prisma.business.findUnique({ where: { subdomain: businessSlug } });
+    if (!business) return; // no revelar si el negocio existe
+
+    // Buscar como member, luego como customer de ESE negocio.
+    const member = await this.prisma.member.findFirst({ where: { email: dto.email, businessId: business.id } });
+    const customer = !member
+      ? await this.prisma.customer.findFirst({ where: { email: dto.email, businessId: business.id, deletedAt: null } })
+      : null;
+
+    if (!member && !customer) return; // no revelar si el email existe
+
+    const userType = member ? 'MEMBER' : 'CUSTOMER';
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        tokenHash,
+        email: dto.email,
+        userType,
+        businessId: business.id,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hora
       },
     });
-    if (error || !data.properties?.action_link) {
-      return;
-    }
 
-    await this.mail.sendPasswordReset(dto.email, {
-      resetUrl: data.properties.action_link,
-      expiresIn: '1 hora',
-    });
+    const resetUrl = `${this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001'}/reset-password?token=${rawToken}&slug=${businessSlug}`;
+    await this.mail.sendPasswordReset(dto.email, { resetUrl, expiresIn: '1 hora' });
   }
 
   // ── Reset password ────────────────────────────────────────────────────────
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
-    const {
-      data: { user },
-      error,
-    } = await this.supabase.adminClient.auth.getUser(dto.token);
-    if (error || !user) throw new BadRequestException('Token de recuperación inválido o expirado');
+    const tokenHash = this.hashToken(dto.token);
+    const stored = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
 
-    const { error: updateError } =
-      await this.supabase.adminClient.auth.admin.updateUserById(user.id, {
-        password: dto.newPassword,
-      });
-    if (updateError) throw new BadRequestException('No se pudo actualizar la contraseña');
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw new BadRequestException('Token de recuperación inválido o expirado');
+    }
+
+    const passwordHash = await argon2.hash(dto.newPassword, { type: argon2.argon2id });
+
+    if (stored.userType === 'MEMBER') {
+      const member = await this.prisma.member.findFirst({ where: { email: stored.email, businessId: stored.businessId } });
+      if (member) {
+        await this.prisma.member.update({ where: { id: member.id }, data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null } });
+      }
+    } else {
+      const customer = await this.prisma.customer.findFirst({ where: { email: stored.email, businessId: stored.businessId, deletedAt: null } });
+      if (customer) {
+        await this.prisma.customer.update({ where: { id: customer.id }, data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null } });
+      }
+    }
+
+    await this.prisma.passwordResetToken.update({ where: { id: stored.id }, data: { usedAt: new Date() } });
   }
 
   // ── Accept invitation ─────────────────────────────────────────────────────
 
-  async acceptInvitation(
-    dto: AcceptInvitationDto,
-  ): Promise<{ token: string; member: object }> {
+  async acceptInvitation(dto: AcceptInvitationDto): Promise<{ token: string; refreshToken: string; member: object }> {
     const member = await this.prisma.member.findUnique({
       where: { invitationToken: dto.token },
-      include: { business: { select: { name: true } } },
+      include: { business: { select: { id: true, name: true } } },
     });
 
     if (!member || member.status !== 'PENDING' || !member.hasTempPassword) {
@@ -272,48 +329,28 @@ export class AuthService {
     if (!member.invitationTokenExpiresAt || member.invitationTokenExpiresAt < new Date()) {
       throw new BadRequestException('La invitación expiró — pedí que te reinviten');
     }
-    if (!member.authUserId) {
-      throw new BadRequestException('La invitación no tiene un usuario de Supabase asociado');
-    }
 
-    const { error: updateError } =
-      await this.supabase.adminClient.auth.admin.updateUserById(member.authUserId, {
-        password: dto.newPassword,
-      });
-    if (updateError) throw new BadRequestException('No se pudo actualizar la contraseña');
+    const passwordHash = await argon2.hash(dto.newPassword, { type: argon2.argon2id });
 
     const activatedMember = await this.prisma.member.update({
       where: { id: member.id },
       data: {
+        passwordHash,
         status: 'ACTIVE',
         hasTempPassword: false,
         invitationToken: null,
         invitationTokenExpiresAt: null,
+        emailVerified: true,
       },
     });
 
-    let inviteSignIn: Awaited<ReturnType<typeof this.supabase.adminClient.auth.signInWithPassword>>;
-    try {
-      inviteSignIn = await this.supabase.adminClient.auth.signInWithPassword({
-        email: member.email,
-        password: dto.newPassword,
-      });
-    } catch {
-      throw new BadRequestException('Error al iniciar sesión tras aceptar la invitación');
-    }
-    const { data: sessionData, error: signInError } = inviteSignIn;
-    if (signInError || !sessionData.session) {
-      throw new BadRequestException('Error al iniciar sesión tras aceptar la invitación');
-    }
+    const token = this.signToken({ sub: member.id, type: 'member', businessId: member.businessId });
+    const refreshToken = await this.createRefreshToken(member.id, 'MEMBER', member.businessId);
 
     return {
-      token: sessionData.session.access_token,
-      member: {
-        id: activatedMember.id,
-        name: activatedMember.name,
-        email: activatedMember.email,
-        status: activatedMember.status,
-      },
+      token,
+      refreshToken,
+      member: { id: activatedMember.id, name: activatedMember.name, email: activatedMember.email, status: activatedMember.status },
     };
   }
 
@@ -325,9 +362,7 @@ export class AuthService {
         where: { id: ctx.memberId },
         include: {
           business: true,
-          role: {
-            include: { rolePermissions: { include: { permission: true } } },
-          },
+          role: { include: { rolePermissions: { include: { permission: true } } } },
         },
       });
       if (!member) throw new UnauthorizedException('Miembro no encontrado');
@@ -337,12 +372,7 @@ export class AuthService {
         member: { id: member.id, name: member.name, email: member.email },
         role: member.role.name,
         permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
-        business: {
-          id: member.business.id,
-          name: member.business.name,
-          subdomain: member.business.subdomain,
-          mode: member.business.mode,
-        },
+        business: { id: member.business.id, name: member.business.name, subdomain: member.business.subdomain, mode: member.business.mode },
       };
     }
 
@@ -354,48 +384,58 @@ export class AuthService {
 
     return {
       type: 'customer',
-      customer: {
-        id: customer.id,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-      },
-      business: {
-        id: customer.business.id,
-        name: customer.business.name,
-        subdomain: customer.business.subdomain,
-        mode: customer.business.mode,
-      },
+      customer: { id: customer.id, firstName: customer.firstName, lastName: customer.lastName, email: customer.email },
+      business: { id: customer.business.id, name: customer.business.name, subdomain: customer.business.subdomain, mode: customer.business.mode },
     };
   }
 
-  // ── Helper: getOrCreate Supabase user ─────────────────────────────────────
+  // ── Helpers privados ──────────────────────────────────────────────────────
 
-  private async getOrCreateSupabaseUser(email: string, password: string): Promise<string> {
-    const { data: created, error: createError } =
-      await this.supabase.adminClient.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-      });
+  signToken(payload: JwtPayload): string {
+    const { sub, type, businessId } = payload;
+    return jwt.sign({ sub, type, businessId }, this.jwtSecret, { expiresIn: this.jwtExpiresIn as jwt.SignOptions['expiresIn'] });
+  }
 
-    if (!createError && created.user) return created.user.id;
+  verifyToken(token: string): JwtPayload {
+    return jwt.verify(token, this.jwtSecret) as JwtPayload;
+  }
 
-    // El email ya existe en Supabase → reusar el usuario existente.
-    // Esto permite que un dueño de negocio A se registre como cliente en negocio B.
-    if (createError?.message?.includes('already') || createError?.status === 422) {
-      for (let page = 1; page <= 20; page++) {
-        const { data, error } = await this.supabase.adminClient.auth.admin.listUsers({
-          page,
-          perPage: 200,
-        });
-        if (error) throw new BadRequestException('Error buscando usuario en Supabase');
-        const found = data.users.find((u) => u.email === email);
-        if (found) return found.id;
-        if (data.users.length < 200) break;
-      }
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async createRefreshToken(userId: string, userType: 'MEMBER' | 'CUSTOMER', businessId: string): Promise<string> {
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const days = userType === 'MEMBER' ? MEMBER_REFRESH_DAYS : CUSTOMER_REFRESH_DAYS;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+    await this.prisma.refreshToken.create({
+      data: { tokenHash, userId, userType, businessId, expiresAt },
+    });
+
+    return rawToken;
+  }
+
+  private async checkLockout(lockedUntil: Date | null): Promise<void> {
+    if (lockedUntil && lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000);
+      throw new ForbiddenException(`Cuenta bloqueada. Intentá de nuevo en ${minutesLeft} minuto(s).`);
+    }
+  }
+
+  private async handleFailedLogin(type: 'member' | 'customer', id: string, currentAttempts: number): Promise<void> {
+    const newAttempts = currentAttempts + 1;
+    const data: { failedLoginAttempts: number; lockedUntil?: Date } = { failedLoginAttempts: newAttempts };
+
+    if (newAttempts >= LOCKOUT_THRESHOLD) {
+      data.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
     }
 
-    throw new BadRequestException(createError?.message ?? 'Error al crear usuario en Supabase');
+    if (type === 'member') {
+      await this.prisma.member.update({ where: { id }, data });
+    } else {
+      await this.prisma.customer.update({ where: { id }, data });
+    }
   }
 }
