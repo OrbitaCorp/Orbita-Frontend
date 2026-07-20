@@ -62,7 +62,6 @@ export class AuthGuard implements CanActivate {
       }
 
       request.user = {
-        authUserId: member.authUserId ?? member.id,
         type: 'member',
         memberId: member.id,
         businessId: member.businessId,
@@ -88,7 +87,6 @@ export class AuthGuard implements CanActivate {
       }
 
       request.user = {
-        authUserId: customer.authUserId ?? customer.id,
         type: 'customer',
         customerId: customer.id,
         businessId: customer.businessId,

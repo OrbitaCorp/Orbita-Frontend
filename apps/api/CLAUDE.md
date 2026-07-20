@@ -97,3 +97,8 @@ Ver [`apps/api/src/auth/auth.service.ts`](apps/api/src/auth/auth.service.ts) y
 [`apps/api/src/common/guards/auth.guard.ts`](apps/api/src/common/guards/auth.guard.ts) como
 fuente de verdad del flujo actual. No asumas Supabase Auth por default ni propongas volver a
 él — si una tarea o documento lo menciona, es una referencia desactualizada.
+
+**Migración 100% completa (2026-07-20):** no quedan resabios de la coexistencia con Supabase
+Auth. La columna `authUserId` (que se había conservado temporalmente en `Member`, `Customer` y
+`PlatformAdmin` tras la migración inicial del 2026-07-18) fue eliminada del schema, del tipo
+`AuthContext` y de `AuthGuard` — ver `PENDIENTES.md` § Fase 1 — Auth para el detalle.

@@ -103,6 +103,33 @@ y 2.1–2.13, todos ✅) y se actualizó la tabla de estado y los resultados rea
 
 ## Tests E2E
 
+### [2026-07-20] Throttler real activo en tests — deshabilitado explícitamente vía skipIf
+**Estado:** RESUELTO (2026-07-20)
+Se verificó con un test empírico que el `ThrottlerGuard` global funciona correctamente en
+producción (5 requests → 201, 6to → 429, confirmado por headers `X-RateLimit-*`). La suite de
+`forgot-password` (5 tests) nunca lo disparaba porque hace exactamente 5 requests HTTP totales
+— justo el límite, sin pasarlo. No era un bug de rate-limiting en producción. Se agregó
+`skipIf: () => true` overrideando `THROTTLER:MODULE_OPTIONS` en `test/helpers/test-app.ts`
+(con comentario en el código) para que las suites e2e prueben lógica de negocio sin que el
+throttle interfiera — necesario porque `@Throttle()` a nivel de handler overridea el límite
+del módulo, así que `skipIf` es la única forma de saltearlo sin tocar código de producción.
+
+### [2026-07-20] Suite e2e corre contra una base Supabase compartida real, no una DB de test efímera
+**Estado:** ABIERTO
+`DATABASE_URL` apunta a un pooler de Supabase real (`aws-1-sa-east-1.pooler.supabase.com`), no
+a una base local/efímera. Esto genera dos problemas observados en esta sesión: (1) los
+customers `test-e2e-*@example.com` creados por `register()` en corridas pasadas del suite se
+acumulan indefinidamente (no hay cleanup automático); (2) al correr **todos** los archivos
+`.e2e-spec.ts` en paralelo (comportamiento default de Jest), se detectó una condición de
+carrera entre `auth-isolation.e2e-spec.ts` y `auth.e2e-spec.ts`: el test "forgot-password sin
+slug + email de owner → MEMBER" a veces lee `userType: 'CUSTOMER'` porque la query de
+verificación (`passwordResetToken.findFirst` ordenado por `createdAt desc`) no está scopeada
+por negocio, y ambos archivos escriben filas para el mismo email (`dueno@zapatoslorena.test`,
+reusado como fixture en ambos suites) contra la misma tabla compartida. Workaround usado en
+esta sesión: `jest --runInBand`. Pendiente evaluar: (a) DB de test dedicada/efímera por CI run,
+(b) `--runInBand` permanente en `test:e2e`, o (c) scopear las queries de verificación de los
+tests por negocio para que no dependan del orden global de inserción.
+
 ### [2026-07-12] Tests e2e crean usuarios reales en Supabase que no se limpian
 **Estado:** RESUELTO (2026-07-18)
 Con la migración a auth propio, los tests ya no tocan Supabase Auth. Los customers de test
@@ -130,13 +157,22 @@ requiere un member PENDING con `hasTempPassword: true` en la DB local;
 ## Fase 1 — Auth
 
 ### [2026-07-18] Migración de Supabase Auth a sistema propio completada
-**Estado:** RESUELTO (2026-07-18)
+**Estado:** RESUELTO (2026-07-18) — cierre final (2026-07-20)
 Se eliminó Supabase Auth como proveedor de autenticación. Cada negocio ahora gestiona
 credenciales independientemente: argon2id para hashing, JWT HS256 con `JWT_SECRET` propio,
 refresh token con rotación (SHA-256 hash en DB). Migración SQL aplicada:
-`20260718223824_own_auth_system`. El campo `authUserId` se conserva temporalmente (nullable,
-sin uso funcional) para no romper registros históricos — se puede eliminar en una migración
-futura cuando se confirme que no se referencia desde ningún otro sistema externo.
+`20260718223824_own_auth_system`. El campo `authUserId` se conservó temporalmente (nullable,
+sin uso funcional) tras esa migración.
+
+**Actualización (2026-07-20):** se confirmó que `authUserId` no se leía ni escribía en ningún
+flujo activo (grep completo sobre `src/` y `prisma/`, cero referencias funcionales fuera de la
+población de `ctx.authUserId` en `AuthGuard`, que a su vez nadie consumía). Se eliminó la
+columna de `Member`, `Customer` y `PlatformAdmin` (migración
+`20260720000000_drop_auth_user_id`, `DROP COLUMN` + `DROP INDEX` de los `@unique`), junto con
+el campo en `MemberContext`/`CustomerContext` (`auth-context.type.ts`) y su población en
+`auth.guard.ts`. Se perdieron 15 valores huérfanos (3 members + 12 customers) que apuntaban a
+`auth.users` de Supabase y ya no tenían ningún consumidor. **La migración de Supabase Auth a
+auth propio está 100% completa — no quedan resabios de la coexistencia temporal.**
 
 ### [2026-07-18] `SupabaseService` aún existe pero ya no se usa en auth
 **Estado:** ABIERTO

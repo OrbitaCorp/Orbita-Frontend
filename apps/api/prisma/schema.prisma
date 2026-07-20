@@ -193,7 +193,6 @@ model NotificationConfig {
 model Member {
   id              String       @id @default(uuid())
   businessId      String       @map("business_id")
-  authUserId      String?      @unique @map("auth_user_id") // FK → Supabase auth.users
   name            String
   email           String
   roleId          String       @map("role_id")
@@ -273,7 +272,6 @@ model RolePermission {
 model Customer {
   id         String    @id @default(uuid())
   businessId String    @map("business_id")
-  authUserId String?   @map("auth_user_id") // FK → Supabase auth.users. NULL = sin cuenta (POS-only). Coexistencia temporal.
   firstName  String    @map("first_name")
   lastName   String?   @map("last_name")
   email      String? // campo de vinculación POS ↔ storefront
@@ -1238,7 +1236,6 @@ enum SubscriptionPaymentStatus {
 
 model PlatformAdmin {
   id         String            @id @default(uuid())
-  authUserId String            @unique @map("auth_user_id") // FK → Supabase auth.users
   name       String
   email      String            @unique
   role       PlatformAdminRole @default(OPERATOR)
