@@ -8,13 +8,12 @@
 //   …/configuracion?vista=equipo                         → Equipo (V17)
 //   …/configuracion?vista=notificaciones                 → Notificaciones (V18)
 //
-// (Fase 1 — Alex) La vista General está integrada con la API real:
-//   carga con GET /business + GET /business/config, y guarda POR CARD (cada sección
-//   tiene su propio botón) con PUT /business, PUT /business/config y POST /business/pause.
-// Requiere sesión: el token se lee de localStorage vía lib/api.ts — workaround hasta que
-// exista el login real del panel (ver apps/api/PENDIENTES.md, Fase 2). Sin token, se
-// muestra un aviso en lugar del formulario. "Eliminar espacio" queda deshabilitado
-// (DIFERIDO — depende del módulo Subscriptions).
+// (Fase 1 — Alex) La pestaña General ya trabaja con los datos reales del negocio:
+// al abrir trae todo del backend, y cada tarjeta tiene su propio botón de guardar,
+// así si falla una no se pierde lo del resto. Usa la sesión real del login: si no
+// entraste con tu cuenta, muestra un aviso con un botón para ir a iniciar sesión.
+// "Eliminar espacio" está deshabilitado a propósito: eso llega con el módulo de
+// suscripciones (decisión del equipo, quedó anotado en PENDIENTES.md).
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
@@ -22,10 +21,11 @@ import { Card } from '@/design-system/components/Card'
 import { Button } from '@/design-system/components/Button'
 import { Toast } from '@/design-system/components/Toast'
 import { Modal } from '@/design-system/components/Modal'
+import { useAuth } from '@/hooks/useAuth'
 import {
     ApiError,
-    getBusiness, updateBusiness,
-    getBusinessConfig, updateBusinessConfig,
+    panelGetBusiness, updateBusiness,
+    panelGetBusinessConfig, panelUpdateBusinessConfig,
     pauseBusiness,
 } from '@/lib/api'
 
@@ -49,19 +49,48 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     return <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)', marginBottom: 16 }}>{children}</div>
 }
 
-// Mensaje de error de guardado, debajo del botón de cada card.
+// Cartelito rojo que aparece abajo del botón cuando un guardado falla.
 function ErrorInline({ msg }: { msg?: string | null }) {
     if (!msg) return null
     return <div style={{ fontSize: 13, color: 'var(--color-error)', marginTop: 10 }}>{msg}</div>
 }
 
+// El botoncito "¿Qué pasa si...?" de la zona peligrosa: lo tocás y se abre la
+// explicación completa. Así el texto queda corto (clave en el celular) pero la
+// información está toda ahí igual.
+function DetalleExpandible({ pregunta, children }: { pregunta: string; children: React.ReactNode }) {
+    const [abierto, setAbierto] = useState(false)
+    return (
+        <div style={{ marginTop: 10 }}>
+            <button
+                onClick={() => setAbierto(a => !a)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: 'var(--color-primary)' }}
+            >
+                <span style={{ display: 'inline-block', transform: abierto ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}>▸</span>
+                {pregunta}
+            </button>
+            {abierto && (
+                <ul style={{ margin: '8px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--color-body)', lineHeight: 1.5 }}>
+                    {children}
+                </ul>
+            )}
+        </div>
+    )
+}
+
 function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (m: string) => void }) {
+    // Acá me fijo si hay alguien con la sesión iniciada. Mientras la recupera
+    // dice 'loading'; después queda logueado o anónimo. Esta pantalla es solo
+    // para el dueño o su equipo, no para clientes.
+    const { status: authStatus, user } = useAuth()
+    const esDueno = authStatus === 'authenticated' && user?.type === 'member'
+
     // ── Carga inicial ──
     const [cargando, setCargando] = useState(true)
     const [sinSesion, setSinSesion] = useState(false)
     const [errorCarga, setErrorCarga] = useState<string | null>(null)
 
-    // ── Estado por bloque (cada card guarda lo suyo por separado) ──
+    // ── Lo que se va escribiendo en cada tarjeta (cada una guarda lo suyo aparte) ──
     const [negocio, setNegocio]   = useState({ name: '', industry: '', description: '' })
     const [contacto, setContacto] = useState({ whatsapp: '', email: '', scheduleText: '' })
     const [pagos, setPagos]       = useState({ acceptsMercadopago: false, acceptsCash: false, acceptsPickup: false, acceptsTransfer: false, transferAlias: '' })
@@ -74,10 +103,12 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
     const [modalPausa, setModalPausa] = useState(false)
 
     useEffect(() => {
+        if (authStatus === 'loading') return          // todavía no sabemos si hay sesión
+        if (!esDueno) { setCargando(false); return }  // sin sesión de dueño → banner
         let cancelado = false
         async function cargar() {
             try {
-                const [biz, cfg] = await Promise.all([getBusiness(), getBusinessConfig()])
+                const [biz, cfg] = await Promise.all([panelGetBusiness(), panelGetBusinessConfig()])
                 if (cancelado) return
                 setNegocio({ name: biz.name ?? '', industry: biz.industry ?? '', description: biz.description ?? '' })
                 setIsPaused(biz.isPaused)
@@ -90,8 +121,8 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
                     transferAlias: cfg.transferAlias ?? '',
                 })
                 setEnvios({
-                    // Decimal de Prisma llega serializado como string — se muestra tal cual
-                    // y se convierte con Number() recién al guardar.
+                    // Los montos llegan del backend como texto: los muestro tal cual
+                    // y los paso a número recién en el momento de guardar.
                     shippingBase: cfg.shippingBase != null ? String(cfg.shippingBase) : '',
                     freeShippingFrom: cfg.freeShippingFrom != null ? String(cfg.freeShippingFrom) : '',
                     deliveryZones: (cfg.deliveryZones ?? []).join(', '),
@@ -108,10 +139,11 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
         }
         cargar()
         return () => { cancelado = true }
-    }, [])
+    }, [authStatus, esDueno])
 
-    // Guardado genérico por card: marca "guardando", limpia el error previo del bloque,
-    // ejecuta el PUT y muestra el resultado (toast si salió bien, error inline si no).
+    // El guardado que usan todas las tarjetas: pone el botón en "guardando", borra
+    // el error viejo, manda los datos al backend y avisa cómo salió (cartel verde
+    // si salió bien, cartelito rojo abajo del botón si no).
     async function guardar(card: string, fn: () => Promise<unknown>, okMsg: string) {
         setGuardando(card)
         setErrores(prev => ({ ...prev, [card]: null }))
@@ -131,22 +163,22 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
         'Información del negocio guardada')
 
     const guardarContacto = () => guardar('contacto',
-        () => updateBusinessConfig({
+        () => panelUpdateBusinessConfig({
             whatsapp: contacto.whatsapp,
             scheduleText: contacto.scheduleText,
-            // El email vacío se omite (no "borra"): @IsEmail() del backend rechaza "".
+            // Si el email está vacío directamente no lo mando: el backend no acepta un email en blanco.
             ...(contacto.email.trim() ? { email: contacto.email.trim() } : {}),
         }),
         'Datos de contacto guardados')
 
     const guardarPagos = () => guardar('pagos',
-        () => updateBusinessConfig({
+        () => panelUpdateBusinessConfig({
             acceptsMercadopago: pagos.acceptsMercadopago,
             acceptsCash: pagos.acceptsCash,
             acceptsPickup: pagos.acceptsPickup,
             acceptsTransfer: pagos.acceptsTransfer,
-            // El alias vacío se omite; si transferencia está activa sin alias, el backend
-            // responde 400 con el motivo — ese mensaje se muestra bajo el botón.
+            // El alias vacío no se manda; si activás transferencia sin poner el alias,
+            // el backend lo rechaza y ese aviso es el que se ve abajo del botón.
             ...(pagos.transferAlias.trim() ? { transferAlias: pagos.transferAlias.trim() } : {}),
         }),
         'Métodos de pago guardados')
@@ -160,7 +192,7 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
         if (envios.freeShippingFrom.trim() !== '' && Number.isNaN(gratis)) {
             setErrores(prev => ({ ...prev, envios: 'El monto de envío gratis debe ser un número' })); return
         }
-        guardar('envios', () => updateBusinessConfig({
+        guardar('envios', () => panelUpdateBusinessConfig({
             ...(envios.shippingBase.trim() !== '' ? { shippingBase: base } : {}),
             ...(envios.freeShippingFrom.trim() !== '' ? { freeShippingFrom: gratis } : {}),
             deliveryZones: envios.deliveryZones.split(',').map(z => z.trim()).filter(Boolean),
@@ -169,7 +201,7 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
     }
 
     const guardarRedes = () => guardar('redes',
-        () => updateBusinessConfig({ instagram: redes.instagram, tiktok: redes.tiktok, facebook: redes.facebook }),
+        () => panelUpdateBusinessConfig({ instagram: redes.instagram, tiktok: redes.tiktok, facebook: redes.facebook }),
         'Redes sociales guardadas')
 
     async function confirmarPausa() {
@@ -188,21 +220,24 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
         }
     }
 
-    // ── Estados especiales de la vista ──
+    // ── Pantallas especiales: sin sesión, cargando, o error al traer los datos ──
 
-    if (sinSesion) {
+    if ((authStatus !== 'loading' && !esDueno) || sinSesion) {
         return (
             <div style={pageWrap}>
                 <ConfigTabs activo="general" ir={ir} />
                 <h1 style={h1Style}>Configuración general</h1>
                 <Card>
                     <SectionTitle>No hay sesión activa</SectionTitle>
-                    <div style={{ fontSize: 14, color: 'var(--color-body)', lineHeight: 1.6 }}>
-                        Esta pantalla ahora usa datos reales del backend y necesita un usuario logueado.
-                        El login del panel todavía no está implementado (tarea de Auth) — mientras tanto,
-                        iniciá sesión con el snippet de la consola del navegador (guía del equipo) y recargá
-                        esta página.
+                    <div style={{ fontSize: 14, color: 'var(--color-body)', lineHeight: 1.6, marginBottom: 14 }}>
+                        Esta pantalla usa datos reales de tu negocio y necesita que entres con tu
+                        cuenta de dueño (o de tu equipo).
                     </div>
+                    {/* Va con recarga completa a propósito: es la forma en que el equipo
+                        maneja la ida al login, y así anda bien también con subdominios. */}
+                    <Button variant="primary" onClick={() => { window.location.href = '/login' }}>
+                        Iniciar sesión
+                    </Button>
                 </Card>
             </div>
         )
@@ -287,8 +322,9 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
                 {/* ── Envíos ── */}
                 <Card>
                     <SectionTitle>Envíos</SectionTitle>
-                    <CfgField label="Costo base de envío ($)" value={envios.shippingBase} onChange={v => setEnvios(p => ({ ...p, shippingBase: v }))} />
-                    <CfgField label="Envío gratis desde ($)" value={envios.freeShippingFrom} onChange={v => setEnvios(p => ({ ...p, freeShippingFrom: v }))} />
+                    {/* Estos dos campos solo dejan escribir números (nada de letras) */}
+                    <CfgField label="Costo base de envío ($)" value={envios.shippingBase} onChange={v => setEnvios(p => ({ ...p, shippingBase: v.replace(/[^0-9.,]/g, '') }))} />
+                    <CfgField label="Envío gratis desde ($)" value={envios.freeShippingFrom} onChange={v => setEnvios(p => ({ ...p, freeShippingFrom: v.replace(/[^0-9.,]/g, '') }))} />
                     <CfgField label="Zonas de entrega (separadas por coma)" value={envios.deliveryZones} onChange={v => setEnvios(p => ({ ...p, deliveryZones: v }))} />
                     <CfgField label="Texto de política de envíos" value={envios.shippingPolicy} area onChange={v => setEnvios(p => ({ ...p, shippingPolicy: v }))} />
                     <Button variant="primary" loading={guardando === 'envios'} onClick={guardarEnvios}>Guardar cambios</Button>
@@ -308,30 +344,53 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
                 {/* ── Zona peligrosa ── */}
                 <Card>
                     <SectionTitle>Zona peligrosa</SectionTitle>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, paddingBottom: 14, borderBottom: '1px solid var(--color-border)' }}>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-body)' }}>
-                                {isPaused ? 'Reactivar tienda' : 'Pausar tienda'}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                        {/* Pausar / reactivar */}
+                        <div style={cajaPeligro}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 180, flex: 1 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-body)' }}>
+                                        {isPaused ? 'Reactivar tienda' : 'Pausar tienda'}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 2 }}>
+                                        {isPaused
+                                            ? 'Tu tienda está pausada: tus clientes no la ven.'
+                                            : 'Tu tienda deja de estar visible para tus clientes. Tus datos se conservan.'}
+                                    </div>
+                                </div>
+                                <Button variant="outline" loading={guardando === 'pausa'} onClick={() => setModalPausa(true)}>
+                                    {isPaused ? 'Reactivar' : 'Pausar'}
+                                </Button>
                             </div>
-                            <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 2 }}>
-                                {isPaused
-                                    ? 'La tienda está pausada: tus clientes no la ven. Reactivala cuando quieras.'
-                                    : 'La tienda permanece activa para vos pero oculta para tus clientes.'}
-                            </div>
+                            <DetalleExpandible pregunta="¿Qué pasa si pauso la tienda?">
+                                <li>Nadie puede ver tu tienda ni comprarte mientras esté pausada.</li>
+                                <li>Vos seguís entrando al panel con normalidad.</li>
+                                <li>Tus datos, productos y pedidos quedan intactos.</li>
+                                <li>La reactivás cuando quieras, con un click.</li>
+                            </DetalleExpandible>
+                            <ErrorInline msg={errores.pausa} />
                         </div>
-                        <Button variant="outline" loading={guardando === 'pausa'} onClick={() => setModalPausa(true)}>
-                            {isPaused ? 'Reactivar tienda' : 'Pausar tienda'}
-                        </Button>
-                    </div>
-                    <ErrorInline msg={errores.pausa} />
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, paddingTop: 14 }}>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-error)' }}>Eliminar espacio</div>
-                            <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 2 }}>
-                                Diferido: depende del módulo de suscripciones (ver PENDIENTES.md). Por ahora esta acción no está disponible.
+
+                        {/* Eliminar espacio */}
+                        <div style={cajaPeligro}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 180, flex: 1 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-error)' }}>Eliminar espacio</div>
+                                    <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 2 }}>
+                                        Borra tu espacio con todos sus datos.
+                                    </div>
+                                </div>
+                                <Button variant="danger" disabled>Eliminar</Button>
                             </div>
+                            <DetalleExpandible pregunta="¿Qué pasa si elimino mi espacio?">
+                                <li>Con una suscripción activa, la tienda se pausa hasta que termine el período que ya pagaste.</li>
+                                <li>Al terminar, tenés 30 días para arrepentirte y recuperar todo (volviendo a pagar la suscripción).</li>
+                                <li>Pasados esos 30 días, el espacio y todos sus datos se eliminan de forma definitiva.</li>
+                                <li style={{ color: 'var(--color-muted)' }}>Esta parte todavía la estamos armando, así que por ahora el botón no anda.</li>
+                            </DetalleExpandible>
                         </div>
-                        <Button variant="danger" disabled>Eliminar espacio</Button>
+
                     </div>
                 </Card>
 
@@ -353,8 +412,8 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
             >
                 <div style={{ fontSize: 14, color: 'var(--color-body)', lineHeight: 1.6 }}>
                     {isPaused
-                        ? 'El storefront vuelve a estar visible para tus clientes.'
-                        : 'El storefront deja de verse para tus clientes. Los datos se conservan y podés reactivarla cuando quieras.'}
+                        ? 'Tu tienda vuelve a estar visible para tus clientes.'
+                        : 'Tu tienda deja de estar visible para tus clientes. Los datos se conservan y podés reactivarla cuando quieras.'}
                 </div>
             </Modal>
         </div>
@@ -402,3 +461,4 @@ export default function ConfigGeneral() {
 
 const pageWrap: React.CSSProperties = { padding: '24px 32px 64px', maxWidth: 1280, width: '100%', margin: '0 auto', boxSizing: 'border-box' }
 const h1Style: React.CSSProperties = { fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--color-text)', margin: '0 0 20px' }
+const cajaPeligro: React.CSSProperties = { border: '1px solid var(--color-border)', borderRadius: 10, padding: '12px 14px' }

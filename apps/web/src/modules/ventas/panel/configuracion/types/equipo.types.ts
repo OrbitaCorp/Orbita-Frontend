@@ -9,12 +9,13 @@ export type GrupoPermiso =
     | 'POS'
     | 'Descuentos'
     | 'Configuración'
+    | 'Catálogo'   // agregado en Fase 1: el backend también tiene permisos de catálogo
 
 export interface Permiso {
     id:    string
     grupo: GrupoPermiso
     label: string
-    desc:  string
+    desc?: string          // opcional: los permisos reales del backend vienen sin descripción
 }
 
 export interface Rol {

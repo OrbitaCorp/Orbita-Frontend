@@ -193,8 +193,39 @@ recuperación solo se envía desde `MailService.sendPasswordReset` — no hay du
 
 ## Fase 2 — Businesses/Branches
 
+### [2026-07-20] Política de suscripción vencida / eliminación de espacio (decisión de producto)
+**Estado:** ABIERTO — política refinada y documentada; la lógica se implementa con el módulo Subscriptions
+Política acordada (refinada por Alex el 2026-07-20 — mapea 1:1 a los estados del schema):
+1. **Vencimiento**: 5 días de gracia para volver a pagar (PAST_DUE — coincide con
+   `gracePeriodDays` del schema y la "política B" del plan técnico). La tienda sigue
+   funcionando durante la gracia y se avisa por email.
+2. **Sin pago tras la gracia**: la tienda se **pausa** automáticamente (SUSPENDED), con
+   aviso por email, y el dueño tiene **30 días** para renovar el pago y reactivarla.
+3. **Pasados los 30 días**: borrado definitivo del espacio y sus datos (CANCELLED — esto
+   responde el punto abierto del checklist de MODELO_DATOS sobre cuándo SUSPENDED pasa a
+   CANCELLED y libera el subdominio).
+4. **"Eliminar espacio" con suscripción activa**: la tienda se pausa hasta el fin del
+   período ya pagado; después corren los mismos 30 días para arrepentirse (recuperarla
+   exige volver a pagar la suscripción); recién ahí, borrado definitivo.
+En UI: los textos de "Pausar tienda" y "Eliminar espacio" de Configuración general explican
+la política en lenguaje simple dentro de cada acción (se quitó el recuadro de aviso general
+por decisión de Alex). El enforcement (crons de gracia y borrado, emails, bloqueo)
+corresponde a Subscriptions + preapproval de MP (fase 13 del plan técnico, todavía sin
+tarjetas asignadas en Jira — pendiente de repartir en el equipo).
+Además se ajustó el lenguaje de la zona peligrosa para usuarios no técnicos (sin
+"storefront") y se agregó validación numérica en los campos de envíos (los montos ya no
+aceptan texto).
+
 ### [2026-07-18] Panel `ConfigGeneral` integrado con la API real — sesión provisoria por localStorage
-**Estado:** ABIERTO — workaround consciente hasta que exista el login del panel (Alan)
+**Estado:** RESUELTO (2026-07-20) — adaptado al auth real (useAuth + authedFetch)
+Actualización 2026-07-20: con la migración de auth (JWT propio + AuthContext + BFF), la
+pantalla dejó el workaround de localStorage. Ahora toma la sesión de `useAuth` (exige
+`type === 'member'`), llama al backend con `authedFetch` (token en memoria + refresh
+automático) vía funciones `panel*` nuevas en `lib/api.ts`, y sin sesión muestra un botón
+al login real (`/login`). Pendiente menor anotado: las llamadas de datos del panel van
+directo al backend (API_BASE) — en dev con localhost CORS lo permite; bajo subdominios
+reales convendrá pasarlas por el BFF (mismo origen), como ya hace auth.
+Texto original de la entrada (historial):
 La vista General de `apps/web/src/modules/ventas/panel/configuracion/ConfigGeneral.tsx` dejó
 de usar datos hardcodeados: carga con `GET /business` + `GET /business/config` y guarda por
 card con `PUT /business`, `PUT /business/config` y `POST /business/pause` (con modal de
@@ -289,6 +320,18 @@ después del fix.
 ---
 
 ## Fase 3 — Equipo (Roles/Permissions/Members)
+
+### [2026-07-20] Pestaña Roles del panel Equipo integrada con la API real (+fix del modal)
+**Estado:** RESUELTO (2026-07-20)
+`Equipo.tsx` (pestaña Roles) dejó los mocks: lista con `GET /roles`, catálogo con
+`GET /permissions` (ahora incluye el grupo Catálogo en la UI), y crear/editar/eliminar
+contra `POST/PUT/DELETE /roles/:id`, con validación en el modal (nombre + al menos un
+permiso) y errores del backend visibles (roles default protegidos, borrado con miembros →
+422). Se arregló el bug de diseño del modal de rol: era más alto que la pantalla y el
+título/nombre quedaban inaccesibles — ahora el contenido scrollea adentro con header y
+footer fijos. Los nombres de los roles default se muestran localizados (owner→Dueño, etc.).
+La pestaña **Miembros sigue con datos de muestra** a propósito (tarjeta "Config: Equipo" de
+F5 — invitaciones dependen del servicio de email de F3).
 
 ### [2026-07-18] "PUT /roles/:id/permissions" cubierto por el reemplazo completo en `PUT /roles/:id`
 **Estado:** RESUELTO (2026-07-18) — aclaración, no cambio de código
