@@ -260,6 +260,16 @@ export type UpdateBusinessConfigInput = Partial<{
   acceptsCard: boolean
   acceptsPickup: boolean
   transferAlias: string
+  // (Fase 1 — Config, Alex) Campos que el DTO del backend ya aceptaba y la pantalla
+  // de Configuración general necesita. Aditivo: no afecta a los llamadores existentes.
+  scheduleText: string
+  shippingBase: number
+  freeShippingFrom: number
+  deliveryZones: string[]
+  shippingPolicy: string
+  instagram: string
+  tiktok: string
+  facebook: string
 }>
 
 export function updateBusinessConfig(input: UpdateBusinessConfigInput) {
@@ -268,12 +278,50 @@ export function updateBusinessConfig(input: UpdateBusinessConfigInput) {
 
 export function getBusinessConfig() {
   return request<{
-    whatsapp: string | null; email: string | null
+    whatsapp: string | null; email: string | null; scheduleText: string | null
     acceptsMercadopago: boolean; acceptsCash: boolean; acceptsTransfer: boolean
     acceptsCard: boolean; acceptsPickup: boolean; transferAlias: string | null
+    // Ojo: los montos son Decimal en Prisma y llegan serializados como string.
+    shippingBase: string | number | null; freeShippingFrom: string | number | null
+    deliveryZones: string[]; shippingPolicy: string | null
+    instagram: string | null; tiktok: string | null; facebook: string | null
   }>('/business/config')
 }
 
 export function publishBusiness() {
   return request<{ url: string; published: boolean }>('/business/publish', { method: 'POST' })
+}
+
+// ─── Panel: Configuración general (Fase 1 — Alex) ───────────────────────────
+// Funciones que consume panel/configuracion/ConfigGeneral.tsx.
+
+export type UpdateBusinessInput = Partial<{
+  name: string
+  industry: string
+  description: string
+}>
+
+// PUT /business — datos básicos (nombre, rubro, descripción). No acepta subdomain/mode.
+export function updateBusiness(input: UpdateBusinessInput) {
+  return request<{ id: string; name: string; industry: string; description: string | null }>(
+    '/business',
+    { method: 'PUT', body: JSON.stringify(input) },
+  )
+}
+
+// POST /business/pause — pausa o reanuda la tienda según `paused`. Solo owner.
+export function pauseBusiness(paused: boolean) {
+  return request<{ isPaused: boolean }>('/business/pause', {
+    method: 'POST',
+    body: JSON.stringify({ paused }),
+  })
+}
+
+// POST /business/mode — cambia FULL ↔ SHOWCASE. Endpoint dedicado (solo owner); el
+// backend rechaza pasar a vidriera si hay pedidos online sin resolver (422).
+export function changeBusinessMode(mode: 'FULL' | 'SHOWCASE') {
+  return request<{ mode: string }>('/business/mode', {
+    method: 'POST',
+    body: JSON.stringify({ mode }),
+  })
 }
