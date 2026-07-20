@@ -21,17 +21,24 @@ export class TagsService {
 
   async update(businessId: string, id: string, dto: UpsertTagDto) {
     await this.findOneRaw(businessId, id);
+
+    // businessId va en el where del updateMany, no solo en el findOneRaw previo —
+    // la query tiene que garantizar el aislamiento por sí misma.
+    let result: Prisma.BatchPayload;
     try {
-      return await this.prisma.tag.update({ where: { id }, data: { name: dto.name } });
+      result = await this.prisma.tag.updateMany({ where: { id, businessId }, data: { name: dto.name } });
     } catch (err) {
       throw this.mapNameConflict(err);
     }
+    if (result.count === 0) throw new NotFoundException('Tag no encontrado');
+    return this.findOneRaw(businessId, id);
   }
 
   async remove(businessId: string, id: string) {
     await this.findOneRaw(businessId, id);
     // product_tags tiene onDelete: Cascade — no queda huérfano.
-    await this.prisma.tag.delete({ where: { id } });
+    const { count } = await this.prisma.tag.deleteMany({ where: { id, businessId } });
+    if (count === 0) throw new NotFoundException('Tag no encontrado');
     return { ok: true };
   }
 

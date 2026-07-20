@@ -256,36 +256,59 @@ export class AuthService {
 
   // ── Forgot password ───────────────────────────────────────────────────────
 
-  async forgotPassword(dto: ForgotPasswordDto, businessSlug: string): Promise<void> {
-    if (!businessSlug) throw new BadRequestException('Header X-Business-Slug requerido');
+  async forgotPassword(dto: ForgotPasswordDto, businessSlug?: string): Promise<void> {
+    if (businessSlug) {
+      const business = await this.prisma.business.findUnique({ where: { subdomain: businessSlug } });
+      if (!business) return; // no revelar si el negocio existe
 
-    const business = await this.prisma.business.findUnique({ where: { subdomain: businessSlug } });
-    if (!business) return; // no revelar si el negocio existe
+      // Buscar como member, luego como customer de ESE negocio.
+      const member = await this.prisma.member.findFirst({ where: { email: dto.email, businessId: business.id } });
+      const customer = !member
+        ? await this.prisma.customer.findFirst({ where: { email: dto.email, businessId: business.id, deletedAt: null } })
+        : null;
 
-    // Buscar como member, luego como customer de ESE negocio.
-    const member = await this.prisma.member.findFirst({ where: { email: dto.email, businessId: business.id } });
-    const customer = !member
-      ? await this.prisma.customer.findFirst({ where: { email: dto.email, businessId: business.id, deletedAt: null } })
-      : null;
+      if (!member && !customer) return; // no revelar si el email existe
 
-    if (!member && !customer) return; // no revelar si el email existe
+      const userType = member ? 'MEMBER' : 'CUSTOMER';
+      await this.issuePasswordResetToken(dto.email, userType, business.id, businessSlug);
+      return;
+    }
 
-    const userType = member ? 'MEMBER' : 'CUSTOMER';
+    // Sin slug (orbita.com/panel) — mismo criterio que login(): buscar member
+    // globalmente. Nunca se busca customer sin slug: un customer siempre
+    // pertenece a un negocio específico (no existe "cuenta de plataforma" para
+    // clientes del storefront), a diferencia de un dueño que puede no recordar
+    // el subdominio de su propia tienda.
+    const member = await this.prisma.member.findFirst({ where: { email: dto.email } });
+    if (!member) return; // no revelar si el email existe
+
+    const business = await this.prisma.business.findUnique({ where: { id: member.businessId } });
+    if (!business) return;
+
+    await this.issuePasswordResetToken(dto.email, 'MEMBER', business.id, business.subdomain);
+  }
+
+  private async issuePasswordResetToken(
+    email: string,
+    userType: 'MEMBER' | 'CUSTOMER',
+    businessId: string,
+    slug: string,
+  ): Promise<void> {
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(rawToken);
 
     await this.prisma.passwordResetToken.create({
       data: {
         tokenHash,
-        email: dto.email,
+        email,
         userType,
-        businessId: business.id,
+        businessId,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hora
       },
     });
 
-    const resetUrl = `${this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001'}/reset-password?token=${rawToken}&slug=${businessSlug}`;
-    await this.mail.sendPasswordReset(dto.email, { resetUrl, expiresIn: '1 hora' });
+    const resetUrl = `${this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001'}/reset-password?token=${rawToken}&slug=${slug}`;
+    await this.mail.sendPasswordReset(email, { resetUrl, expiresIn: '1 hora' });
   }
 
   // ── Reset password ────────────────────────────────────────────────────────
@@ -356,6 +379,11 @@ export class AuthService {
 
   // ── /me ───────────────────────────────────────────────────────────────────
 
+  // getMe() solo se llama desde GET /auth/me (auth.controller.ts), que no tiene
+  // @Public() — pasa siempre por AuthGuard, que ya validó JWT + businessId (ver
+  // auth.guard.ts) antes de poblar `ctx`. Por eso buscar por id acá es seguro:
+  // memberId/customerId y businessId ya son un par verificado, no datos crudos
+  // del cliente.
   async getMe(ctx: AuthContext): Promise<object> {
     if (ctx.type === 'member') {
       const member = await this.prisma.member.findUnique({

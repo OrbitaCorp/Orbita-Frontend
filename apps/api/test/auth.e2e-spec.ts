@@ -262,30 +262,125 @@ describe('Auth (e2e)', () => {
   // ── POST /auth/forgot-password ──────────────────────────────────────────
 
   describe('POST /api/v1/auth/forgot-password', () => {
-    it('con email existente + slug → 201', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/auth/forgot-password')
-        .set('x-business-slug', SEED_BUSINESS_SLUG)
-        .send({ email: SEED_USERS.owner.email });
+    it('con email existente + slug → 201, crea token scopeado a ESE negocio', async () => {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      try {
+        const res = await request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .set('x-business-slug', SEED_BUSINESS_SLUG)
+          .send({ email: SEED_USERS.owner.email });
 
-      expect(res.status).toBe(201);
+        expect(res.status).toBe(201);
+
+        const resetToken = await prisma.passwordResetToken.findFirst({
+          where: { email: SEED_USERS.owner.email },
+          orderBy: { createdAt: 'desc' },
+          include: { business: { select: { subdomain: true } } },
+        });
+        expect(resetToken).not.toBeNull();
+        expect(resetToken.userType).toBe('MEMBER');
+        expect(resetToken.business.subdomain).toBe(SEED_BUSINESS_SLUG);
+      } finally {
+        await prisma.$disconnect();
+      }
     });
 
-    it('con email inexistente + slug → 201 (no filtra información)', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/auth/forgot-password')
-        .set('x-business-slug', SEED_BUSINESS_SLUG)
-        .send({ email: 'noexiste-forgot@example.com' });
+    it('con email inexistente + slug → 201 (no filtra información), no crea ningún token', async () => {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      try {
+        const email = 'noexiste-forgot@example.com';
+        const res = await request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .set('x-business-slug', SEED_BUSINESS_SLUG)
+          .send({ email });
 
-      expect(res.status).toBe(201);
+        expect(res.status).toBe(201);
+
+        const count = await prisma.passwordResetToken.count({ where: { email } });
+        expect(count).toBe(0);
+      } finally {
+        await prisma.$disconnect();
+      }
     });
 
-    it('sin header X-Business-Slug → 400', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/auth/forgot-password')
-        .send({ email: SEED_USERS.owner.email });
+    it('sin header X-Business-Slug + email de member (dueño) → resuelve GLOBALMENTE, crea token MEMBER para su propio negocio', async () => {
+      // Mismo criterio que login(): un dueño que no recuerda el subdominio de
+      // su tienda puede pedir el reset desde orbita.com sin slug. Se prueba el
+      // efecto real (token creado, con el businessId y userType correctos), no
+      // solo el status code — 201 por sí solo no distingue "encontrado" de
+      // "no revelado" (ver caso de email inexistente arriba).
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      try {
+        const res = await request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .send({ email: SEED_USERS.owner.email });
 
-      expect(res.status).toBe(400);
+        expect(res.status).toBe(201);
+
+        const resetToken = await prisma.passwordResetToken.findFirst({
+          where: { email: SEED_USERS.owner.email },
+          orderBy: { createdAt: 'desc' },
+          include: { business: { select: { subdomain: true } } },
+        });
+        expect(resetToken).not.toBeNull();
+        expect(resetToken.userType).toBe('MEMBER');
+        // Sin slug en el request, igual resuelve el negocio REAL del dueño
+        // (member.businessId) — no un negocio arbitrario ni ninguno.
+        expect(resetToken.business.subdomain).toBe(SEED_BUSINESS_SLUG);
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    it('sin header X-Business-Slug + email de customer (sin cuenta de member) → NUNCA se resuelve, no crea ningún token', async () => {
+      // Confirma la otra mitad del criterio: sin slug, el flujo SOLO busca en
+      // `member` — un customer puro (sin ser también member de ningún
+      // negocio) nunca genera un token, aunque el email exista y tenga
+      // password seteado. Se verifica por conteo antes/después en vez de
+      // confiar en el status code, que es 201 en ambos casos (encontrado o
+      // no) por diseño anti-enumeración.
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      try {
+        const email = SEED_USERS.customerWithAccount.email;
+
+        const memberWithThisEmail = await prisma.member.findFirst({ where: { email } });
+        expect(memberWithThisEmail).toBeNull(); // precondición: no es member de nada
+
+        const countBefore = await prisma.passwordResetToken.count({ where: { email } });
+
+        const res = await request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .send({ email });
+
+        expect(res.status).toBe(201); // no filtra información
+
+        const countAfter = await prisma.passwordResetToken.count({ where: { email } });
+        expect(countAfter).toBe(countBefore); // ningún token nuevo — nunca se buscó como customer
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    it('sin header X-Business-Slug + email inexistente → 201 (no filtra información), no crea ningún token', async () => {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      try {
+        const email = 'noexiste-forgot-sin-slug@example.com';
+        const res = await request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .send({ email });
+
+        expect(res.status).toBe(201);
+
+        const count = await prisma.passwordResetToken.count({ where: { email } });
+        expect(count).toBe(0);
+      } finally {
+        await prisma.$disconnect();
+      }
     });
   });
 

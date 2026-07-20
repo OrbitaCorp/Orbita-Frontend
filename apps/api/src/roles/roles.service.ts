@@ -58,19 +58,33 @@ export class RolesService {
 
     // Reemplazo completo de permisos: más simple y predecible que un diff
     // incremental, y el volumen por rol (~19 permisos máx.) lo hace barato.
-    const updated = await this.prisma.role.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        description: dto.description ?? null,
-        color: dto.color ?? null,
-        rolePermissions: {
-          deleteMany: {},
-          create: dto.permissions.map((code) => ({ permission: { connect: { code } } })),
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // El update de campos escalares va scopeado por businessId acá mismo — no
+      // depende del findOneRaw de arriba para el aislamiento.
+      const { count } = await tx.role.updateMany({
+        where: { id, businessId },
+        data: { name: dto.name, description: dto.description ?? null, color: dto.color ?? null },
+      });
+      if (count === 0) throw new NotFoundException('Rol no encontrado');
+
+      // rolePermissions es un nested write: Prisma solo lo acepta contra un
+      // `where` por clave única, no admite updateMany con relaciones anidadas.
+      // Usar `id` solo acá es seguro porque el updateMany de arriba, en la misma
+      // transacción, ya confirmó que este `id` pertenece a `businessId` — y
+      // businessId de un Role nunca se reasigna (ningún endpoint lo modifica),
+      // así que no queda ventana de carrera real.
+      return tx.role.update({
+        where: { id },
+        data: {
+          rolePermissions: {
+            deleteMany: {},
+            create: dto.permissions.map((code) => ({ permission: { connect: { code } } })),
+          },
         },
-      },
-      include: roleInclude,
+        include: roleInclude,
+      });
     });
+
     return this.toResponse(updated);
   }
 
@@ -80,8 +94,9 @@ export class RolesService {
       throw new UnprocessableEntityException('No se puede eliminar un rol por defecto');
     }
 
+    let result: Prisma.BatchPayload;
     try {
-      await this.prisma.role.delete({ where: { id } });
+      result = await this.prisma.role.deleteMany({ where: { id, businessId } });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
         throw new UnprocessableEntityException(
@@ -90,6 +105,7 @@ export class RolesService {
       }
       throw err;
     }
+    if (result.count === 0) throw new NotFoundException('Rol no encontrado');
 
     return { ok: true };
   }

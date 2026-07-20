@@ -43,7 +43,10 @@ export class AuthController {
 
   @Post('forgot-password')
   @Public()
-  forgotPassword(@Body() dto: ForgotPasswordDto, @Headers('x-business-slug') businessSlug: string) {
+  // Por IP, mismo patrón que login (ThrottlerGuard global no tiene tracker
+  // combinado IP+email en este proyecto — ver PENDIENTES.md).
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 intentos / 15 min
+  forgotPassword(@Body() dto: ForgotPasswordDto, @Headers('x-business-slug') businessSlug?: string) {
     return this.authService.forgotPassword(dto, businessSlug);
   }
 
