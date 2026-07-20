@@ -10,6 +10,7 @@ import { UpdateBusinessConfigDto } from './dto/update-business-config.dto';
 import { UpdateStorefrontConfigDto } from './dto/update-storefront-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
 import { PauseBusinessDto } from './dto/pause-business.dto';
+import { ChangeModeDto } from './dto/change-mode.dto';
 
 @Controller('business')
 export class BusinessesController {
@@ -96,6 +97,17 @@ export class BusinessesController {
   pause(@CurrentBusiness() ctx: AuthContext, @Body() dto: PauseBusinessDto) {
     const member = assertMemberContext(ctx);
     return this.businessesService.pause(member.businessId, dto.paused);
+  }
+
+  // Cambiar el modo (FULL ↔ SHOWCASE) tiene endpoint propio: PUT /business lo excluye
+  // a propósito porque afecta todo el comportamiento del storefront (checkout, carrito,
+  // cupones, mensajes, opiniones). Solo owner, como el resto de la zona peligrosa.
+  // Decisión y regla de negocio documentadas en PENDIENTES.md (Fase 2).
+  @Post('mode')
+  @Roles('owner')
+  changeMode(@CurrentBusiness() ctx: AuthContext, @Body() dto: ChangeModeDto) {
+    const member = assertMemberContext(ctx);
+    return this.businessesService.changeMode(member.businessId, dto.mode);
   }
 
   // DELETE /business (eliminar negocio) queda fuera de esta fase: interactúa con

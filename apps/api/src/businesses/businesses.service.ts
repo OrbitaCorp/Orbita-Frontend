@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -98,6 +98,39 @@ export class BusinessesService {
       data: { isPaused: paused },
     });
     return { isPaused: business.isPaused };
+  }
+
+  // Cambio de modo FULL ↔ SHOWCASE — endpoint dedicado (ver PENDIENTES.md, Fase 2).
+  // Regla implementada: para pasar a SHOWCASE (se apagan checkout y pedidos online) no
+  // puede haber pedidos ONLINE en curso; hay que entregarlos o cancelarlos primero. Con
+  // la base actual sin órdenes el chequeo pasa trivialmente, pero deja la validación
+  // lista para cuando el módulo Orders esté implementado.
+  async changeMode(businessId: string, mode: 'FULL' | 'SHOWCASE') {
+    const business = await this.prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) throw new NotFoundException('Negocio no encontrado');
+    if (business.mode === mode) return this.toBusinessResponse(business); // idempotente
+
+    if (mode === 'SHOWCASE') {
+      const enCurso = await this.prisma.order.count({
+        where: {
+          businessId,
+          channel: 'ONLINE',
+          status: { in: ['PENDING', 'CONFIRMED', 'PREPARING', 'SHIPPED'] },
+          deletedAt: null,
+        },
+      });
+      if (enCurso > 0) {
+        throw new UnprocessableEntityException(
+          `No se puede pasar a vidriera: hay ${enCurso} pedido(s) online sin resolver. Entregalos o cancelalos primero.`,
+        );
+      }
+    }
+
+    const updated = await this.prisma.business.update({
+      where: { id: businessId },
+      data: { mode },
+    });
+    return this.toBusinessResponse(updated);
   }
 
   // ── Config operativa (contacto, pagos, envíos, redes) ───────────────────

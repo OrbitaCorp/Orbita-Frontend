@@ -180,6 +180,22 @@ envío automático de recovery esté deshabilitado. No verificado desde este ent
 
 ## Fase 2 — Businesses/Branches
 
+### [2026-07-18] Panel `ConfigGeneral` integrado con la API real — sesión provisoria por localStorage
+**Estado:** ABIERTO — workaround consciente hasta que exista el login del panel (Alan)
+La vista General de `apps/web/src/modules/ventas/panel/configuracion/ConfigGeneral.tsx` dejó
+de usar datos hardcodeados: carga con `GET /business` + `GET /business/config` y guarda por
+card con `PUT /business`, `PUT /business/config` y `POST /business/pause` (con modal de
+confirmación). Para autenticarse reutiliza el token de `localStorage` que ya usa el
+onboarding (`lib/api.ts`); si no hay token, la pantalla muestra un aviso claro en lugar de
+romperse. Cuando Alan implemente el login del panel, reemplazar ese origen del token.
+"Eliminar espacio" quedó deshabilitado en la UI con nota de diferido (depende de
+Subscriptions — ver entrada `DELETE /business`). Detalle asumido: un campo de email vacío se
+omite del PUT (no "borra" el valor guardado) para no chocar con `@IsEmail()` sobre string
+vacío. En `lib/api.ts` se extendieron de forma aditiva `UpdateBusinessConfigInput` y el tipo
+de respuesta de `getBusinessConfig()` (campos de contacto/envíos/redes que el DTO del
+backend ya aceptaba); ojo: `shippingBase`/`freeShippingFrom` llegan serializados como string
+(Decimal de Prisma) y la UI los convierte con `Number()`.
+
 ### [2026-07-12] `PUT /business` no acepta el campo `mode`
 **Estado:** RESUELTO (2026-07-12)
 El contrato original permitía editar `mode` (FULL/SHOWCASE) junto con name/industry/description
@@ -190,11 +206,18 @@ diseñar e implementar el endpoint dedicado para cambiar `mode` — ver entrada 
 `CONTRATO_API.md` corregido para reflejar esto.
 
 ### [2026-07-12] Endpoint dedicado para cambiar `business.mode` — no implementado
-**Estado:** DIFERIDO — sin fecha objetivo aún
-Consecuencia directa de la entrada anterior: en este momento **no existe ninguna forma de
-cambiar `mode` vía API** (ni en `PUT /business` ni en otro lado). Diseñar un endpoint separado
-(ej. `POST /business/mode`) con sus propias validaciones de negocio antes de habilitar el
-cambio en producción.
+**Estado:** RESUELTO (2026-07-18) — implementado `POST /business/mode`
+No existía ninguna forma de cambiar `mode` vía API para un negocio ya activo (el onboarding
+puede setearlo vía `PUT /onboarding/business`, pero solo mientras `isActive === false`).
+Se implementó `POST /business/mode` en el módulo Businesses (tarea de Alex, Fase 1 —
+"definir cómo se cambia el modo"):
+- Body `{ mode: 'FULL' | 'SHOWCASE' }` (`ChangeModeDto`), restringido a `@Roles('owner')`
+  por ser zona peligrosa (mismo criterio que `POST /business/pause`).
+- Idempotente: pedir el modo ya vigente devuelve el negocio sin tocar nada.
+- Regla de negocio: para pasar a SHOWCASE no puede haber pedidos ONLINE en curso
+  (PENDING/CONFIRMED/PREPARING/SHIPPED, no borrados) → `422` con mensaje. Con la base
+  actual sin órdenes el chequeo pasa trivialmente, pero queda listo para cuando Orders
+  esté implementado. `PUT /business` sigue excluyendo `mode` a propósito.
 
 ### [2026-07-12] Rol mínimo para operaciones de sucursal
 **Estado:** RESUELTO (2026-07-12)
@@ -253,6 +276,17 @@ después del fix.
 ---
 
 ## Fase 3 — Equipo (Roles/Permissions/Members)
+
+### [2026-07-18] "PUT /roles/:id/permissions" cubierto por el reemplazo completo en `PUT /roles/:id`
+**Estado:** RESUELTO (2026-07-18) — aclaración, no cambio de código
+La tarjeta de Fase 1 ("Crear y editar roles") menciona `PUT /roles/:id/permissions` como ruta
+aparte. `RolesService.update()` ya reemplaza la matriz completa de permisos dentro del mismo
+`PUT /roles/:id` (deleteMany + create, validando codes contra el catálogo), así que el
+comportamiento pedido existe sin ruta extra — no se agregó una ruta no documentada en
+CONTRATO_API.md. Las validaciones de la tarjeta ya estaban implementadas: los roles default
+(owner incluido) no se editan ni se borran (422), y borrar un rol con miembros asignados da
+422 (P2003). El catálogo de permisos del seed ya incluye `catalog.view/manage` y
+`config.team.view` (resuelto por el equipo en commits previos).
 
 ### [2026-07-13] Autorización por rol (`@Roles()`), no por permiso, pese a lo que dice el contrato
 **Estado:** RESUELTO (2026-07-14) — para los módulos de Fases 3-5
