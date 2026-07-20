@@ -99,10 +99,10 @@ export class BusinessesController {
     return this.businessesService.pause(member.businessId, dto.paused);
   }
 
-  // Cambiar el modo (FULL ↔ SHOWCASE) tiene endpoint propio: PUT /business lo excluye
-  // a propósito porque afecta todo el comportamiento del storefront (checkout, carrito,
-  // cupones, mensajes, opiniones). Solo owner, como el resto de la zona peligrosa.
-  // Decisión y regla de negocio documentadas en PENDIENTES.md (Fase 2).
+  // (Fase 1 — Alex) La puerta de entrada para cambiar el modo de la tienda
+  // (completa o solo catálogo). Va separada del resto de los datos porque cambia
+  // cómo funciona toda la tienda (carrito, compras, cupones). Solo el dueño puede
+  // tocarla, igual que todo lo de la zona peligrosa. Anotado en PENDIENTES.md.
   @Post('mode')
   @Roles('owner')
   changeMode(@CurrentBusiness() ctx: AuthContext, @Body() dto: ChangeModeDto) {

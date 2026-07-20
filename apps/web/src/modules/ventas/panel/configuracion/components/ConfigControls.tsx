@@ -1,11 +1,10 @@
-// Controles reutilizables de configuración: Toggle (switch) y CfgField (campo).
+// Controles reutilizables de configuración: Toggle (la llavecita) y CfgField (campo).
 //
-// Soportan dos modos (cambio aditivo — Fase 1, integración de ConfigGeneral):
-//  - NO controlado (comportamiento original): `defaultOn` / `value` actúan como valor
-//    inicial y el control maneja su propio estado. Así lo siguen usando StockForm
-//    (inventario) y las demás vistas prototipo — nada de eso cambia.
-//  - CONTROLADO (nuevo): pasando `on` + `onChange` (Toggle) u `onChange` (CfgField),
-//    el padre es dueño del estado — necesario para leer/guardar contra la API real.
+// (Fase 1 — Alex) Ahora se pueden usar de dos maneras:
+//  - Como siempre: el control se maneja solo con su valor inicial. Las otras
+//    pantallas que ya los usaban siguen igual, no les cambia nada.
+//  - Conectados (nuevo): pasándoles onChange, la pantalla que los usa se entera
+//    de cada cambio. Lo necesitaba para poder guardar de verdad en Configuración.
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
@@ -54,8 +53,8 @@ export function CfgField({ label, value, area, select, onChange, disabled }: Cfg
         border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 14,
         color: 'var(--color-text)', fontFamily: 'inherit', outline: 'none',
     }
-    // Con onChange el campo es controlado (`value`); sin onChange conserva el
-    // comportamiento original (`defaultValue`) para no romper a los otros consumidores.
+    // Si le pasan onChange, el campo avisa cada cambio a su pantalla; si no, se
+    // comporta como siempre, para no romper las otras pantallas que ya lo usaban.
     const bind = onChange
         ? { value, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value), disabled }
         : { defaultValue: value, disabled }

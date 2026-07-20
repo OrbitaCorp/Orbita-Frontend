@@ -100,11 +100,11 @@ export class BusinessesService {
     return { isPaused: business.isPaused };
   }
 
-  // Cambio de modo FULL ↔ SHOWCASE — endpoint dedicado (ver PENDIENTES.md, Fase 2).
-  // Regla implementada: para pasar a SHOWCASE (se apagan checkout y pedidos online) no
-  // puede haber pedidos ONLINE en curso; hay que entregarlos o cancelarlos primero. Con
-  // la base actual sin órdenes el chequeo pasa trivialmente, pero deja la validación
-  // lista para cuando el módulo Orders esté implementado.
+  // (Fase 1 — Alex) Acá se cambia el modo de verdad. Reglas: si ya está en ese
+  // modo no hace nada, y no te deja pasar a solo catálogo si hay pedidos online
+  // sin terminar (para no dejar clientes colgados con la compra hecha). Hoy la
+  // base no tiene pedidos así que pasa siempre, pero la regla ya queda lista
+  // para cuando exista el módulo de pedidos.
   async changeMode(businessId: string, mode: 'FULL' | 'SHOWCASE') {
     const business = await this.prisma.business.findUnique({ where: { id: businessId } });
     if (!business) throw new NotFoundException('Negocio no encontrado');
