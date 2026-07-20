@@ -195,8 +195,10 @@ export class ProductsService {
     const existingVariantIds = new Set(existing.variants.map((v) => v.id));
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.product.update({
-        where: { id },
+      // businessId va en el where del updateMany, dentro de la misma tx — no
+      // depende del findOneRaw de arriba para el aislamiento.
+      const { count } = await tx.product.updateMany({
+        where: { id, businessId },
         data: {
           categoryId: dto.categoryId ?? null,
           name: dto.name,
@@ -207,6 +209,7 @@ export class ProductsService {
           status: dto.status ?? undefined,
         },
       });
+      if (count === 0) throw new NotFoundException('Producto no encontrado');
 
       await tx.productTag.deleteMany({ where: { productId: id } });
       if (dto.tagIds?.length) {
@@ -259,7 +262,11 @@ export class ProductsService {
 
   async remove(businessId: string, id: string) {
     await this.findOneRaw(businessId, id);
-    await this.prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
+    const { count } = await this.prisma.product.updateMany({
+      where: { id, businessId },
+      data: { deletedAt: new Date() },
+    });
+    if (count === 0) throw new NotFoundException('Producto no encontrado');
     return { ok: true };
   }
 
@@ -353,7 +360,12 @@ export class ProductsService {
       await this.supabase.adminClient.storage.from(PRODUCT_IMAGES_BUCKET).remove([path]).catch(() => {});
     }
 
-    await this.prisma.productImage.delete({ where: { id: imageId } });
+    // ProductImage no tiene businessId propio (solo productId) — el where lleva
+    // productId además de id, así el aislamiento no depende únicamente del
+    // findFirst de arriba. productId a su vez ya fue validado contra businessId
+    // por el findOneRaw() al inicio de este método.
+    const { count } = await this.prisma.productImage.deleteMany({ where: { id: imageId, productId } });
+    if (count === 0) throw new NotFoundException('Imagen no encontrada');
     return { ok: true };
   }
 

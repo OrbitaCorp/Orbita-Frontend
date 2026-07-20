@@ -44,8 +44,12 @@ export class AuthGuard implements CanActivate {
     const slug = request.headers['x-business-slug'];
 
     if (payload.type === 'member') {
-      const member = await this.prisma.member.findUnique({
-        where: { id: payload.sub },
+      // businessId va en el where además del sub: si alguien lograra fabricar
+      // un JWT con un sub válido pero un businessId que no coincide con el real
+      // (ej. clave comprometida), la búsqueda falla acá directamente en vez de
+      // devolver el member y dejar que el resto del guard ignore el campo.
+      const member = await this.prisma.member.findFirst({
+        where: { id: payload.sub, businessId: payload.businessId },
         include: {
           role: { include: { rolePermissions: { include: { permission: true } } } },
           business: { select: { id: true, mode: true, subdomain: true } },
@@ -71,8 +75,10 @@ export class AuthGuard implements CanActivate {
     }
 
     if (payload.type === 'customer') {
-      const customer = await this.prisma.customer.findUnique({
-        where: { id: payload.sub },
+      // Mismo motivo que en la rama member: businessId va en el where, no solo
+      // el sub.
+      const customer = await this.prisma.customer.findFirst({
+        where: { id: payload.sub, businessId: payload.businessId },
         include: { business: { select: { id: true, mode: true, subdomain: true } } },
       });
       if (!customer || customer.deletedAt) throw new UnauthorizedException('Token inválido o expirado');

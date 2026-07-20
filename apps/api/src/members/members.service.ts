@@ -96,11 +96,15 @@ export class MembersService {
       if (!role) throw new BadRequestException('Rol inválido');
     }
 
-    const updated = await this.prisma.member.update({
-      where: { id },
+    // businessId va en el where del updateMany — la query garantiza el
+    // aislamiento por sí misma, no depende del findOneRaw previo.
+    const { count } = await this.prisma.member.updateMany({
+      where: { id, businessId },
       data: { name: dto.name, roleId: dto.roleId },
-      include: { role: { select: { id: true, name: true } } },
     });
+    if (count === 0) throw new NotFoundException('Miembro no encontrado');
+
+    const updated = await this.findOneRaw(businessId, id);
     return this.toResponse(updated);
   }
 
@@ -112,7 +116,8 @@ export class MembersService {
 
     // No se borra el usuario de Supabase Auth asociado — ver PENDIENTES.md
     // (decisión abierta: si conviene liberar el email para poder reinvitarlo).
-    await this.prisma.member.delete({ where: { id } });
+    const { count } = await this.prisma.member.deleteMany({ where: { id, businessId } });
+    if (count === 0) throw new NotFoundException('Miembro no encontrado');
     return { ok: true };
   }
 

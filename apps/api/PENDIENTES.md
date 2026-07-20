@@ -821,3 +821,93 @@ versión inusualmente alto, posiblemente una build de este entorno). **Recomenda
 construido en RBT-293 del lado del frontend se verificó por: TypeScript (`tsc --noEmit` limpio) +
 simulación manual de cada request que dispara el código (vía `curl`, reproduciendo exactamente los
 payloads que arma `apps/web/src/lib/api.ts`) — pero no por click real en la UI.
+
+---
+
+## RBT-290 — Auditoría de aislamiento multi-tenant
+
+### [2026-07-20] `PlatformAdminGuard` es un stub que siempre devuelve `true` — sin endpoints que lo usen todavía
+**Estado:** ABIERTO — TODO explícito dejado en el código
+Confirmado por grep (`PlatformAdminGuard` solo aparece en su propia definición): ningún
+endpoint de `platform.controller.ts` lo usa hoy — todos son stubs sin `@UseGuards`. No hay
+bypass activo. Se dejó un comentario `TODO(RBT-290)` en
+`common/guards/platform-admin.guard.ts` marcando que la implementación real (verificar
+`platform_admin` activo en la DB) es un requisito **bloqueante** antes de que cualquier
+endpoint le agregue `@UseGuards(PlatformAdminGuard)`.
+
+### [2026-07-20] 15 casos de TOCTOU: `update`/`delete` por `id` sin `businessId` en el where — corregidos
+**Estado:** RESUELTO (2026-07-20)
+Auditoría de todos los `*.service.ts` encontró 15 mutaciones que validaban `businessId` con un
+`findFirst` previo pero después mutaban con `update({where:{id}})` / `delete({where:{id}})`,
+sin `businessId` en el where de la mutación en sí — el aislamiento dependía del orden del
+código alrededor, no de la query. Corregido en `branches.service.ts`, `tags.service.ts`,
+`categories.service.ts`, `inventory.service.ts` (suppliers), `members.service.ts`,
+`products.service.ts` (update en tx, soft-delete, `productImage.delete`) y `roles.service.ts`,
+usando `updateMany`/`deleteMany({where:{id, businessId}})` + chequeo de `count === 0` → 404.
+También se agregó `businessId` a dos `count()` que lo tenían suelto (`categories.service.ts`,
+finding productCount/childrenCount de `remove()`).
+
+Caso especial — `roles.service.ts` `update()`: el reemplazo de `rolePermissions` es un nested
+write de Prisma, que solo acepta `where` por clave única (no admite `updateMany` con relaciones
+anidadas). Se resolvió en dos pasos dentro de la misma `$transaction`: primero un
+`updateMany({where:{id,businessId}})` de los campos escalares (que sí garantiza el
+aislamiento), y recién después el `update({where:{id}})` anidado para `rolePermissions` —
+seguro porque corre en la misma transacción inmediatamente después de confirmar la
+pertenencia, y `businessId` de un `Role` nunca se reasigna (ningún endpoint lo modifica).
+
+Caso especial — `products.service.ts` `removeImage()`: `ProductImage` no tiene columna
+`businessId` propia (solo `productId`, sin relación directa al tenant en el schema). El
+`deleteMany` quedó scopeado por `{id: imageId, productId}` — `productId` ya había sido
+validado contra `businessId` por el `findOneRaw()` al inicio del mismo método.
+
+Verificado: `npx tsc --noEmit` limpio y `nest build` sin errores después de cada cambio; suite
+e2e completa corrida al final (ver entrada siguiente).
+
+### [2026-07-20] `AuthGuard` no validaba `businessId` del JWT contra la DB — defensa en profundidad agregada
+**Estado:** RESUELTO (2026-07-20)
+El guard ya usaba el `businessId` de la fila de `member`/`customer` en DB como fuente de
+verdad (correcto), pero el lookup por `id` ignoraba el campo `businessId` que también viaja en
+el payload del JWT. Se cambió `findUnique({where:{id}})` a `findFirst({where:{id, businessId:
+payload.businessId}})` en ambas ramas (member y customer) de `auth.guard.ts` — si algún día se
+lograra fabricar un JWT con un `sub` válido pero un `businessId` que no coincide (ej. clave
+comprometida), la búsqueda falla directo en vez de devolver el registro real ignorando el
+campo. Los 4 `findUnique`/`findFirst` por `id` restantes en `auth.service.ts#getMe()`
+(`memberId`/`customerId`) se dejaron como están — confirmado por código que `getMe()` solo se
+alcanza vía `GET /auth/me`, sin `@Public()`, siempre después de que `AuthGuard` ya validó
+JWT + businessId y pobló `ctx`; se documentó con un comentario en el propio método.
+
+### [2026-07-20] `forgot-password` sin rate limit específico — agregado
+**Estado:** RESUELTO (2026-07-20) — limitación documentada
+Se agregó `@Throttle({default:{limit:5, ttl:900000}})` (5 intentos / 15 min) a `POST
+/auth/forgot-password`, mismo patrón que `login()` (única otra ruta con throttling específico
+en el proyecto). **Limitación**: el `ThrottlerGuard` global de este proyecto no tiene un
+tracker combinado IP+email — el throttling es por IP únicamente (igual que login). Si en el
+futuro se quiere limitar por IP+email (más resistente a un atacante distribuido probando un
+solo email desde muchas IPs), hay que implementar un tracker custom extendiendo
+`ThrottlerGuard` con un `getTracker()` propio — no existe ese patrón en el proyecto todavía.
+
+### [2026-07-20] Gap de producto: `forgot-password` no tenía modo "sin slug" para dueños — agregado
+**Estado:** RESUELTO (2026-07-20)
+`forgotPassword()` exigía `X-Business-Slug` siempre (`400` si faltaba) — a diferencia de
+`login()`, que sí soporta buscar member globalmente sin slug (flujo panel/apex,
+`orbita.com/login`). Un dueño que olvida su contraseña Y no recuerda el subdominio de su
+tienda no tenía forma de recuperarla desde `orbita.com`. Se igualó el criterio a `login()`:
+sin slug, busca `member` globalmente (nunca `customer` sin slug — un customer siempre
+pertenece a un negocio específico, no existe "cuenta de plataforma" para clientes del
+storefront). Reusa el mismo mecanismo de token (`passwordResetToken`, ahora extraído a
+`issuePasswordResetToken()`); `resetPassword()` no necesitó cambios porque ya resuelve
+`businessId` desde el token almacenado, sin importar cuál rama lo creó. Test
+`auth.e2e-spec.ts` ("sin header X-Business-Slug → 400") actualizado: ahora afirma `201` (busca
+globalmente) en vez de `400`, más un caso nuevo para email inexistente sin slug (sigue sin
+filtrar información).
+
+### [2026-07-20] Test e2e preexistente falla por datos de seed no idempotentes — no relacionado a esta sesión
+**Estado:** ABIERTO — detectado corriendo la suite completa para verificar los cambios de arriba
+`auth.e2e-spec.ts` → "registro con email de customerWithoutAccount vincula al existente (no
+duplica)" espera `201` pero recibe `400 "Ya tenés cuenta en esta tienda"`. Causa: el test
+registra una contraseña para el fixture `customerWithoutAccount` (que el seed crea sin
+`passwordHash`), pero no es idempotente — si el seed no se vuelve a correr entre ejecuciones
+del suite, la segunda corrida encuentra el fixture ya con `passwordHash` seteado por la corrida
+anterior y `register()` responde `400` (comportamiento correcto: ya no está "sin cuenta"). No
+se tocó `register()` en esta sesión — confirmado por diff, el método no cambió. Requiere correr
+`pnpm seed` antes de `test:e2e`, o hacer el test idempotente (reset del fixture al final).
