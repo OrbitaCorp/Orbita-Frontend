@@ -944,7 +944,7 @@ export function SetupUnificado({
         borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)',
         padding: '0 28px', overflowX: 'auto', scrollbarWidth: 'none',
       }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', minWidth: 480 }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 480 }}>
           {PASOS_MOSTRADOS.map((label, i) => {
             const done    = i < paso
             const current = i === paso
