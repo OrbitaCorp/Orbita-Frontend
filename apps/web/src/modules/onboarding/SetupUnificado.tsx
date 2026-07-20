@@ -169,9 +169,13 @@ function SelectCard({ sel, Icon, label, desc, onClick }: {
 
 // ─── Shared steps ─────────────────────────────────────────────────────────────
 
-function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; setNegocio: Dispatch<SetStateAction<Negocio>>; conModoVenta?: boolean }) {
+// `estadoSub` vive en el padre porque la barra de navegación necesita saber si
+// el subdominio está libre para habilitar "Continuar".
+function StepNegocio({ negocio, setNegocio, conModoVenta, estadoSub, setEstadoSub }: {
+  negocio: Negocio; setNegocio: Dispatch<SetStateAction<Negocio>>; conModoVenta?: boolean
+  estadoSub: EstadoSub; setEstadoSub: Dispatch<SetStateAction<EstadoSub>>
+}) {
   const fileRef = useRef<HTMLInputElement>(null)
-  const [estadoSub, setEstadoSub] = useState<EstadoSub>('idle')
 
   useEffect(() => {
     const sub = negocio.subdominio.trim()
@@ -183,7 +187,7 @@ function StepNegocio({ negocio, setNegocio, conModoVenta }: { negocio: Negocio; 
         .catch(() => setEstadoSub('idle'))
     }, 700)
     return () => clearTimeout(t)
-  }, [negocio.subdominio])
+  }, [negocio.subdominio, setEstadoSub])
 
   const set = (k: 'nombre' | 'descripcion' | 'telefono') => (v: string) =>
     setNegocio(prev => ({ ...prev, [k]: v }))
@@ -823,6 +827,7 @@ export function SetupUnificado({
   const [transferAlias, setTransferAlias] = useState('')
   const [tamano,      setTamano]      = useState('')
   const [cuenta,      setCuenta]      = useState<Cuenta>({ ownerName: '', email: '', password: '', terms: true })
+  const [estadoSub,   setEstadoSub]   = useState<EstadoSub>('idle')
   const [orbiAbierto, setOrbiAbierto] = useState(false)
 
   // Si no eligieron rubro todavía (entraron directo a esta URL), volver al
@@ -859,17 +864,42 @@ export function SetupUnificado({
     setSeleccion(prev => toggleFn(prev, key))
   }
 
-  const puedeAvanzar =
-    paso === 0        ? seleccion.length > 0 :
-    paso === 2        ? negocio.tipoLocal.length > 0 :
-    paso === 3         ? (!pagos.includes('transferencia') || transferAlias.trim().length > 0) :
-    paso === lastPaso ? (
-      cuenta.ownerName.trim().length > 0 &&
-      /\S+@\S+\.\S+/.test(cuenta.email) &&
-      cuenta.password.length >= 8 &&
-      cuenta.terms
-    ) :
-    true
+  // Devuelve el motivo por el que NO se puede avanzar, o null si está todo ok.
+  // Se muestra al lado del botón para que el usuario sepa qué le falta en vez
+  // de encontrarse un "Continuar" gris sin explicación.
+  const motivoBloqueo: string | null = (() => {
+    if (paso === 0) {
+      return seleccion.length > 0 ? null : 'Elegí al menos una opción'
+    }
+    if (paso === 1) {
+      if (!negocio.nombre.trim())   return 'Completá el nombre de tu negocio'
+      if (!negocio.telefono.trim()) return 'Completá tu teléfono'
+      if (negocio.subdominio.trim() && estadoSub === 'ocupado')  return 'Ese subdominio ya está ocupado'
+      if (negocio.subdominio.trim() && estadoSub === 'checking') return 'Verificando el subdominio…'
+      if (conModoVenta && !negocio.modoVenta) return 'Elegí cómo vas a vender'
+      return null
+    }
+    if (paso === 2) {
+      if (negocio.tipoLocal.length === 0) return 'Elegí al menos una forma de operar'
+      if (negocio.tipoLocal.includes('fisico') && !negocio.direccion.trim()) return 'Indicá la dirección de tu local'
+      return null
+    }
+    if (paso === 3) {
+      if (pagos.length === 0) return 'Elegí al menos un método de pago'
+      if (pagos.includes('transferencia') && !transferAlias.trim()) return 'Ingresá tu alias o CBU'
+      return null
+    }
+    if (paso === lastPaso) {
+      if (!cuenta.ownerName.trim())            return 'Completá tu nombre'
+      if (!/\S+@\S+\.\S+/.test(cuenta.email))  return 'Ingresá un email válido'
+      if (cuenta.password.length < 8)          return 'La contraseña necesita 8 caracteres'
+      if (!cuenta.terms)                       return 'Aceptá los términos para continuar'
+      return null
+    }
+    return null
+  })()
+
+  const puedeAvanzar = motivoBloqueo === null
 
   function avanzar() {
     if (paso === 0) setWizard({ subrubros: seleccion })
@@ -910,7 +940,7 @@ export function SetupUnificado({
 
   function renderStep() {
     if (paso === 0) return <PrimerPaso seleccion={seleccion} toggle={toggle} />
-    if (paso === 1) return <StepNegocio  negocio={negocio}  setNegocio={setNegocio} conModoVenta={conModoVenta} />
+    if (paso === 1) return <StepNegocio  negocio={negocio}  setNegocio={setNegocio} conModoVenta={conModoVenta} estadoSub={estadoSub} setEstadoSub={setEstadoSub} />
     if (paso === 2) return <StepUbicacion negocio={negocio} setNegocio={setNegocio} />
     if (paso === 3) return <StepPagos    pagos={pagos}      setPagos={setPagos}     transferAlias={transferAlias} setTransferAlias={setTransferAlias} />
     if (paso === pasoEquipo) return <StepEquipo tamano={tamano} setTamano={setTamano} />
@@ -1038,6 +1068,11 @@ export function SetupUnificado({
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {motivoBloqueo && (
+            <span style={{ fontSize: 12.5, color: 'var(--color-muted)', textAlign: 'right' }}>
+              {motivoBloqueo}
+            </span>
+          )}
           <button
             onClick={avanzar}
             disabled={!puedeAvanzar}

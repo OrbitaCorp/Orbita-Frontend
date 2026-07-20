@@ -96,7 +96,12 @@ function Header() {
 
 // ─── Pantalla 1: Selección de plan ──────────────────────────────────────────
 
-function PlanScreen({ onPagar, onExplorar, error }: { onPagar: () => void; onExplorar: () => void; error?: string }) {
+// Atajo para entrar al panel sin pasar por el cobro. Solo se muestra si la
+// variable de entorno lo habilita, así en producción no queda una vía para
+// saltearse el pago (ver PENDIENTES.md).
+const PERMITE_OMITIR_PAGO = process.env.NEXT_PUBLIC_ALLOW_SKIP_PAYMENT === 'true'
+
+function PlanScreen({ onPagar, onOmitir, error }: { onPagar: () => void; onOmitir: () => void; error?: string }) {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)', fontFamily: 'inherit' }}>
       <Header />
@@ -211,29 +216,33 @@ function PlanScreen({ onPagar, onExplorar, error }: { onPagar: () => void; onExp
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '24px 0 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-          <span style={{ fontSize: 12, color: 'var(--color-subtle)', whiteSpace: 'nowrap' }}>o si preferís</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-        </div>
+        {PERMITE_OMITIR_PAGO && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', margin: '24px 0 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+              <span style={{ fontSize: 12, color: 'var(--color-subtle)', whiteSpace: 'nowrap' }}>o si preferís</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+            </div>
 
-        <button
-          onClick={onExplorar}
-          style={{
-            marginTop: 16, background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 13, color: 'var(--color-muted)', fontWeight: 500,
-            textDecoration: 'underline', textUnderlineOffset: 3,
-            transition: 'color 150ms',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-muted)' }}
-        >
-          Explorar el panel primero (sin publicar)
-        </button>
+            <button
+              onClick={onOmitir}
+              style={{
+                marginTop: 16, background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 13, color: 'var(--color-muted)', fontWeight: 500,
+                textDecoration: 'underline', textUnderlineOffset: 3,
+                transition: 'color 150ms',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-muted)' }}
+            >
+              Omitir pago y entrar al panel
+            </button>
 
-        <p style={{ fontSize: 11, color: 'var(--color-subtle)', marginTop: 8, textAlign: 'center' }}>
-          Sin tarjeta de crédito requerida para explorar
-        </p>
+            <p style={{ fontSize: 11, color: 'var(--color-subtle)', marginTop: 8, textAlign: 'center' }}>
+              Atajo de desarrollo — no disponible en producción
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
@@ -511,6 +520,38 @@ export default function PlanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Crea de verdad la cuenta, el negocio y la sesión del dueño. Es el único
+  // lugar donde se persiste algo: si esto no corre, no queda nada en la base.
+  function activarNegocio() {
+    const account = {
+      ownerName: wizard.ownerName,
+      email: wizard.ownerEmail,
+      password: wizard.ownerPassword,
+      businessName: wizard.nombre,
+    }
+    return completeOnboarding(account, wizard)
+      .then(() => wizard.logoDataUrl ? uploadLogo(dataUrlToBlob(wizard.logoDataUrl), 'logo.png') : null)
+      .then(() => publishBusiness())
+      // El registro de onboarding emite su propio token de un solo uso (sin
+      // refresh) — para dejar al dueño con la MISMA sesión que usa el resto
+      // del panel (access en memoria + refresh httpOnly cross-subdominio),
+      // logueamos acá con las credenciales recién creadas vía el flujo
+      // estándar de auth (RBT-285/290), no con el token de onboarding.
+      .then(() => login(account.email, account.password))
+      .then(user => { if (user.type === 'member') setSubdominioListo(user.business.subdomain) })
+  }
+
+  function manejarError(err: unknown) {
+    let msg = 'No se pudo procesar tu pago. Intentá de nuevo.'
+    if (err instanceof ApiError) {
+      if (err.message.includes('password')) msg = 'La contraseña no es válida. Volvé al paso anterior.'
+      else if (err.status === 409) msg = 'Este email ya tiene un negocio registrado.'
+      else msg = err.message
+    }
+    setErrorPago(msg)
+    setEstado('plan')
+  }
+
   function pagar() {
     if (passwordLost) {
       setErrorPago('Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.')
@@ -518,36 +559,21 @@ export default function PlanPage() {
     }
     setErrorPago('')
     setEstado('procesando')
-    const account = {
-      ownerName: wizard.ownerName,
-      email: wizard.ownerEmail,
-      password: wizard.ownerPassword,
-      businessName: wizard.nombre,
-    }
-    Promise.all([
-      completeOnboarding(account, wizard)
-        .then(() => wizard.logoDataUrl ? uploadLogo(dataUrlToBlob(wizard.logoDataUrl), 'logo.png') : null)
-        .then(() => publishBusiness())
-        // El registro de onboarding emite su propio token de un solo uso (sin
-        // refresh) — para dejar al dueño con la MISMA sesión que usa el resto
-        // del panel (access en memoria + refresh httpOnly cross-subdominio),
-        // logueamos acá con las credenciales recién creadas vía el flujo
-        // estándar de auth (RBT-285/290), no con el token de onboarding.
-        .then(() => login(account.email, account.password))
-        .then(user => { if (user.type === 'member') setSubdominioListo(user.business.subdomain) }),
-      new Promise(resolve => setTimeout(resolve, 2800)),
-    ])
+    Promise.all([activarNegocio(), new Promise(resolve => setTimeout(resolve, 2800))])
       .then(() => { resetWizard(); setEstado('exito') })
-      .catch(err => {
-        let msg = 'No se pudo procesar tu pago. Intentá de nuevo.'
-        if (err instanceof ApiError) {
-          if (err.message.includes('password')) msg = 'La contraseña no es válida. Volvé al paso anterior.'
-          else if (err.status === 409) msg = 'Este email ya tiene un negocio registrado.'
-          else msg = err.message
-        }
-        setErrorPago(msg)
-        setEstado('plan')
-      })
+      .catch(manejarError)
+  }
+
+  function omitirPago() {
+    if (passwordLost) {
+      setErrorPago('Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.')
+      return
+    }
+    setErrorPago('')
+    setEstado('procesando')
+    activarNegocio()
+      .then(() => { resetWizard(); setEstado('exito') })
+      .catch(manejarError)
   }
 
   function irAlPanel() {
@@ -556,5 +582,5 @@ export default function PlanPage() {
 
   if (estado === 'procesando') return <ProcesandoScreen />
   if (estado === 'exito')      return <ExitoScreen irAlPanel={irAlPanel} />
-  return <PlanScreen onPagar={pagar} onExplorar={() => router.push(next)} error={errorPago || (passwordLost ? 'Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.' : '')} />
+  return <PlanScreen onPagar={pagar} onOmitir={omitirPago} error={errorPago || (passwordLost ? 'Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.' : '')} />
 }
