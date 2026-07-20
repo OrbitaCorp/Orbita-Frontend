@@ -1,7 +1,6 @@
 import { BusinessMode } from '@prisma/client';
 
 export interface MemberContext {
-  authUserId: string;
   type: 'member';
   memberId: string;
   businessId: string;
@@ -12,7 +11,6 @@ export interface MemberContext {
 }
 
 export interface CustomerContext {
-  authUserId: string;
   type: 'customer';
   customerId: string;
   businessId: string;

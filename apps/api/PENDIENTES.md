@@ -103,6 +103,33 @@ y 2.1–2.13, todos ✅) y se actualizó la tabla de estado y los resultados rea
 
 ## Tests E2E
 
+### [2026-07-20] Throttler real activo en tests — deshabilitado explícitamente vía skipIf
+**Estado:** RESUELTO (2026-07-20)
+Se verificó con un test empírico que el `ThrottlerGuard` global funciona correctamente en
+producción (5 requests → 201, 6to → 429, confirmado por headers `X-RateLimit-*`). La suite de
+`forgot-password` (5 tests) nunca lo disparaba porque hace exactamente 5 requests HTTP totales
+— justo el límite, sin pasarlo. No era un bug de rate-limiting en producción. Se agregó
+`skipIf: () => true` overrideando `THROTTLER:MODULE_OPTIONS` en `test/helpers/test-app.ts`
+(con comentario en el código) para que las suites e2e prueben lógica de negocio sin que el
+throttle interfiera — necesario porque `@Throttle()` a nivel de handler overridea el límite
+del módulo, así que `skipIf` es la única forma de saltearlo sin tocar código de producción.
+
+### [2026-07-20] Suite e2e corre contra una base Supabase compartida real, no una DB de test efímera
+**Estado:** ABIERTO
+`DATABASE_URL` apunta a un pooler de Supabase real (`aws-1-sa-east-1.pooler.supabase.com`), no
+a una base local/efímera. Esto genera dos problemas observados en esta sesión: (1) los
+customers `test-e2e-*@example.com` creados por `register()` en corridas pasadas del suite se
+acumulan indefinidamente (no hay cleanup automático); (2) al correr **todos** los archivos
+`.e2e-spec.ts` en paralelo (comportamiento default de Jest), se detectó una condición de
+carrera entre `auth-isolation.e2e-spec.ts` y `auth.e2e-spec.ts`: el test "forgot-password sin
+slug + email de owner → MEMBER" a veces lee `userType: 'CUSTOMER'` porque la query de
+verificación (`passwordResetToken.findFirst` ordenado por `createdAt desc`) no está scopeada
+por negocio, y ambos archivos escriben filas para el mismo email (`dueno@zapatoslorena.test`,
+reusado como fixture en ambos suites) contra la misma tabla compartida. Workaround usado en
+esta sesión: `jest --runInBand`. Pendiente evaluar: (a) DB de test dedicada/efímera por CI run,
+(b) `--runInBand` permanente en `test:e2e`, o (c) scopear las queries de verificación de los
+tests por negocio para que no dependan del orden global de inserción.
+
 ### [2026-07-12] Tests e2e crean usuarios reales en Supabase que no se limpian
 **Estado:** RESUELTO (2026-07-18)
 Con la migración a auth propio, los tests ya no tocan Supabase Auth. Los customers de test
@@ -130,13 +157,22 @@ requiere un member PENDING con `hasTempPassword: true` en la DB local;
 ## Fase 1 — Auth
 
 ### [2026-07-18] Migración de Supabase Auth a sistema propio completada
-**Estado:** RESUELTO (2026-07-18)
+**Estado:** RESUELTO (2026-07-18) — cierre final (2026-07-20)
 Se eliminó Supabase Auth como proveedor de autenticación. Cada negocio ahora gestiona
 credenciales independientemente: argon2id para hashing, JWT HS256 con `JWT_SECRET` propio,
 refresh token con rotación (SHA-256 hash en DB). Migración SQL aplicada:
-`20260718223824_own_auth_system`. El campo `authUserId` se conserva temporalmente (nullable,
-sin uso funcional) para no romper registros históricos — se puede eliminar en una migración
-futura cuando se confirme que no se referencia desde ningún otro sistema externo.
+`20260718223824_own_auth_system`. El campo `authUserId` se conservó temporalmente (nullable,
+sin uso funcional) tras esa migración.
+
+**Actualización (2026-07-20):** se confirmó que `authUserId` no se leía ni escribía en ningún
+flujo activo (grep completo sobre `src/` y `prisma/`, cero referencias funcionales fuera de la
+población de `ctx.authUserId` en `AuthGuard`, que a su vez nadie consumía). Se eliminó la
+columna de `Member`, `Customer` y `PlatformAdmin` (migración
+`20260720000000_drop_auth_user_id`, `DROP COLUMN` + `DROP INDEX` de los `@unique`), junto con
+el campo en `MemberContext`/`CustomerContext` (`auth-context.type.ts`) y su población en
+`auth.guard.ts`. Se perdieron 15 valores huérfanos (3 members + 12 customers) que apuntaban a
+`auth.users` de Supabase y ya no tenían ningún consumidor. **La migración de Supabase Auth a
+auth propio está 100% completa — no quedan resabios de la coexistencia temporal.**
 
 ### [2026-07-18] `SupabaseService` aún existe pero ya no se usa en auth
 **Estado:** ABIERTO
@@ -193,6 +229,53 @@ recuperación solo se envía desde `MailService.sendPasswordReset` — no hay du
 
 ## Fase 2 — Businesses/Branches
 
+### [2026-07-20] Política de suscripción vencida / eliminación de espacio (decisión de producto)
+**Estado:** ABIERTO — política refinada y documentada; la lógica se implementa con el módulo Subscriptions
+Política acordada (refinada por Alex el 2026-07-20 — mapea 1:1 a los estados del schema):
+1. **Vencimiento**: 5 días de gracia para volver a pagar (PAST_DUE — coincide con
+   `gracePeriodDays` del schema y la "política B" del plan técnico). La tienda sigue
+   funcionando durante la gracia y se avisa por email.
+2. **Sin pago tras la gracia**: la tienda se **pausa** automáticamente (SUSPENDED), con
+   aviso por email, y el dueño tiene **30 días** para renovar el pago y reactivarla.
+3. **Pasados los 30 días**: borrado definitivo del espacio y sus datos (CANCELLED — esto
+   responde el punto abierto del checklist de MODELO_DATOS sobre cuándo SUSPENDED pasa a
+   CANCELLED y libera el subdominio).
+4. **"Eliminar espacio" con suscripción activa**: la tienda se pausa hasta el fin del
+   período ya pagado; después corren los mismos 30 días para arrepentirse (recuperarla
+   exige volver a pagar la suscripción); recién ahí, borrado definitivo.
+En UI: los textos de "Pausar tienda" y "Eliminar espacio" de Configuración general explican
+la política en lenguaje simple dentro de cada acción (se quitó el recuadro de aviso general
+por decisión de Alex). El enforcement (crons de gracia y borrado, emails, bloqueo)
+corresponde a Subscriptions + preapproval de MP (fase 13 del plan técnico, todavía sin
+tarjetas asignadas en Jira — pendiente de repartir en el equipo).
+Además se ajustó el lenguaje de la zona peligrosa para usuarios no técnicos (sin
+"storefront") y se agregó validación numérica en los campos de envíos (los montos ya no
+aceptan texto).
+
+### [2026-07-18] Panel `ConfigGeneral` integrado con la API real — sesión provisoria por localStorage
+**Estado:** RESUELTO (2026-07-20) — adaptado al auth real (useAuth + authedFetch)
+Actualización 2026-07-20: con la migración de auth (JWT propio + AuthContext + BFF), la
+pantalla dejó el workaround de localStorage. Ahora toma la sesión de `useAuth` (exige
+`type === 'member'`), llama al backend con `authedFetch` (token en memoria + refresh
+automático) vía funciones `panel*` nuevas en `lib/api.ts`, y sin sesión muestra un botón
+al login real (`/login`). Pendiente menor anotado: las llamadas de datos del panel van
+directo al backend (API_BASE) — en dev con localhost CORS lo permite; bajo subdominios
+reales convendrá pasarlas por el BFF (mismo origen), como ya hace auth.
+Texto original de la entrada (historial):
+La vista General de `apps/web/src/modules/ventas/panel/configuracion/ConfigGeneral.tsx` dejó
+de usar datos hardcodeados: carga con `GET /business` + `GET /business/config` y guarda por
+card con `PUT /business`, `PUT /business/config` y `POST /business/pause` (con modal de
+confirmación). Para autenticarse reutiliza el token de `localStorage` que ya usa el
+onboarding (`lib/api.ts`); si no hay token, la pantalla muestra un aviso claro en lugar de
+romperse. Cuando Alan implemente el login del panel, reemplazar ese origen del token.
+"Eliminar espacio" quedó deshabilitado en la UI con nota de diferido (depende de
+Subscriptions — ver entrada `DELETE /business`). Detalle asumido: un campo de email vacío se
+omite del PUT (no "borra" el valor guardado) para no chocar con `@IsEmail()` sobre string
+vacío. En `lib/api.ts` se extendieron de forma aditiva `UpdateBusinessConfigInput` y el tipo
+de respuesta de `getBusinessConfig()` (campos de contacto/envíos/redes que el DTO del
+backend ya aceptaba); ojo: `shippingBase`/`freeShippingFrom` llegan serializados como string
+(Decimal de Prisma) y la UI los convierte con `Number()`.
+
 ### [2026-07-12] `PUT /business` no acepta el campo `mode`
 **Estado:** RESUELTO (2026-07-12)
 El contrato original permitía editar `mode` (FULL/SHOWCASE) junto con name/industry/description
@@ -203,11 +286,18 @@ diseñar e implementar el endpoint dedicado para cambiar `mode` — ver entrada 
 `CONTRATO_API.md` corregido para reflejar esto.
 
 ### [2026-07-12] Endpoint dedicado para cambiar `business.mode` — no implementado
-**Estado:** DIFERIDO — sin fecha objetivo aún
-Consecuencia directa de la entrada anterior: en este momento **no existe ninguna forma de
-cambiar `mode` vía API** (ni en `PUT /business` ni en otro lado). Diseñar un endpoint separado
-(ej. `POST /business/mode`) con sus propias validaciones de negocio antes de habilitar el
-cambio en producción.
+**Estado:** RESUELTO (2026-07-18) — implementado `POST /business/mode`
+No existía ninguna forma de cambiar `mode` vía API para un negocio ya activo (el onboarding
+puede setearlo vía `PUT /onboarding/business`, pero solo mientras `isActive === false`).
+Se implementó `POST /business/mode` en el módulo Businesses (tarea de Alex, Fase 1 —
+"definir cómo se cambia el modo"):
+- Body `{ mode: 'FULL' | 'SHOWCASE' }` (`ChangeModeDto`), restringido a `@Roles('owner')`
+  por ser zona peligrosa (mismo criterio que `POST /business/pause`).
+- Idempotente: pedir el modo ya vigente devuelve el negocio sin tocar nada.
+- Regla de negocio: para pasar a SHOWCASE no puede haber pedidos ONLINE en curso
+  (PENDING/CONFIRMED/PREPARING/SHIPPED, no borrados) → `422` con mensaje. Con la base
+  actual sin órdenes el chequeo pasa trivialmente, pero queda listo para cuando Orders
+  esté implementado. `PUT /business` sigue excluyendo `mode` a propósito.
 
 ### [2026-07-12] Rol mínimo para operaciones de sucursal
 **Estado:** RESUELTO (2026-07-12)
@@ -266,6 +356,29 @@ después del fix.
 ---
 
 ## Fase 3 — Equipo (Roles/Permissions/Members)
+
+### [2026-07-20] Pestaña Roles del panel Equipo integrada con la API real (+fix del modal)
+**Estado:** RESUELTO (2026-07-20)
+`Equipo.tsx` (pestaña Roles) dejó los mocks: lista con `GET /roles`, catálogo con
+`GET /permissions` (ahora incluye el grupo Catálogo en la UI), y crear/editar/eliminar
+contra `POST/PUT/DELETE /roles/:id`, con validación en el modal (nombre + al menos un
+permiso) y errores del backend visibles (roles default protegidos, borrado con miembros →
+422). Se arregló el bug de diseño del modal de rol: era más alto que la pantalla y el
+título/nombre quedaban inaccesibles — ahora el contenido scrollea adentro con header y
+footer fijos. Los nombres de los roles default se muestran localizados (owner→Dueño, etc.).
+La pestaña **Miembros sigue con datos de muestra** a propósito (tarjeta "Config: Equipo" de
+F5 — invitaciones dependen del servicio de email de F3).
+
+### [2026-07-18] "PUT /roles/:id/permissions" cubierto por el reemplazo completo en `PUT /roles/:id`
+**Estado:** RESUELTO (2026-07-18) — aclaración, no cambio de código
+La tarjeta de Fase 1 ("Crear y editar roles") menciona `PUT /roles/:id/permissions` como ruta
+aparte. `RolesService.update()` ya reemplaza la matriz completa de permisos dentro del mismo
+`PUT /roles/:id` (deleteMany + create, validando codes contra el catálogo), así que el
+comportamiento pedido existe sin ruta extra — no se agregó una ruta no documentada en
+CONTRATO_API.md. Las validaciones de la tarjeta ya estaban implementadas: los roles default
+(owner incluido) no se editan ni se borran (422), y borrar un rol con miembros asignados da
+422 (P2003). El catálogo de permisos del seed ya incluye `catalog.view/manage` y
+`config.team.view` (resuelto por el equipo en commits previos).
 
 ### [2026-07-13] Autorización por rol (`@Roles()`), no por permiso, pese a lo que dice el contrato
 **Estado:** RESUELTO (2026-07-14) — para los módulos de Fases 3-5

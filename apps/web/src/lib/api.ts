@@ -1,3 +1,8 @@
+// (Fase 1 - Alex) Traigo el "fetch con sesion" que armaron los chicos para el
+// login: se encarga solo de mandar el token y de renovarlo cuando se vence.
+// Lo usan mis funciones del panel que estan al final de este archivo.
+import { authedFetch } from '@/lib/auth/authClient'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
 // ─── Sesión de onboarding (localStorage) ───────────────────────────────────
@@ -262,6 +267,16 @@ export type UpdateBusinessConfigInput = Partial<{
   acceptsCard: boolean
   acceptsPickup: boolean
   transferAlias: string
+  // (Fase 1 — Config, Alex) Le agrego los campos que la pantalla de Configuración
+  // necesita (horario, envíos, redes). Solo suma campos: no cambia nada de lo que ya había.
+  scheduleText: string
+  shippingBase: number
+  freeShippingFrom: number
+  deliveryZones: string[]
+  shippingPolicy: string
+  instagram: string
+  tiktok: string
+  facebook: string
 }>
 
 export function updateBusinessConfig(input: UpdateBusinessConfigInput) {
@@ -270,12 +285,117 @@ export function updateBusinessConfig(input: UpdateBusinessConfigInput) {
 
 export function getBusinessConfig() {
   return request<{
-    whatsapp: string | null; email: string | null
+    whatsapp: string | null; email: string | null; scheduleText: string | null
     acceptsMercadopago: boolean; acceptsCash: boolean; acceptsTransfer: boolean
     acceptsCard: boolean; acceptsPickup: boolean; transferAlias: string | null
+    // Ojo: los montos de plata llegan del backend como texto, no como número.
+    shippingBase: string | number | null; freeShippingFrom: string | number | null
+    deliveryZones: string[]; shippingPolicy: string | null
+    instagram: string | null; tiktok: string | null; facebook: string | null
   }>('/business/config')
 }
 
 export function publishBusiness() {
   return request<{ url: string; published: boolean }>('/business/publish', { method: 'POST' })
+}
+
+// ─── Panel: Configuración general (Fase 1 — Alex) ───────────────────────────
+// Estas funciones son las que usa la pantalla Configuración del panel para leer
+// y guardar los datos de verdad del negocio.
+//
+// Usan la sesión REAL del login (la que armaron los chicos), no la del wizard de
+// registro que está más arriba — esa queda solo para el wizard. Cuando estén
+// andando los subdominios capaz haya que ajustar cómo se conectan al backend;
+// lo dejé anotado en PENDIENTES.md.
+
+// Ayudante que usan todas las funciones de abajo: hace el pedido al backend con
+// la sesión puesta y, si algo falla, arma el error con el mensaje para la pantalla.
+async function panelRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await authedFetch(`${API_BASE}${path}`, options)
+  const isJson = res.headers.get('content-type')?.includes('application/json')
+  const body = isJson ? await res.json().catch(() => null) : null
+  if (!res.ok) {
+    const message = body?.message ?? body?.error ?? `Error ${res.status}`
+    throw new ApiError(res.status, Array.isArray(message) ? message.join(', ') : message)
+  }
+  return body as T
+}
+
+export function panelGetBusiness() {
+  return panelRequest<{
+    id: string; name: string; industry: string; description: string | null
+    subdomain: string; mode: string; isActive: boolean; isPaused: boolean
+    subrubros: string[]; teamSize: string | null
+    operatesPhysical: boolean; operatesOnline: boolean
+  }>('/business')
+}
+
+export function panelGetBusinessConfig() {
+  return panelRequest<{
+    whatsapp: string | null; email: string | null; scheduleText: string | null
+    acceptsMercadopago: boolean; acceptsCash: boolean; acceptsTransfer: boolean
+    acceptsCard: boolean; acceptsPickup: boolean; transferAlias: string | null
+    // Ojo: los montos de plata llegan del backend como texto, no como número.
+    shippingBase: string | number | null; freeShippingFrom: string | number | null
+    deliveryZones: string[]; shippingPolicy: string | null
+    instagram: string | null; tiktok: string | null; facebook: string | null
+  }>('/business/config')
+}
+
+export function panelUpdateBusinessConfig(input: UpdateBusinessConfigInput) {
+  return panelRequest('/business/config', { method: 'PUT', body: JSON.stringify(input) })
+}
+
+export type UpdateBusinessInput = Partial<{
+  name: string
+  industry: string
+  description: string
+}>
+
+// Guarda los datos básicos del negocio (nombre, rubro, descripción).
+export function updateBusiness(input: UpdateBusinessInput) {
+  return panelRequest<{ id: string; name: string; industry: string; description: string | null }>(
+    '/business',
+    { method: 'PUT', body: JSON.stringify(input) },
+  )
+}
+
+// Pausa o reactiva la tienda. Solo el dueño puede hacerlo.
+export function pauseBusiness(paused: boolean) {
+  return panelRequest<{ isPaused: boolean }>('/business/pause', {
+    method: 'POST',
+    body: JSON.stringify({ paused }),
+  })
+}
+
+// Cambia el modo de la tienda: completa (con carrito) o solo catálogo. Solo el
+// dueño. El backend no deja pasar a solo catálogo con pedidos online sin terminar.
+export function changeBusinessMode(mode: 'FULL' | 'SHOWCASE') {
+  return panelRequest<{ mode: string }>('/business/mode', {
+    method: 'POST',
+    body: JSON.stringify({ mode }),
+  })
+}
+
+// ─── Panel: Equipo → Roles (Fase 1 — tarea 5, Alex) ─────────────────────────
+// Con estas funciones la pestaña Roles crea, edita y borra roles de verdad en la
+// base. Miembros sigue con datos de muestra: esa parte es de una fase más adelante.
+
+export type ApiPermission = { id: string; group: string; code: string; label: string }
+export type ApiRole = {
+  id: string; name: string; description: string | null; color: string | null
+  isDefault: boolean; permissions: string[]; memberCount: number
+}
+export type UpsertRoleInput = { name: string; description?: string; color?: string; permissions: string[] }
+
+export function getRoles() { return panelRequest<ApiRole[]>('/roles') }
+export function getPermissionsCatalog() { return panelRequest<ApiPermission[]>('/permissions') }
+export function createRole(input: UpsertRoleInput) {
+  return panelRequest<ApiRole>('/roles', { method: 'POST', body: JSON.stringify(input) })
+}
+export function updateRole(id: string, input: UpsertRoleInput) {
+  return panelRequest<ApiRole>(`/roles/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+}
+export function deleteRole(id: string) {
+  return panelRequest<{ ok: boolean }>(`/roles/${id}`, { method: 'DELETE' })
 }

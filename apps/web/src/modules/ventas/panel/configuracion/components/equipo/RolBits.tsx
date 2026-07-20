@@ -2,8 +2,7 @@
 
 import { CheckCircle2 } from 'lucide-react'
 import { Button } from '@/design-system/components/Button'
-import { PERMISOS } from '../../mock/equipo.mock'
-import type { Rol } from '../../types/equipo.types'
+import type { Rol, Permiso } from '../../types/equipo.types'
 
 export function RolChip({ rol, small }: { rol: Rol; small?: boolean }) {
     return (
@@ -20,12 +19,13 @@ export function RolChip({ rol, small }: { rol: Rol; small?: boolean }) {
 
 interface RolCardProps {
     r:        Rol
+    catalogo: Permiso[]   // la lista de permisos llega desde la pantalla Equipo (es la real si hay sesión)
     onEdit:   () => void
     onDelete: () => void
 }
 
-export function RolCard({ r, onEdit, onDelete }: RolCardProps) {
-    const permObjs = PERMISOS.filter(p => r.permisos.includes(p.id))
+export function RolCard({ r, catalogo, onEdit, onDelete }: RolCardProps) {
+    const permObjs = catalogo.filter(p => r.permisos.includes(p.id))
     return (
         <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 14, overflow: 'hidden' }}>
             <div style={{ height: 4, background: r.color }} />

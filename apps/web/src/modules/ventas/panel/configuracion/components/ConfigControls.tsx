@@ -1,47 +1,71 @@
-// Controles reutilizables de configuración: Toggle (switch) y CfgField (campo).
+// Controles reutilizables de configuración: Toggle (la llavecita) y CfgField (campo).
+//
+// (Fase 1 — Alex) Ahora se pueden usar de dos maneras:
+//  - Como siempre: el control se maneja solo con su valor inicial. Las otras
+//    pantallas que ya los usaban siguen igual, no les cambia nada.
+//  - Conectados (nuevo): pasándoles onChange, la pantalla que los usa se entera
+//    de cada cambio. Lo necesitaba para poder guardar de verdad en Configuración.
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
-// Switch on/off — autocontenido para la demo (estado local).
-export function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
-    const [on, setOn] = useState(defaultOn)
+export function Toggle({ defaultOn = false, on, onChange, disabled = false }: {
+    defaultOn?: boolean
+    on?: boolean
+    onChange?: (on: boolean) => void
+    disabled?: boolean
+}) {
+    const [interno, setInterno] = useState(defaultOn)
+    const activo = on ?? interno
+    const click = () => {
+        if (disabled) return
+        if (onChange) onChange(!activo)
+        else setInterno(o => !o)
+    }
     return (
         <span
-            onClick={() => setOn(o => !o)}
+            onClick={click}
             style={{
                 width: 40, height: 22, borderRadius: 11,
-                background: on ? 'var(--color-success)' : 'var(--color-surface-alt)',
-                border: on ? 'none' : '1px solid var(--color-border)',
-                position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'inline-block',
+                background: activo ? 'var(--color-success)' : 'var(--color-surface-alt)',
+                border: activo ? 'none' : '1px solid var(--color-border)',
+                position: 'relative', flexShrink: 0, cursor: disabled ? 'not-allowed' : 'pointer', display: 'inline-block',
+                opacity: disabled ? 0.5 : 1,
             }}
         >
-            <span style={{ position: 'absolute', top: on ? 3 : 2, left: on ? 21 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(15,23,42,0.15)', transition: 'left 200ms' }} />
+            <span style={{ position: 'absolute', top: activo ? 3 : 2, left: activo ? 21 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(15,23,42,0.15)', transition: 'left 200ms' }} />
         </span>
     )
 }
 
 interface CfgFieldProps {
-    label:    string
-    value:    string
-    area?:    boolean
-    select?:  boolean
+    label:     string
+    value:     string
+    area?:     boolean
+    select?:   boolean
+    onChange?: (value: string) => void
+    disabled?: boolean
 }
 
-export function CfgField({ label, value, area, select }: CfgFieldProps) {
+export function CfgField({ label, value, area, select, onChange, disabled }: CfgFieldProps) {
     const base: React.CSSProperties = {
         width: '100%', boxSizing: 'border-box', background: 'var(--color-bg)',
         border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 14,
         color: 'var(--color-text)', fontFamily: 'inherit', outline: 'none',
     }
+    // Si le pasan onChange, el campo avisa cada cambio a su pantalla; si no, se
+    // comporta como siempre, para no romper las otras pantallas que ya lo usaban.
+    const bind = onChange
+        ? { value, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value), disabled }
+        : { defaultValue: value, disabled }
     return (
         <div style={{ marginBottom: 14 }}>
             <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-body)', marginBottom: 6, display: 'block' }}>{label}</label>
             {area ? (
-                <textarea defaultValue={value} rows={2} style={{ ...base, resize: 'vertical', minHeight: 52, padding: '10px 12px' }} />
+                <textarea {...bind} rows={2} style={{ ...base, resize: 'vertical', minHeight: 52, padding: '10px 12px' }} />
             ) : (
                 <div style={{ position: 'relative' }}>
-                    <input defaultValue={value} style={{ ...base, height: 40, padding: '0 12px' }} />
+                    <input {...bind} style={{ ...base, height: 40, padding: '0 12px' }} />
                     {select && <ChevronDown size={14} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)', pointerEvents: 'none' }} />}
                 </div>
             )}

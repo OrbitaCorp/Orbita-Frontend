@@ -2,27 +2,30 @@
 // agrupada por módulo, búsqueda y resumen con barras de progreso.
 
 import { useState } from 'react'
-import { Search, Check, Package, Users, LayoutGrid, CreditCard, Tag, Settings } from 'lucide-react'
+import { Search, Check, Package, Users, LayoutGrid, CreditCard, Tag, Settings, ShoppingBag } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { Modal } from '@/design-system/components/Modal'
 import { Button } from '@/design-system/components/Button'
 import { Lbl, Inp, Toggle } from './FormBits'
-import { PERMISOS, GRUPOS, ROL_COLORS } from '../../mock/equipo.mock'
-import type { Rol, GrupoPermiso } from '../../types/equipo.types'
+import { ROL_COLORS } from '../../mock/equipo.mock'
+import type { Rol, Permiso, GrupoPermiso } from '../../types/equipo.types'
 
 const MODULE_ICONS: Record<GrupoPermiso, ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>> = {
     'Pedidos': Package, 'Clientes': Users, 'Reportes': LayoutGrid, 'Inventario': Package,
-    'POS': CreditCard, 'Descuentos': Tag, 'Configuración': Settings,
+    'POS': CreditCard, 'Descuentos': Tag, 'Configuración': Settings, 'Catálogo': ShoppingBag,
 }
 
 interface ModalRolProps {
-    rol?:    Rol
-    mode:    'create' | 'edit' | 'view'
-    onClose: () => void
-    onSave:  (r: Rol, isNew: boolean) => void
+    rol?:     Rol
+    mode:     'create' | 'edit' | 'view'
+    catalogo: Permiso[]          // catálogo de permisos (real desde la API, o de muestra)
+    grupos:   GrupoPermiso[]
+    saving?:  boolean
+    onClose:  () => void
+    onSave:   (r: Rol, isNew: boolean) => void
 }
 
-export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
+export function ModalRol({ rol, mode, catalogo, grupos, saving, onClose, onSave }: ModalRolProps) {
     const view = mode === 'view'
     const [nombre, setNombre] = useState(rol?.nombre ?? '')
     const [color, setColor] = useState(rol?.color ?? '#3B82F6')
@@ -30,10 +33,10 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
     const [perms, setPerms] = useState<string[]>(rol?.permisos ?? [])
     const [q, setQ] = useState('')
 
-    const filtered = (g: GrupoPermiso) => PERMISOS.filter(p => p.grupo === g && (!q || p.label.toLowerCase().includes(q.toLowerCase())))
+    const filtered = (g: GrupoPermiso) => catalogo.filter(p => p.grupo === g && (!q || p.label.toLowerCase().includes(q.toLowerCase())))
     const toggle = (id: string) => { if (view) return; setPerms(ps => ps.includes(id) ? ps.filter(x => x !== id) : [...ps, id]) }
     const toggleGroup = (g: GrupoPermiso) => {
-        const gp = PERMISOS.filter(p => p.grupo === g).map(p => p.id)
+        const gp = catalogo.filter(p => p.grupo === g).map(p => p.id)
         const all = gp.every(id => perms.includes(id))
         setPerms(ps => all ? ps.filter(x => !gp.includes(x)) : [...new Set([...ps, ...gp])])
     }
@@ -52,8 +55,12 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
             maxWidth={600}
             footer={view
                 ? <Button variant="primary" onClick={onClose}>Cerrar</Button>
-                : <><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" disabled={!nombre.trim() || perms.length === 0} onClick={submit}>{mode === 'create' ? 'Crear rol' : 'Guardar cambios'}</Button></>}
+                : <><span style={{ marginRight: 'auto', alignSelf: 'center', fontSize: 12, color: 'var(--color-muted)' }}>{!nombre.trim() ? 'Poné un nombre al rol' : perms.length === 0 ? 'Elegí al menos un permiso' : ''}</span><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" loading={saving} disabled={!nombre.trim() || perms.length === 0} onClick={submit}>{mode === 'create' ? 'Crear rol' : 'Guardar cambios'}</Button></>}
         >
+            {/* Arreglo: la ventana era más alta que la pantalla y el título quedaba
+                afuera. Ahora la lista de permisos se desliza adentro, y el título y los
+                botones quedan siempre a la vista. */}
+            <div style={{ maxHeight: '58vh', overflowY: 'auto', paddingRight: 6 }}>
             {!view && (
                 <>
                     <Lbl>Nombre del rol</Lbl>
@@ -79,7 +86,7 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
                 </div>
                 {!view && (
                     <>
-                        <button onClick={() => setPerms(PERMISOS.map(p => p.id))} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Todos</button>
+                        <button onClick={() => setPerms(catalogo.map(p => p.id))} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Todos</button>
                         <button onClick={() => setPerms([])} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Ninguno</button>
                     </>
                 )}
@@ -87,12 +94,12 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
 
             {/* Permisos por grupo */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {GRUPOS.map(g => {
+                {grupos.map(g => {
                     const gp = filtered(g)
                     if (!gp.length) return null
-                    const allg = PERMISOS.filter(p => p.grupo === g)
+                    const allg = catalogo.filter(p => p.grupo === g)
                     const act = allg.filter(p => perms.includes(p.id)).length
-                    const I = MODULE_ICONS[g]
+                    const I = MODULE_ICONS[g] ?? Package
                     return (
                         <div key={g}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -110,7 +117,7 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
                                             <span style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: on ? color : 'transparent', border: on ? 'none' : '1.5px solid var(--color-border)', display: 'grid', placeItems: 'center' }}>{on && <Check size={13} strokeWidth={2.6} color="#fff" />}</span>
                                             <div style={{ minWidth: 0 }}>
                                                 <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text)' }}>{p.label}</div>
-                                                <div style={{ fontSize: 11, color: 'var(--color-muted)', lineHeight: 1.3 }}>{p.desc}</div>
+                                                {p.desc ? <div style={{ fontSize: 11, color: 'var(--color-muted)', lineHeight: 1.3 }}>{p.desc}</div> : null}
                                             </div>
                                         </button>
                                     )
@@ -124,10 +131,10 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
             {/* Resumen */}
             <div style={{ marginTop: 18, padding: 14, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>Resumen del rol {nombre || ''}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-muted)', marginBottom: 10 }}>Acceso a {perms.length} de {PERMISOS.length} funcionalidades</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted)', marginBottom: 10 }}>Acceso a {perms.length} de {catalogo.length} funcionalidades</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
-                    {GRUPOS.map(g => {
-                        const allg = PERMISOS.filter(p => p.grupo === g)
+                    {grupos.map(g => {
+                        const allg = catalogo.filter(p => p.grupo === g)
                         const act = allg.filter(p => perms.includes(p.id)).length
                         return (
                             <div key={g}>
@@ -142,6 +149,7 @@ export function ModalRol({ rol, mode, onClose, onSave }: ModalRolProps) {
                         )
                     })}
                 </div>
+            </div>
             </div>
         </Modal>
     )

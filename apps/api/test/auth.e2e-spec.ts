@@ -382,6 +382,26 @@ describe('Auth (e2e)', () => {
         await prisma.$disconnect();
       }
     });
+
+    it('anti-enumeración: respuesta IDÉNTICA entre customer-sin-member y email inexistente (sin slug)', async () => {
+      const customerEmail = SEED_USERS.customerWithAccount.email;
+      const fakeEmail = 'definitivamente-no-existe@example.com';
+
+      const [resCustomer, resFake] = await Promise.all([
+        request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .send({ email: customerEmail }),
+        request(app.getHttpServer())
+          .post('/api/v1/auth/forgot-password')
+          .send({ email: fakeEmail }),
+      ]);
+
+      expect(resCustomer.status).toBe(201);
+      expect(resFake.status).toBe(201);
+      expect(resCustomer.status).toBe(resFake.status);
+      expect(resCustomer.body).toEqual(resFake.body);
+      expect(resCustomer.headers['content-type']).toBe(resFake.headers['content-type']);
+    });
   });
 
   // ── POST /auth/accept-invitation ────────────────────────────────────────

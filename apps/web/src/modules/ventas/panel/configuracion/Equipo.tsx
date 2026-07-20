@@ -13,8 +13,10 @@ import { ModalInvitar } from './components/equipo/ModalInvitar'
 import { ModalRol } from './components/equipo/ModalRol'
 import { ModalEditarMiembro } from './components/equipo/ModalEditarMiembro'
 import { ModalEmailMiembro } from './components/equipo/ModalEmailMiembro'
-import { ROLES0, MIEMBROS0, fmtAcceso, genPassword } from './mock/equipo.mock'
-import type { Rol, Miembro } from './types/equipo.types'
+import { ROLES0, MIEMBROS0, PERMISOS, GRUPOS, fmtAcceso, genPassword } from './mock/equipo.mock'
+import { useAuth } from '@/hooks/useAuth'
+import { ApiError, getRoles, getPermissionsCatalog, createRole, updateRole, deleteRole, type ApiRole } from '@/lib/api'
+import type { Rol, Miembro, Permiso, GrupoPermiso } from './types/equipo.types'
 
 const COLS = '1.6fr 1.4fr 130px 150px 110px 100px'
 
@@ -36,12 +38,54 @@ export default function Equipo({ ir, onToast }: EquipoProps) {
     const [sub, setSub] = useState<'miembros' | 'roles'>('miembros')
     const [modal, setModal] = useState<ModalState>(null)
 
-    // Mantiene el contador de miembros por rol sincronizado.
-    useEffect(() => {
-        setRoles(rs => rs.map(r => ({ ...r, miembros: miembros.filter(m => m.rol === r.id).length })))
-    }, [miembros])
+    // ── Roles de verdad (Fase 1 — tarea 5): la pestaña Roles ya trabaja contra la
+    // base real. Miembros sigue con datos de muestra: esa parte es de la Fase 5.
+    const { status: authStatus, user } = useAuth()
+    const esDueno = authStatus === 'authenticated' && user?.type === 'member'
+    const [rolesReales, setRolesReales] = useState(false)
+    const [catalogo, setCatalogo] = useState<Permiso[]>(PERMISOS)
+    const [grupos, setGrupos] = useState<GrupoPermiso[]>(GRUPOS)
+    const [guardandoRol, setGuardandoRol] = useState(false)
 
-    const rolById = (id: string) => roles.find(r => r.id === id) ?? roles[0]
+    // Los roles que vienen de fábrica llegan con el nombre en inglés (owner, admin...):
+    // acá los muestro en español. A los roles creados a mano no les cambio nada.
+    const NOMBRES_ROL: Record<string, string> = { owner: 'Dueño', admin: 'Administrador', cajero: 'Cajero', empleado: 'Empleado' }
+    // Convierte un rol tal como viene del backend al formato que usan estas pantallas.
+    const mapRol = (r: ApiRole): Rol => ({
+        id: r.id,
+        nombre: NOMBRES_ROL[r.name] ?? r.name,
+        descripcion: r.description ?? '',
+        color: r.color ?? '#3B82F6',
+        esDefault: r.isDefault,
+        permisos: r.permissions,
+        miembros: r.memberCount,
+    })
+
+    // Trae de la base los roles y el catálogo completo de permisos, listos para mostrar.
+    async function cargarRoles() {
+        const [rs, perms] = await Promise.all([getRoles(), getPermissionsCatalog()])
+        setCatalogo(perms.map(pm => ({ id: pm.code, grupo: pm.group as GrupoPermiso, label: pm.label })))
+        setGrupos([...new Set(perms.map(pm => pm.group))] as GrupoPermiso[])
+        setRoles(rs.map(mapRol))
+        setRolesReales(true)
+    }
+    useEffect(() => {
+        if (!esDueno) return
+        cargarRoles().catch(() => { /* sin sesión o backend caído: la vista sigue con datos de muestra */ })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [esDueno])
+
+    // Va actualizando cuántos miembros tiene cada rol (solo con los datos de
+    // muestra: con roles reales ese número ya viene contado desde el backend).
+    useEffect(() => {
+        if (rolesReales) return
+        setRoles(rs => rs.map(r => ({ ...r, miembros: miembros.filter(m => m.rol === r.id).length })))
+    }, [miembros, rolesReales])
+
+    // Los miembros de muestra apuntan a roles de muestra viejos ('dueno', 'vendedor');
+    // acá los emparejo con el rol real que corresponde para que la tabla no se rompa.
+    const ALIAS_MOCK: Record<string, string> = { dueno: 'Dueño', admin: 'Administrador', vendedor: 'Cajero' }
+    const rolById = (id: string) => roles.find(r => r.id === id) ?? roles.find(r => r.nombre === ALIAS_MOCK[id]) ?? roles[0]
 
     const cambiarRol = (mid: string, rid: string) => {
         setMiembros(ms => ms.map(m => m.id === mid ? { ...m, rol: rid } : m))
@@ -120,10 +164,16 @@ export default function Equipo({ ir, onToast }: EquipoProps) {
                         <RolCard
                             key={r.id}
                             r={r}
+                            catalogo={catalogo}
                             onEdit={() => setModal({ type: 'rol', rol: r, mode: r.esDefault ? 'view' : 'edit' })}
-                            onDelete={() => {
+                            onDelete={async () => {
                                 if (r.miembros > 0) { onToast(`No se puede eliminar: ${r.miembros} miembro(s) con este rol`); return }
-                                setRoles(rs => rs.filter(x => x.id !== r.id))
+                                if (rolesReales) {
+                                    try { await deleteRole(r.id); await cargarRoles() }
+                                    catch (e) { onToast(e instanceof ApiError ? e.message : 'No se pudo eliminar el rol'); return }
+                                } else {
+                                    setRoles(rs => rs.filter(x => x.id !== r.id))
+                                }
                                 onToast(`Rol "${r.nombre}" eliminado`)
                             }}
                         />
@@ -158,10 +208,29 @@ export default function Equipo({ ir, onToast }: EquipoProps) {
                 <ModalRol
                     rol={modal.rol}
                     mode={modal.mode}
+                    catalogo={catalogo}
+                    grupos={grupos}
+                    saving={guardandoRol}
                     onClose={() => setModal(null)}
-                    onSave={(r, isNew) => {
-                        if (isNew) setRoles(rs => [...rs, r])
-                        else setRoles(rs => rs.map(x => x.id === r.id ? r : x))
+                    onSave={async (r, isNew) => {
+                        if (rolesReales) {
+                            // Guarda el rol en la base de verdad y vuelve a traer la lista actualizada.
+                            setGuardandoRol(true)
+                            try {
+                                const input = { name: r.nombre, description: r.descripcion || undefined, color: r.color, permissions: r.permisos }
+                                if (isNew) await createRole(input)
+                                else await updateRole(r.id, input)
+                                await cargarRoles()
+                            } catch (e) {
+                                onToast(e instanceof ApiError ? e.message : 'No se pudo guardar el rol')
+                                setGuardandoRol(false)
+                                return
+                            }
+                            setGuardandoRol(false)
+                        } else {
+                            if (isNew) setRoles(rs => [...rs, r])
+                            else setRoles(rs => rs.map(x => x.id === r.id ? r : x))
+                        }
                         setModal(null)
                         onToast(isNew ? `Rol "${r.nombre}" creado` : `Rol "${r.nombre}" actualizado`)
                     }}
@@ -198,7 +267,7 @@ function RolDropdown({ rol, roles, disabled, onPick }: { rol: Rol; roles: Rol[];
             </button>
             {open && (
                 <div style={{ position: 'absolute', top: 30, left: 0, zIndex: 20, background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(15,23,42,0.12)', padding: 4, minWidth: 160 }}>
-                    {roles.filter(r => r.id !== 'dueno').map(r => (
+                    {roles.filter(r => r.nombre !== 'Dueño').map(r => (
                         <button key={r.id} onClick={() => { onPick(r.id); setOpen(false) }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color }} />
                             <span style={{ fontSize: 13, color: 'var(--color-text)', flex: 1 }}>{r.nombre}</span>
