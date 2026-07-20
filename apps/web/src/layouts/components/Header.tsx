@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Bell, Moon, Sun, Search, LogOut, User, ChevronDown, AlertCircle, AlertTriangle, X, Menu, ArrowLeft } from 'lucide-react'
 import { useDarkMode } from '@/hooks/useDarkMode'
+import { useAuth } from '@/hooks/useAuth'
 import { nombreConversacion } from '@/modules/ventas/panel/mensajes/mock/mensajes.mock'
 
 const seccionLabels: Record<string, string> = {
@@ -50,6 +51,15 @@ interface Props { onMenuClick: () => void }
 
 export default function Header({ onMenuClick }: Props) {
     const { isDark, toggle } = useDarkMode()
+
+    // (Alex) Hice andar SOLO el botón "Cerrar sesión" para poder probar entrar y
+    // salir mientras desarrollamos. La tarjeta completa del perfil de usuario
+    // ("Globales: Perfil de usuario y cerrar sesión") sigue siendo de Alan.
+    const { logout } = useAuth()
+    const cerrarSesion = async () => {
+        await logout()
+        window.location.href = '/login'   // con recarga completa: así maneja el equipo la vuelta al login
+    }
     const router = useRouter()
     const { query } = router
     const negocioId   = (query.negocioId   as string) ?? 'rama-tienda'
@@ -347,6 +357,7 @@ export default function Header({ onMenuClick }: Props) {
                                 </div>
                                 <div className="p-1" style={{ borderTop: '1px solid var(--color-border)' }}>
                                     <button className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm cursor-pointer text-left" style={{ background: 'transparent', border: 'none', color: 'var(--color-error)' }}
+                                        onClick={cerrarSesion}
                                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-error-bg)')}
                                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                     >
