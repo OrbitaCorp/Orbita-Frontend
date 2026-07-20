@@ -299,6 +299,27 @@ export function publishBusiness() {
   return request<{ url: string; published: boolean }>('/business/publish', { method: 'POST' })
 }
 
+// ─── Suscripción a Órbita (cobro del plan al dueño) ─────────────────────────
+// Es el cobro NEGOCIO → ÓRBITA, no los pagos de los clientes al negocio.
+// Usa la sesión de onboarding porque el alta se hace durante el wizard, con el
+// negocio todavía sin publicar.
+
+// Pide el link de MercadoPago donde el dueño autoriza el débito automático.
+export function startSubscriptionCheckout() {
+  return request<{ preapprovalId: string; initPoint: string }>('/subscription/checkout', {
+    method: 'POST',
+  })
+}
+
+// Al volver de MP: confirma contra el backend, que le pregunta a MP el estado
+// real. `activated: true` significa que el negocio quedó publicado.
+export function confirmSubscription(preapprovalId: string) {
+  return request<{ status: string; activated: boolean; subscriptionId?: string; subdomain?: string }>(
+    '/subscription/confirm',
+    { method: 'POST', body: JSON.stringify({ preapprovalId }) },
+  )
+}
+
 // ─── Panel: Configuración general (Fase 1 — Alex) ───────────────────────────
 // Estas funciones son las que usa la pantalla Configuración del panel para leer
 // y guardar los datos de verdad del negocio.

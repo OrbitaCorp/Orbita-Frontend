@@ -604,6 +604,79 @@ patrón usado en Fases 3-5. Ver orden sugerido en `Guia prueba manual fase 6.md`
 
 ---
 
+## Fase 13 — Suscripciones (cobro negocio → Órbita)
+
+### [2026-07-20] Se usa preapproval (Suscripciones de MP), no Checkout API/Orders
+**Estado:** RESUELTO (2026-07-20) — decisión tomada acá, confirmar con el equipo
+El usuario pidió inicialmente "Checkout API en vez de Checkout Pro" y pasó credenciales de una
+aplicación de MP configurada como **"Checkout API vía Orders"**. Pero también pidió
+explícitamente que la pantalla de pago sea la de MercadoPago ("nosotros no tocamos nada") y
+que el cobro sea **recurrente** ($5.000 cada 3 meses; en pruebas $1 cada 3 días).
+
+Esos tres requisitos juntos solo los cumple **preapproval** (producto "Suscripciones" de MP):
+Orders/Checkout API son de pago único y obligarían a construir la recurrencia a mano
+(guardar el token de tarjeta + cron de cobro), además de exigir capturar los datos de tarjeta.
+
+**Riesgo abierto:** una aplicación de MP configurada como "Checkout API vía Orders"
+probablemente **no pueda crear preapprovals**. Si al probar devuelve 401/403, hay que crear
+una aplicación nueva en el panel de MP con el producto **Suscripciones** habilitado y usar
+ese Access Token. Sin verificar todavía (no se probó contra MP real).
+
+### [2026-07-20] El negocio ahora se crea ANTES del pago — revierte la decisión del 2026-07-17
+**Estado:** RESUELTO (2026-07-20) — decisión explícita del usuario
+Hasta ahora la regla era "no se persiste nada hasta que el pago se apruebe" (ver
+"Diferir creación de cuenta hasta pago aprobado" más abajo). Con el pago real eso se vuelve
+inviable: MP se lleva al usuario a su propio dominio, y la contraseña elegida en el wizard
+vive **solo en memoria** (`partialize` la excluye de localStorage a propósito), así que se
+pierde en el salto y no se puede crear la cuenta cuando vuelve.
+
+Se le plantearon al usuario tres opciones (guardar la clave en sessionStorage durante el
+salto / abrir MP en otra pestaña / crear la cuenta antes y activarla al pagar) y **eligió la
+tercera**. Flujo actual:
+1. `plan.tsx` crea cuenta + negocio con `isActive: false` (no visible para nadie).
+2. Pide el `init_point` a `POST /subscription/checkout` y redirige a MP.
+3. MP vuelve a `/onboarding/pago-retorno`, que llama a `POST /subscription/confirm`.
+4. El backend le pregunta a MP el estado real; si es `authorized`, crea la `Subscription` y
+   recién ahí pone `isActive: true`.
+
+**PENDIENTE (ABIERTO):** hace falta un cron que limpie los negocios que quedaron con
+`isActive: false` y sin `Subscription` después de N días (usuarios que abandonaron en la
+pantalla de MP). Sin eso, cada intento fallido deja un negocio huérfano ocupando su subdominio
+y su email. Ya existe una entrada relacionada sobre limpieza de negocios sin pagar.
+
+### [2026-07-20] `SubscriptionPayment` no se llena todavía
+**Estado:** ABIERTO
+`activateFromPreapproval()` crea/actualiza la `Subscription` pero **no registra filas en
+`subscription_payments`**. Falta manejar las notificaciones de tipo `authorized_payment` del
+webhook (cada débito de un período) para poder mostrar el historial de facturación que
+`GET /subscription/payments` ya expone (hoy devolvería una lista vacía).
+
+Tampoco está implementada la máquina de estados de mora (`ACTIVE → PAST_DUE → SUSPENDED`)
+ni el período de gracia — ver la política ya acordada en "Fase 2 — Businesses/Branches".
+
+### [2026-07-20] El webhook no valida la firma de MercadoPago
+**Estado:** ABIERTO — deuda técnica consciente
+`POST /webhooks/mercadopago/preapproval` acepta cualquier request sin verificar que venga
+realmente de MP. El riesgo está acotado porque el handler **no confía en el body**: solo saca
+el id y va a consultarle el estado real a MP con nuestro Access Token. Aun así, permite que un
+tercero nos haga consultar ids arbitrarios. El SDK ya trae `WebhookSignatureValidator`;
+falta configurar el secret del webhook en el panel de MP y engancharlo.
+
+### [2026-07-20] Periodicidad: la documentación dice mensual, el producto es trimestral
+**Estado:** RESUELTO (2026-07-20) — se tomó lo que dice la UI
+`BACKEND_IMPLEMENTACION.md` (Fase 13.5) habla de "cada cobro mensual", pero la pantalla de
+onboarding (`plan.tsx`) muestra **$5.000 cada 3 meses** desde hace tiempo. Se implementó
+trimestral, que es lo que ve el usuario final. La periodicidad no está hardcodeada: sale de
+`MP_SUBSCRIPTION_FREQUENCY` / `MP_SUBSCRIPTION_FREQUENCY_TYPE` para poder probar con ciclos
+cortos. Alguien debería corregir `BACKEND_IMPLEMENTACION.md`.
+
+### [2026-07-20] Atajo para entrar al panel sin pagar
+**Estado:** RESUELTO (2026-07-20)
+El link "Explorar el panel primero" de `plan.tsx` no creaba nada — dejaba al usuario en un
+panel sin negocio. Se reemplazó por **"Omitir pago y entrar al panel"**, que crea la cuenta y
+publica el negocio salteando el cobro. Solo se renderiza si
+`NEXT_PUBLIC_ALLOW_SKIP_PAYMENT === 'true'`, así que en producción no queda expuesto.
+
 ## Onboarding — RBT-291/292 (registro de negocio + rubros)
 
 ### [2026-07-18] `registerBusiness()` bloquea el email de forma GLOBAL, no por negocio — inconsistente con el modelo de aislamiento de auth

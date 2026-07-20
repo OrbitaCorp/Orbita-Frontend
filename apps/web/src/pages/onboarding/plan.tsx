@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Check, Shield, Zap, HeadphonesIcon, Globe, Percent, FileText, Printer, ArrowRight } from 'lucide-react'
-import { completeOnboarding, publishBusiness, uploadLogo, dataUrlToBlob, ApiError } from '@/lib/api'
+import { completeOnboarding, publishBusiness, uploadLogo, dataUrlToBlob, startSubscriptionCheckout, ApiError } from '@/lib/api'
 import { useOnboardingStore } from '@/modules/onboarding/useOnboardingStore'
 import { useAuth } from '@/hooks/useAuth'
 import { tenantUrl } from '@/lib/tenant'
@@ -520,8 +520,10 @@ export default function PlanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Crea de verdad la cuenta, el negocio y la sesión del dueño. Es el único
-  // lugar donde se persiste algo: si esto no corre, no queda nada en la base.
+  // Crea la cuenta, el negocio y la sesión del dueño. El negocio queda SIN
+  // publicar: sale al aire recién cuando MercadoPago confirma la suscripción
+  // (ver subscriptions.service.ts). Si el usuario abandona en la pantalla de
+  // MP, el negocio queda en borrador y no es visible para nadie.
   function activarNegocio() {
     const account = {
       ownerName: wizard.ownerName,
@@ -531,7 +533,6 @@ export default function PlanPage() {
     }
     return completeOnboarding(account, wizard)
       .then(() => wizard.logoDataUrl ? uploadLogo(dataUrlToBlob(wizard.logoDataUrl), 'logo.png') : null)
-      .then(() => publishBusiness())
       // El registro de onboarding emite su propio token de un solo uso (sin
       // refresh) — para dejar al dueño con la MISMA sesión que usa el resto
       // del panel (access en memoria + refresh httpOnly cross-subdominio),
@@ -552,6 +553,8 @@ export default function PlanPage() {
     setEstado('plan')
   }
 
+  // Crea la cuenta y manda al dueño a MercadoPago para que autorice el débito
+  // automático. La vuelta la maneja /onboarding/pago-retorno.
   function pagar() {
     if (passwordLost) {
       setErrorPago('Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.')
@@ -559,11 +562,19 @@ export default function PlanPage() {
     }
     setErrorPago('')
     setEstado('procesando')
-    Promise.all([activarNegocio(), new Promise(resolve => setTimeout(resolve, 2800))])
-      .then(() => { resetWizard(); setEstado('exito') })
+    activarNegocio()
+      .then(() => startSubscriptionCheckout())
+      .then(({ initPoint }) => {
+        // El wizard ya está persistido en la base — se limpia antes de salir
+        // para que al volver de MP no quede estado viejo dando vueltas.
+        resetWizard()
+        window.location.href = initPoint
+      })
       .catch(manejarError)
   }
 
+  // Atajo de desarrollo: crea la cuenta y publica el negocio sin pasar por el
+  // cobro. Solo accesible con NEXT_PUBLIC_ALLOW_SKIP_PAYMENT=true.
   function omitirPago() {
     if (passwordLost) {
       setErrorPago('Tu sesión expiró. Volvé al paso anterior para reingresar tu contraseña.')
@@ -572,6 +583,7 @@ export default function PlanPage() {
     setErrorPago('')
     setEstado('procesando')
     activarNegocio()
+      .then(() => publishBusiness())
       .then(() => { resetWizard(); setEstado('exito') })
       .catch(manejarError)
   }
