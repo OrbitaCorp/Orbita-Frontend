@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthContext } from '../common/types/auth-context.type';
@@ -8,14 +9,12 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
+import { RefreshDto } from './dto/refresh.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  // El negocio se identifica vía X-Business-Slug en TODOS los endpoints —
-  // mismo mecanismo que usa AuthGuard para el resto de la API. Requerido
-  // en register (siempre storefront); opcional en login (su ausencia = panel).
 
   @Post('register')
   @Public()
@@ -25,19 +24,30 @@ export class AuthController {
 
   @Post('login')
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   login(@Body() dto: LoginDto, @Headers('x-business-slug') businessSlug?: string) {
     return this.authService.login(dto, businessSlug);
   }
 
+  @Post('refresh')
+  @Public()
+  refresh(@Body() dto: RefreshDto) {
+    return this.authService.refresh(dto.refreshToken);
+  }
+
   @Post('logout')
-  logout(@CurrentUser() user: AuthContext) {
-    return this.authService.logout(user.authUserId);
+  @Public()
+  logout(@Body() dto: LogoutDto) {
+    return this.authService.logout(dto.refreshToken);
   }
 
   @Post('forgot-password')
   @Public()
-  forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto);
+  // Por IP, mismo patrón que login (ThrottlerGuard global no tiene tracker
+  // combinado IP+email en este proyecto — ver PENDIENTES.md).
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 intentos / 15 min
+  forgotPassword(@Body() dto: ForgotPasswordDto, @Headers('x-business-slug') businessSlug?: string) {
+    return this.authService.forgotPassword(dto, businessSlug);
   }
 
   @Post('reset-password')

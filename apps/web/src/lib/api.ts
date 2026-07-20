@@ -141,7 +141,6 @@ export type WizardData = {
   subrubros: string[]
   nombre: string
   descripcion: string
-  email: string
   telefono: string
   subdominio: string
   modoVenta: 'ecommerce' | 'vidriera' | ''
@@ -193,7 +192,10 @@ export async function completeOnboarding(
       ...(wizard.teamSize ? { teamSize: wizard.teamSize } : {}),
     }),
     updateBusinessConfig({
-      email: wizard.email || undefined,
+      // El contacto público arranca con el mismo email de la cuenta del
+      // dueño (no se pide dos veces en el wizard) — se puede cambiar
+      // después desde configuración si el negocio quiere uno distinto.
+      email: account.email,
       whatsapp: wizard.telefono || undefined,
       acceptsCash: wizard.pagos.includes('efectivo'),
       acceptsTransfer: wizard.pagos.includes('transferencia'),

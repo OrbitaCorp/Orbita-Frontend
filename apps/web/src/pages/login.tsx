@@ -1,14 +1,56 @@
 import { useState } from 'react'
-import { useRouter } from 'next/router'
 import { Mail, Lock, Eye } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { AuthError } from '@/lib/auth/authClient'
+import { tenantUrl } from '@/lib/tenant'
 
+// Login de DUEÑO (panel), servido en el apex: orbita.local/login.
+// Como no estamos en un subdominio de tienda, el AuthContext no manda
+// X-Business-Slug → el backend usa el path "sin slug" (busca member en
+// cualquier negocio) y devuelve el negocio del dueño en `business.subdomain`.
+//
+// Redirect entre subdominios: el token de acceso queda en memoria de ESTE
+// origen (apex) y se pierde al navegar al subdominio — pero el BFF ya seteó el
+// refresh token en una cookie httpOnly scopeada a `.orbita.local` (compartida).
+// Al aterrizar en {slug}.orbita.local/panel, el AuthProvider hace /api/auth/refresh
+// (la cookie viaja) y recupera un token nuevo. Ningún token viaja en la URL.
 export default function AdminLogin() {
-  const router   = useRouter()
+  const { login } = useAuth()
+  const [email,  setEmail]  = useState('')
+  const [pw,     setPw]     = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [error,  setError]  = useState('')
+  const [enviando, setEnviando] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    router.push('/admin/rama-tienda/ventas/dashboard')
+    setError('')
+    if (!email.trim() || !pw) {
+      setError('Ingresá tu email y contraseña.')
+      return
+    }
+    setEnviando(true)
+    try {
+      const user = await login(email.trim(), pw)
+      if (user.type !== 'member') {
+        // Un customer no tiene panel. (No debería pasar por el path sin slug.)
+        setError('Esta cuenta no tiene un panel de administración.')
+        setEnviando(false)
+        return
+      }
+      // Redirige al panel en el subdominio del negocio del dueño.
+      window.location.href = tenantUrl(user.business.subdomain, '/panel')
+    } catch (err) {
+      // El backend devuelve 401 genérico tanto para contraseña incorrecta como
+      // para email inexistente (anti-enumeración, decidido en la migración de
+      // auth). No se puede distinguir "no tenés negocio" → mensaje genérico.
+      if (err instanceof AuthError && err.status === 401) {
+        setError('Email o contraseña incorrectos.')
+      } else {
+        setError('No se pudo iniciar sesión. Intentá de nuevo.')
+      }
+      setEnviando(false)
+    }
   }
 
   return (
@@ -35,8 +77,17 @@ export default function AdminLogin() {
         <div style={{ height: 1, background: 'var(--color-border)', marginBottom: 24 }} />
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {error && (
+            <div style={{
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 8, padding: '10px 12px', fontSize: 12.5, color: 'var(--color-error)',
+            }}>
+              {error}
+            </div>
+          )}
+
           <Field label="Email">
-            <Input type="email" placeholder="tu@email.com"
+            <Input type="email" value={email} onChange={setEmail} placeholder="tu@email.com"
               icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
@@ -47,6 +98,8 @@ export default function AdminLogin() {
             </div>
             <Input
               type={showPw ? 'text' : 'password'}
+              value={pw}
+              onChange={setPw}
               placeholder="••••••••"
               icon={<Lock size={15} strokeWidth={1.5} color="var(--color-subtle)" />}
               rightIcon={
@@ -57,13 +110,13 @@ export default function AdminLogin() {
             />
           </div>
 
-          <button type="submit" style={{
+          <button type="submit" disabled={enviando} style={{
             width: '100%', height: 48, borderRadius: 10, marginTop: 8,
-            background: 'var(--color-primary)', color: '#fff',
-            fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(59,130,246,0.25)',
+            background: enviando ? 'var(--color-surface-alt)' : 'var(--color-primary)', color: '#fff',
+            fontSize: 14, fontWeight: 700, border: 'none', cursor: enviando ? 'default' : 'pointer',
+            boxShadow: enviando ? 'none' : '0 4px 16px rgba(59,130,246,0.25)',
           }}>
-            Ingresar
+            {enviando ? 'Ingresando…' : 'Ingresar'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--color-subtle)', fontSize: 11, margin: '4px 0' }}>
@@ -113,8 +166,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Input({ type = 'text', placeholder, icon, rightIcon }: {
-  type?: string; placeholder?: string
+function Input({ type = 'text', value, onChange, placeholder, icon, rightIcon }: {
+  type?: string; value: string; onChange: (v: string) => void; placeholder?: string
   icon?: React.ReactNode; rightIcon?: React.ReactNode
 }) {
   return (
@@ -122,6 +175,8 @@ function Input({ type = 'text', placeholder, icon, rightIcon }: {
       {icon && <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>{icon}</span>}
       <input
         type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         style={{
           width: '100%', height: 44,

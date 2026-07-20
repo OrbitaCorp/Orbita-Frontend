@@ -87,15 +87,10 @@ código.
 ## Seed / Fixtures
 
 ### [2026-07-13] `apps/api/scripts/reset-unlinked-customer.ts` no existe
-**Estado:** ABIERTO
-`Guia prueba manual fases 1 2.md` (sección 1.9) menciona este script como forma de volver un
-fixture "sin cuenta" (`authUserId: null`) sin tener que ir a mano al Dashboard de Supabase. El
-archivo no existe en `apps/api/scripts/` (la carpeta no existe). Al correr 1.9 en esta sesión,
-ambos fixtures (`sinregistrar@` y `sinregistrar2@zapatoslorena.test`) ya tenían `authUserId` seteado
-de corridas anteriores — se resolvió a mano: `supabase.auth.admin.deleteUser(authUserId)` +
-`prisma.customer.update({ where: { id }, data: { authUserId: null } })` sobre
-`sinregistrar@zapatoslorena.test` (dejando `sinregistrar2@` intacto como respaldo). Falta crear
-el script real que documenta la guía, tomando ese mismo par de pasos como base.
+**Estado:** RESUELTO (2026-07-18)
+Ya no se necesita el script: con auth propio, el seed resetea `passwordHash: null` en los
+customers "sin cuenta" automáticamente en cada corrida (`pnpm seed`). No hay Supabase Auth
+que limpiar externamente.
 
 ### [2026-07-12] GUIA_PRUEBA_MANUAL_FASES_1_2.md no existe en apps/api
 **Estado:** RESUELTO (2026-07-13)
@@ -109,13 +104,10 @@ y 2.1–2.13, todos ✅) y se actualizó la tabla de estado y los resultados rea
 ## Tests E2E
 
 ### [2026-07-12] Tests e2e crean usuarios reales en Supabase que no se limpian
-**Estado:** ABIERTO
-Los tests de `POST /auth/register` crean usuarios de test en Supabase Auth
-(`test-e2e-{timestamp}@example.com` y `sinregistrar@zapatoslorena.test` en la primera
-corrida). No hay cleanup automático — Supabase no expone un "delete by email" y los tests
-no guardan los `authUserId` para borrarlos después. Considerar un script de limpieza que
-liste usuarios con emails de patrón `test-e2e-*` y los elimine vía
-`supabase.auth.admin.deleteUser()`.
+**Estado:** RESUELTO (2026-07-18)
+Con la migración a auth propio, los tests ya no tocan Supabase Auth. Los customers de test
+se crean en la DB local y se limpian con el seed (que ahora resetea `passwordHash: null` en
+los fixtures "sin cuenta").
 
 ### [2026-07-12] Login de member enviando header X-Business-Slug: prioriza member
 **Estado:** RESUELTO (2026-07-12)
@@ -127,35 +119,59 @@ sí se requiere el header). La prioridad member > customer es ahora incondiciona
 regresión agregado en `auth.e2e-spec.ts`.
 
 ### [2026-07-12] POST /auth/accept-invitation y POST /auth/reset-password sin test e2e
-**Estado:** ABIERTO — cobertura parcial
-Ambos endpoints funcionan (verificados manualmente en Fase 1) pero no tienen test e2e
-automatizado. `accept-invitation` requiere un member PENDING con `hasTempPassword: true`;
-`reset-password` requiere un token de recuperación real de Supabase. Para cubrirlos, los
-tests necesitarían crear estado en Supabase via admin API dentro del propio test.
+**Estado:** ABIERTO — cobertura parcial (ahora factible sin Supabase)
+Ambos endpoints funcionan pero no tienen test e2e automatizado. Con auth propio, el
+blocker técnico (necesitaban estado en Supabase) desapareció: `accept-invitation` solo
+requiere un member PENDING con `hasTempPassword: true` en la DB local;
+`reset-password` requiere un PasswordResetToken creado directamente en la DB.
 
 ---
 
 ## Fase 1 — Auth
 
-### [2026-07-13] `AuthService.login()` enmascara cualquier excepción como "Credenciales inválidas"
+### [2026-07-18] Migración de Supabase Auth a sistema propio completada
+**Estado:** RESUELTO (2026-07-18)
+Se eliminó Supabase Auth como proveedor de autenticación. Cada negocio ahora gestiona
+credenciales independientemente: argon2id para hashing, JWT HS256 con `JWT_SECRET` propio,
+refresh token con rotación (SHA-256 hash en DB). Migración SQL aplicada:
+`20260718223824_own_auth_system`. El campo `authUserId` se conserva temporalmente (nullable,
+sin uso funcional) para no romper registros históricos — se puede eliminar en una migración
+futura cuando se confirme que no se referencia desde ningún otro sistema externo.
+
+### [2026-07-18] `SupabaseService` aún existe pero ya no se usa en auth
 **Estado:** ABIERTO
-`login()` envuelve la llamada a `supabase.adminClient.auth.signInWithPassword()` en un
-`try { ... } catch { throw new UnauthorizedException('Credenciales inválidas') }` que no
-distingue *por qué* falló: da exactamente el mismo `401` para una contraseña incorrecta que
-para un error de infraestructura (ver la entrada de WebSocket/Node 20 más arriba, que este
-patrón mantuvo invisible durante la primera prueba manual contra la base real). `register()`
-tiene un patrón similar en varios puntos. Sugerido: loguear el error real con
-`this.logger.error(err)` (o similar) antes de convertirlo al mensaje genérico de cara al
-cliente, para no perder la causa real en producción. No se tocó en esta sesión para no alterar
-comportamiento de un módulo ya cerrado sin pedido explícito — queda para que el equipo decida.
+`SupabaseService` sigue existiendo (`src/supabase/supabase.service.ts`) y se importa en
+`onboarding.service.ts` (import residual — ya no se usa funcionalmente). Queda pendiente:
+(a) eliminar el import no-utilizado, (b) evaluar si `SupabaseService` se sigue necesitando
+para Storage (product-images, business-logos) y si no, remover el módulo completo.
+
+### [2026-07-18] Swagger/OpenAPI pendiente de actualizar para nuevos endpoints auth
+**Estado:** ABIERTO
+Los endpoints de auth cambiaron comportamiento: `register` ya no devuelve token (solo message),
+`login` devuelve `refreshToken` adicional, `logout` es público y recibe `refreshToken` en body,
+`forgot-password` requiere `X-Business-Slug`. Se agregó `POST /auth/refresh`. Falta actualizar
+la documentación OpenAPI/Swagger para reflejar el nuevo contrato.
+
+### [2026-07-18] Frontend no actualizado para el nuevo flujo de auth
+**Estado:** ABIERTO — bloqueante para deploy a producción
+El frontend sigue usando el flujo anterior (espera token en register, no envía refreshToken en
+logout, no usa el endpoint /refresh). Hay que actualizar: (a) flujo de login para almacenar
+y rotar refreshToken, (b) flujo de register para redirigir a login después del mensaje de
+éxito, (c) interceptor axios para renovar token automáticamente cuando expire.
+
+### [2026-07-13] `AuthService.login()` enmascara cualquier excepción como "Credenciales inválidas"
+**Estado:** RESUELTO (2026-07-18)
+Con la migración a auth propio, el login ya no envuelve llamadas a un servicio externo.
+Los errores de argon2/Prisma no se enmascaran — solo se devuelve "Credenciales inválidas"
+cuando la contraseña es incorrecta o el usuario no existe (comportamiento deliberado de
+no-enumeración).
 
 ### [2026-07-12] Validación de JWT vía llamada a Supabase, no localmente
-**Estado:** ABIERTO
-`AuthGuard` valida el token con `supabase.auth.getUser(token)` (llamada de red a Supabase Auth)
-en vez de verificar el JWT localmente con la clave pública. Se eligió por simplicidad y porque
-detecta tokens revocados que una validación local no vería. Trade-off: una llamada HTTP extra
-por request autenticado. Revisar si conviene cachear (ej. Redis, TTL corto) cuando haya presión
-de performance o el volumen de requests lo justifique.
+**Estado:** RESUELTO (2026-07-18)
+Con la migración a JWT HS256 propio, la validación es local (`jwt.verify` con secret
+simétrico). No hay más llamada de red por request. Los refresh tokens se almacenan
+hasheados en DB con revocación explícita, lo que reemplaza la detección de tokens
+revocados que antes proveía Supabase.
 
 ### [2026-07-12] `accept-invitation` usa `memberId` como token, sin expiración ni secreto
 **Estado:** RESUELTO (2026-07-14)
@@ -169,12 +185,9 @@ validación del DTO. Verificado en vivo: invite → token de 64 hex ≠ memberId
 del mismo token 400 "ya aceptada" → memberId como token 400 (longitud inválida).
 
 ### [2026-07-12] Email de recovery duplicado de Supabase
-**Estado:** ABIERTO — pendiente de confirmación manual
-`forgot-password` genera el link de recuperación vía `supabase.auth.admin.generateLink()` y
-manda el email de branding propio (`MailService.sendPasswordReset`). Si el proyecto de Supabase
-todavía tiene habilitado su propio email automático de "reset password", el usuario recibe DOS
-emails. Hay que confirmar en el Dashboard de Supabase (Authentication → Email Templates) que el
-envío automático de recovery esté deshabilitado. No verificado desde este entorno de desarrollo.
+**Estado:** RESUELTO (2026-07-18)
+Con la migración a auth propio, `forgot-password` ya no llama a Supabase Auth. El email de
+recuperación solo se envía desde `MailService.sendPasswordReset` — no hay duplicación posible.
 
 ---
 
@@ -514,6 +527,39 @@ patrón usado en Fases 3-5. Ver orden sugerido en `Guia prueba manual fase 6.md`
 
 ## Onboarding — RBT-291/292 (registro de negocio + rubros)
 
+### [2026-07-18] `registerBusiness()` bloquea el email de forma GLOBAL, no por negocio — inconsistente con el modelo de aislamiento de auth
+**Estado:** RESUELTO (2026-07-18) — decisión de producto explícita para V1
+Auditoría del flujo de onboarding tras la migración de auth (Supabase → argon2id/JWT propio,
+ver "Fase 1 — Auth" más abajo) encontró que `registerBusiness()` (y su contraparte de
+verificación en vivo, `checkEmail()`) chequean si el email ya existe con
+`prisma.member.findFirst({ where: { email } })` **sin `businessId`** — es decir, contra
+*todos* los negocios de la plataforma, no solo el que se está creando. Esto contradice el
+modelo de aislamiento que el resto de auth sí respeta (`login()` sí está scopeado por
+`businessId`; el schema soporta `@@unique([businessId, email])`, un unique *compuesto*, no
+global sobre `email`).
+
+En la práctica: si `lorena@x.com` ya es member (owner/staff) de un negocio, no puede
+autoservirse un **segundo** negocio propio con ese mismo email vía onboarding — recibe `409`
+aunque el schema y el resto del sistema permitirían perfectamente que tuviera credenciales
+independientes en cada negocio (igual que ya puede ser member de un negocio y customer de
+otro con contraseñas distintas).
+
+**Decisión (usuario, 2026-07-18):** se mantiene el comportamiento actual para V1, como regla
+de producto deliberada: **un email = un negocio** en el flujo de autoservicio de onboarding
+(no una limitación técnica del modelo de datos). Cambios:
+- Mensaje de error actualizado de `"Ese email ya tiene una cuenta"` (ambiguo — sugería que el
+  problema era la cuenta, no el negocio) a `"Este email ya tiene un negocio registrado en
+  Orbita"`, para que quede claro que la restricción es "un negocio por email", no un límite
+  del sistema de credenciales.
+- Documentado como excepción explícita al modelo de aislamiento multi-tenant en
+  `CONTRATO_API.md` (módulo Auth → "Aislamiento multi-tenant"), para que no se lea como una
+  inconsistencia sin explicar la próxima vez que alguien audite este flujo.
+- Test de regresión que fija este comportamiento en
+  `test/onboarding.e2e-spec.ts` ("HALLAZGO: el check de email duplicado es GLOBAL...").
+**Si en el futuro se quiere permitir multi-negocio por email** (ej. una persona que administra
+varias tiendas independientes), el cambio es sacar el `businessId`-less `findFirst` de
+`registerBusiness()`/`checkEmail()` — el schema ya lo soporta sin migración.
+
 ### [2026-07-16] `POST /onboarding/register-business` compartía servicio con el seed script — no se hizo
 **Estado:** RESUELTO (2026-07-16) — decisión distinta a la prevista en la entrada de Fase 2
 La entrada de Fase 2 sobre `POST /businesses` proponía extraer un `BusinessOnboardingService`
@@ -809,3 +855,93 @@ versión inusualmente alto, posiblemente una build de este entorno). **Recomenda
 construido en RBT-293 del lado del frontend se verificó por: TypeScript (`tsc --noEmit` limpio) +
 simulación manual de cada request que dispara el código (vía `curl`, reproduciendo exactamente los
 payloads que arma `apps/web/src/lib/api.ts`) — pero no por click real en la UI.
+
+---
+
+## RBT-290 — Auditoría de aislamiento multi-tenant
+
+### [2026-07-20] `PlatformAdminGuard` es un stub que siempre devuelve `true` — sin endpoints que lo usen todavía
+**Estado:** ABIERTO — TODO explícito dejado en el código
+Confirmado por grep (`PlatformAdminGuard` solo aparece en su propia definición): ningún
+endpoint de `platform.controller.ts` lo usa hoy — todos son stubs sin `@UseGuards`. No hay
+bypass activo. Se dejó un comentario `TODO(RBT-290)` en
+`common/guards/platform-admin.guard.ts` marcando que la implementación real (verificar
+`platform_admin` activo en la DB) es un requisito **bloqueante** antes de que cualquier
+endpoint le agregue `@UseGuards(PlatformAdminGuard)`.
+
+### [2026-07-20] 15 casos de TOCTOU: `update`/`delete` por `id` sin `businessId` en el where — corregidos
+**Estado:** RESUELTO (2026-07-20)
+Auditoría de todos los `*.service.ts` encontró 15 mutaciones que validaban `businessId` con un
+`findFirst` previo pero después mutaban con `update({where:{id}})` / `delete({where:{id}})`,
+sin `businessId` en el where de la mutación en sí — el aislamiento dependía del orden del
+código alrededor, no de la query. Corregido en `branches.service.ts`, `tags.service.ts`,
+`categories.service.ts`, `inventory.service.ts` (suppliers), `members.service.ts`,
+`products.service.ts` (update en tx, soft-delete, `productImage.delete`) y `roles.service.ts`,
+usando `updateMany`/`deleteMany({where:{id, businessId}})` + chequeo de `count === 0` → 404.
+También se agregó `businessId` a dos `count()` que lo tenían suelto (`categories.service.ts`,
+finding productCount/childrenCount de `remove()`).
+
+Caso especial — `roles.service.ts` `update()`: el reemplazo de `rolePermissions` es un nested
+write de Prisma, que solo acepta `where` por clave única (no admite `updateMany` con relaciones
+anidadas). Se resolvió en dos pasos dentro de la misma `$transaction`: primero un
+`updateMany({where:{id,businessId}})` de los campos escalares (que sí garantiza el
+aislamiento), y recién después el `update({where:{id}})` anidado para `rolePermissions` —
+seguro porque corre en la misma transacción inmediatamente después de confirmar la
+pertenencia, y `businessId` de un `Role` nunca se reasigna (ningún endpoint lo modifica).
+
+Caso especial — `products.service.ts` `removeImage()`: `ProductImage` no tiene columna
+`businessId` propia (solo `productId`, sin relación directa al tenant en el schema). El
+`deleteMany` quedó scopeado por `{id: imageId, productId}` — `productId` ya había sido
+validado contra `businessId` por el `findOneRaw()` al inicio del mismo método.
+
+Verificado: `npx tsc --noEmit` limpio y `nest build` sin errores después de cada cambio; suite
+e2e completa corrida al final (ver entrada siguiente).
+
+### [2026-07-20] `AuthGuard` no validaba `businessId` del JWT contra la DB — defensa en profundidad agregada
+**Estado:** RESUELTO (2026-07-20)
+El guard ya usaba el `businessId` de la fila de `member`/`customer` en DB como fuente de
+verdad (correcto), pero el lookup por `id` ignoraba el campo `businessId` que también viaja en
+el payload del JWT. Se cambió `findUnique({where:{id}})` a `findFirst({where:{id, businessId:
+payload.businessId}})` en ambas ramas (member y customer) de `auth.guard.ts` — si algún día se
+lograra fabricar un JWT con un `sub` válido pero un `businessId` que no coincide (ej. clave
+comprometida), la búsqueda falla directo en vez de devolver el registro real ignorando el
+campo. Los 4 `findUnique`/`findFirst` por `id` restantes en `auth.service.ts#getMe()`
+(`memberId`/`customerId`) se dejaron como están — confirmado por código que `getMe()` solo se
+alcanza vía `GET /auth/me`, sin `@Public()`, siempre después de que `AuthGuard` ya validó
+JWT + businessId y pobló `ctx`; se documentó con un comentario en el propio método.
+
+### [2026-07-20] `forgot-password` sin rate limit específico — agregado
+**Estado:** RESUELTO (2026-07-20) — limitación documentada
+Se agregó `@Throttle({default:{limit:5, ttl:900000}})` (5 intentos / 15 min) a `POST
+/auth/forgot-password`, mismo patrón que `login()` (única otra ruta con throttling específico
+en el proyecto). **Limitación**: el `ThrottlerGuard` global de este proyecto no tiene un
+tracker combinado IP+email — el throttling es por IP únicamente (igual que login). Si en el
+futuro se quiere limitar por IP+email (más resistente a un atacante distribuido probando un
+solo email desde muchas IPs), hay que implementar un tracker custom extendiendo
+`ThrottlerGuard` con un `getTracker()` propio — no existe ese patrón en el proyecto todavía.
+
+### [2026-07-20] Gap de producto: `forgot-password` no tenía modo "sin slug" para dueños — agregado
+**Estado:** RESUELTO (2026-07-20)
+`forgotPassword()` exigía `X-Business-Slug` siempre (`400` si faltaba) — a diferencia de
+`login()`, que sí soporta buscar member globalmente sin slug (flujo panel/apex,
+`orbita.com/login`). Un dueño que olvida su contraseña Y no recuerda el subdominio de su
+tienda no tenía forma de recuperarla desde `orbita.com`. Se igualó el criterio a `login()`:
+sin slug, busca `member` globalmente (nunca `customer` sin slug — un customer siempre
+pertenece a un negocio específico, no existe "cuenta de plataforma" para clientes del
+storefront). Reusa el mismo mecanismo de token (`passwordResetToken`, ahora extraído a
+`issuePasswordResetToken()`); `resetPassword()` no necesitó cambios porque ya resuelve
+`businessId` desde el token almacenado, sin importar cuál rama lo creó. Test
+`auth.e2e-spec.ts` ("sin header X-Business-Slug → 400") actualizado: ahora afirma `201` (busca
+globalmente) en vez de `400`, más un caso nuevo para email inexistente sin slug (sigue sin
+filtrar información).
+
+### [2026-07-20] Test e2e preexistente falla por datos de seed no idempotentes — no relacionado a esta sesión
+**Estado:** ABIERTO — detectado corriendo la suite completa para verificar los cambios de arriba
+`auth.e2e-spec.ts` → "registro con email de customerWithoutAccount vincula al existente (no
+duplica)" espera `201` pero recibe `400 "Ya tenés cuenta en esta tienda"`. Causa: el test
+registra una contraseña para el fixture `customerWithoutAccount` (que el seed crea sin
+`passwordHash`), pero no es idempotente — si el seed no se vuelve a correr entre ejecuciones
+del suite, la segunda corrida encuentra el fixture ya con `passwordHash` seteado por la corrida
+anterior y `register()` responde `400` (comportamiento correcto: ya no está "sin cuenta"). No
+se tocó `register()` en esta sesión — confirmado por diff, el método no cambió. Requiere correr
+`pnpm seed` antes de `test:e2e`, o hacer el test idempotente (reset del fixture al final).

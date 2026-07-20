@@ -79,9 +79,12 @@ export class CategoriesService {
     }
     const slug = this.resolveSlug(dto);
 
+    // businessId va en el where del updateMany — no depende del findOneRaw previo,
+    // la query tiene que garantizar el aislamiento por sí misma.
+    let result: Prisma.BatchPayload;
     try {
-      return await this.prisma.category.update({
-        where: { id },
+      result = await this.prisma.category.updateMany({
+        where: { id, businessId },
         data: {
           name: dto.name,
           slug,
@@ -94,14 +97,16 @@ export class CategoriesService {
     } catch (err) {
       throw this.mapSlugConflict(err);
     }
+    if (result.count === 0) throw new NotFoundException('Categoría no encontrada');
+    return this.findOneRaw(businessId, id);
   }
 
   async remove(businessId: string, id: string) {
     await this.findOneRaw(businessId, id);
 
     const [productCount, childrenCount] = await Promise.all([
-      this.prisma.product.count({ where: { categoryId: id, deletedAt: null } }),
-      this.prisma.category.count({ where: { parentId: id } }),
+      this.prisma.product.count({ where: { categoryId: id, businessId, deletedAt: null } }),
+      this.prisma.category.count({ where: { parentId: id, businessId } }),
     ]);
     if (productCount > 0 || childrenCount > 0) {
       throw new UnprocessableEntityException(
@@ -109,7 +114,8 @@ export class CategoriesService {
       );
     }
 
-    await this.prisma.category.delete({ where: { id } });
+    const { count } = await this.prisma.category.deleteMany({ where: { id, businessId } });
+    if (count === 0) throw new NotFoundException('Categoría no encontrada');
     return { ok: true };
   }
 

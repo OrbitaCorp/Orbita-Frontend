@@ -265,10 +265,14 @@ export class InventoryService {
 
   async updateSupplier(businessId: string, id: string, dto: UpsertSupplierDto) {
     await this.findSupplierRaw(businessId, id);
-    return this.prisma.supplier.update({
-      where: { id },
+    // businessId va en el where del updateMany — la query garantiza el
+    // aislamiento por sí misma, no depende del findSupplierRaw previo.
+    const { count } = await this.prisma.supplier.updateMany({
+      where: { id, businessId },
       data: { name: dto.name, contact: dto.contact ?? null, phone: dto.phone ?? null, email: dto.email ?? null },
     });
+    if (count === 0) throw new NotFoundException('Proveedor no encontrado');
+    return this.findSupplierRaw(businessId, id);
   }
 
   async removeSupplier(businessId: string, id: string) {
@@ -276,7 +280,8 @@ export class InventoryService {
     // stock_movements.supplier_id es ON DELETE SET NULL (ver migration.sql) —
     // el historial de movimientos se conserva, solo pierde la referencia al
     // proveedor. No hay bloqueo por FK que capturar acá.
-    await this.prisma.supplier.delete({ where: { id } });
+    const { count } = await this.prisma.supplier.deleteMany({ where: { id, businessId } });
+    if (count === 0) throw new NotFoundException('Proveedor no encontrado');
     return { ok: true };
   }
 

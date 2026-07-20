@@ -7,10 +7,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SupabaseService } from '../supabase/supabase.service';
 import { MailService } from '../mail/mail.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import * as argon2 from 'argon2';
 
 // Sin caracteres ambiguos (0/O, 1/l/I) para que sea legible al copiarla del email.
 const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -21,7 +21,6 @@ const INVITATION_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 export class MembersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly supabase: SupabaseService,
     private readonly mail: MailService,
   ) {}
 
@@ -53,24 +52,17 @@ export class MembersService {
     const invitationToken = randomBytes(32).toString('hex');
     const invitationTokenExpiresAt = new Date(Date.now() + INVITATION_TOKEN_EXPIRY_MS);
 
-    const { data: authData, error } = await this.supabase.adminClient.auth.admin.createUser({
-      email: dto.email,
-      password: tempPassword,
-      email_confirm: true,
-    });
-    if (error || !authData.user) {
-      throw new BadRequestException(error?.message ?? 'Error al crear el usuario de invitación');
-    }
+    const tempPasswordHash = await argon2.hash(tempPassword, { type: argon2.argon2id });
 
     const member = await this.prisma.member.create({
       data: {
         businessId,
-        authUserId: authData.user.id,
         name: dto.name,
         email: dto.email,
         roleId: dto.roleId,
         status: 'PENDING',
         hasTempPassword: true,
+        passwordHash: tempPasswordHash,
         invitationToken,
         invitationTokenExpiresAt,
       },
@@ -104,11 +96,15 @@ export class MembersService {
       if (!role) throw new BadRequestException('Rol inválido');
     }
 
-    const updated = await this.prisma.member.update({
-      where: { id },
+    // businessId va en el where del updateMany — la query garantiza el
+    // aislamiento por sí misma, no depende del findOneRaw previo.
+    const { count } = await this.prisma.member.updateMany({
+      where: { id, businessId },
       data: { name: dto.name, roleId: dto.roleId },
-      include: { role: { select: { id: true, name: true } } },
     });
+    if (count === 0) throw new NotFoundException('Miembro no encontrado');
+
+    const updated = await this.findOneRaw(businessId, id);
     return this.toResponse(updated);
   }
 
@@ -120,7 +116,8 @@ export class MembersService {
 
     // No se borra el usuario de Supabase Auth asociado — ver PENDIENTES.md
     // (decisión abierta: si conviene liberar el email para poder reinvitarlo).
-    await this.prisma.member.delete({ where: { id } });
+    const { count } = await this.prisma.member.deleteMany({ where: { id, businessId } });
+    if (count === 0) throw new NotFoundException('Miembro no encontrado');
     return { ok: true };
   }
 

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { MailModule } from './mail/mail.module';
@@ -41,6 +42,7 @@ import { StorefrontModule } from './storefront/storefront.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     PrismaModule,
     MailModule,
     SupabaseModule,
@@ -75,6 +77,7 @@ import { StorefrontModule } from './storefront/storefront.module';
   providers: [
     // Orden de guards: AuthGuard primero (valida token y puebla req.user), luego
     // RolesGuard/PermissionsGuard (leen req.user ya poblado) y BusinessModeGuard.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },

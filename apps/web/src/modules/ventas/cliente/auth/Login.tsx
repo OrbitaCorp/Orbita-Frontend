@@ -2,12 +2,67 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { Mail, Lock, Eye } from 'lucide-react'
 import { TIENDA } from '@/lib/storefront/mock'
+import { useAuth } from '@/hooks/useAuth'
+import { AuthError } from '@/lib/auth/authClient'
+import { currentSlug, storefrontBase } from '@/lib/tenant'
 
 export default function Login() {
   const router = useRouter()
-  const { slug } = router.query as { slug: string }
-  const base = `/tienda/${slug}`
+  const { login } = useAuth()
+
+  const slug = (router.query.slug as string | undefined) ?? currentSlug() ?? ''
+  const base = storefrontBase(slug)
+  const returnTo = typeof router.query.returnTo === 'string' ? router.query.returnTo : ''
+  const justRegistered = router.query.registered === '1'
+
+  const [email,  setEmail]  = useState('')
+  const [pw,     setPw]     = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [error,  setError]  = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!email.trim() || !pw) {
+      setError('Ingresá tu email y contraseña.')
+      return
+    }
+    setEnviando(true)
+    try {
+      const user = await login(email.trim(), pw)
+      // Un member de ESTA tienda logueándose desde el storefront → va al panel.
+      if (user.type === 'member') {
+        window.location.href = '/panel'
+        return
+      }
+      // Customer → vuelve a returnTo (RBT-351) o al home del storefront.
+      window.location.href = returnTo || `${base}/` || '/'
+    } catch (err) {
+      // Mapeo al contrato real del backend (ver notas): no existen códigos
+      // INVALID_CREDENTIALS/ACCOUNT_LOCKED; se distingue por status + `error`.
+      if (err instanceof AuthError) {
+        if (err.status === 403 && err.code === 'NO_ACCOUNT_IN_BUSINESS') {
+          setError('No tenés cuenta en esta tienda. Registrate para continuar.')
+        } else if (err.status === 403) {
+          // Único otro 403 del login: cuenta bloqueada por intentos fallidos.
+          setError(err.message || 'Cuenta bloqueada. Intentá de nuevo en 15 minutos.')
+        } else if (err.status === 401) {
+          setError('Email o contraseña incorrectos.')
+        } else {
+          setError('No se pudo iniciar sesión. Intentá de nuevo.')
+        }
+      } else {
+        setError('No se pudo iniciar sesión. Intentá de nuevo.')
+      }
+      setEnviando(false)
+    }
+  }
+
+  function continuarSinCuenta() {
+    // RBT-351: navegar libre sin cuenta; el checkout es el que exige login.
+    window.location.href = returnTo || `${base}/` || '/'
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)', display: 'grid', placeItems: 'center', padding: '16px' }}>
@@ -35,12 +90,28 @@ export default function Login() {
         </p>
         <div style={{ height: 1, background: 'var(--color-border)', marginBottom: 24 }} />
 
-        <form
-          onSubmit={e => { e.preventDefault(); router.push(`${base}/perfil`) }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-        >
+        {justRegistered && (
+          <div style={{
+            background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.30)',
+            borderRadius: 8, padding: '10px 12px', marginBottom: 16,
+            fontSize: 12.5, color: 'var(--color-success)', fontWeight: 600, textAlign: 'center',
+          }}>
+            Cuenta creada. Iniciá sesión para continuar.
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {error && (
+            <div style={{
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 8, padding: '10px 12px', fontSize: 12.5, color: 'var(--color-error)',
+            }}>
+              {error}
+            </div>
+          )}
+
           <Field label="Email">
-            <Input type="email" placeholder="tu@email.com" defaultValue="maria.f@gmail.com"
+            <Input type="email" value={email} onChange={setEmail} placeholder="tu@email.com"
               icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
@@ -51,8 +122,9 @@ export default function Login() {
             </div>
             <Input
               type={showPw ? 'text' : 'password'}
+              value={pw}
+              onChange={setPw}
               placeholder="••••••••"
-              defaultValue="••••••••••"
               icon={<Lock size={15} strokeWidth={1.5} color="var(--color-subtle)" />}
               rightIcon={
                 <button type="button" onClick={() => setShowPw(p => !p)} style={{ color: 'var(--color-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -62,13 +134,13 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" style={{
+          <button type="submit" disabled={enviando} style={{
             width: '100%', height: 48, borderRadius: 10, marginTop: 8,
-            background: 'var(--color-primary)', color: '#fff',
-            fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(59,130,246,0.25)',
+            background: enviando ? 'var(--color-surface-alt)' : 'var(--color-primary)', color: '#fff',
+            fontSize: 14, fontWeight: 700, border: 'none', cursor: enviando ? 'default' : 'pointer',
+            boxShadow: enviando ? 'none' : '0 4px 16px rgba(59,130,246,0.25)',
           }}>
-            Ingresar
+            {enviando ? 'Ingresando…' : 'Ingresar'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--color-subtle)', fontSize: 11, margin: '4px 0' }}>
@@ -86,7 +158,7 @@ export default function Login() {
             <GoogleIcon /> Continuar con Google
           </button>
 
-          <button type="button" onClick={() => router.push(`${base}/checkout/datos`)} style={{
+          <button type="button" onClick={continuarSinCuenta} style={{
             width: '100%', height: 44, borderRadius: 10,
             background: 'transparent', border: '1px solid var(--color-border)',
             fontSize: 13, fontWeight: 600, color: 'var(--color-body)', cursor: 'pointer',
@@ -97,7 +169,7 @@ export default function Login() {
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'var(--color-muted)' }}>
           ¿No tenés cuenta?{' '}
-          <a href={`${base}/registro`} style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>
+          <a href={`${base}/registro${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`} style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>
             Registrate gratis
           </a>
         </div>
@@ -126,8 +198,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Input({ type = 'text', placeholder, defaultValue, icon, rightIcon }: {
-  type?: string; placeholder?: string; defaultValue?: string
+function Input({ type = 'text', value, onChange, placeholder, icon, rightIcon }: {
+  type?: string; value: string; onChange: (v: string) => void; placeholder?: string
   icon?: React.ReactNode; rightIcon?: React.ReactNode
 }) {
   return (
@@ -135,8 +207,9 @@ function Input({ type = 'text', placeholder, defaultValue, icon, rightIcon }: {
       {icon && <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>{icon}</span>}
       <input
         type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        defaultValue={defaultValue}
         style={{
           width: '100%', height: 44,
           padding: `0 ${rightIcon ? 40 : 14}px 0 ${icon ? 40 : 14}px`,

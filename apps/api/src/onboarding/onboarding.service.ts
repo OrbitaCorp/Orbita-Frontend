@@ -7,9 +7,10 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { SupabaseService } from '../supabase/supabase.service';
+import { AuthService } from '../auth/auth.service';
 import { RegisterBusinessDto } from './dto/register-business.dto';
 import { UpdateOnboardingBusinessDto } from './dto/update-onboarding-business.dto';
+import * as argon2 from 'argon2';
 
 // ─── Catálogo de rubros (RBT-292/293) ──────────────────────────────────────
 // Única fuente de verdad para el selector de rubros del onboarding (antes
@@ -128,7 +129,7 @@ const TEMP_SUBDOMAIN_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 export class OnboardingService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly supabase: SupabaseService,
+    private readonly authService: AuthService,
   ) {}
 
   // ── RBT-292 ──────────────────────────────────────────────────────────────
@@ -148,40 +149,29 @@ export class OnboardingService {
     return { available: !existing };
   }
 
-  // Idem para el email del dueño — se valida mientras se escribe, en el paso
-  // "Tu cuenta", antes de llegar al pago. `auth.users` no está modelada en
-  // Prisma (la administra Supabase Auth), así que se consulta con SQL crudo
-  // sobre la misma conexión de Postgres que ya usa la app.
   async checkEmail(email: string) {
     const normalized = (email ?? '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
       return { available: false, reason: 'Formato de email inválido' };
     }
-    const rows = await this.prisma.$queryRaw<Array<{ exists: boolean }>>`
-      SELECT EXISTS(SELECT 1 FROM auth.users WHERE lower(email) = ${normalized}) as exists
-    `;
-    return { available: !rows[0]?.exists };
+    const existing = await this.prisma.member.findFirst({
+      where: { email: { equals: normalized, mode: 'insensitive' } },
+    });
+    return { available: !existing };
   }
 
   // ── RBT-291 ──────────────────────────────────────────────────────────────
 
   async registerBusiness(dto: RegisterBusinessDto) {
-    // 1. Usuario de Supabase Auth para el dueño (fuera de la transacción de
-    // Prisma: Supabase no participa de esa transacción, y si algo falla del
-    // lado de Postgres después, preferimos limpiar el usuario de Auth a mano
-    // que dejar la transacción de Postgres abierta esperando una llamada de red).
-    const { data: authData, error: authError } = await this.supabase.adminClient.auth.admin.createUser({
-      email: dto.email,
-      password: dto.password,
-      email_confirm: true,
+    // Verificar que el email no esté ya en uso como member de otro negocio.
+    const existingMember = await this.prisma.member.findFirst({
+      where: { email: { equals: dto.email, mode: 'insensitive' } },
     });
-    if (authError || !authData.user) {
-      if (authError?.message?.toLowerCase().includes('already been registered')) {
-        throw new ConflictException('Ese email ya tiene una cuenta');
-      }
-      throw new BadRequestException(authError?.message ?? 'Error al crear el usuario');
+    if (existingMember) {
+      throw new ConflictException('Este email ya tiene un negocio registrado en Orbita');
     }
-    const authUserId = authData.user.id;
+
+    const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
 
     const subdomain = await this.generateUniqueSubdomain(dto.businessName);
 
@@ -200,114 +190,101 @@ export class OnboardingService {
     });
     const permissionsByCode = new Map(allPermissions.map((p) => [p.code, p]));
 
-    try {
-      const result = await this.prisma.$transaction(
-        async (tx) => {
-          const business = await tx.business.create({
-            data: {
-              name: dto.businessName,
-              industry: '', // se completa en el paso de Rubros del wizard (RBT-292)
-              subdomain,
-              mode: 'FULL',
-              isActive: false, // "en configuración" — publish() lo activa al final del wizard
-            },
-          });
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const business = await tx.business.create({
+          data: {
+            name: dto.businessName,
+            industry: '',
+            subdomain,
+            mode: 'FULL',
+            isActive: false,
+          },
+        });
 
-          const branch = await tx.branch.create({
-            data: { businessId: business.id, name: 'Principal', isDefault: true },
-          });
+        const branch = await tx.branch.create({
+          data: { businessId: business.id, name: 'Principal', isDefault: true },
+        });
 
-          const roles: Record<string, { id: string }> = {};
-          for (const def of ROLE_DEFS) {
-            const role = await tx.role.create({
-              data: { businessId: business.id, name: def.name, color: def.color, isDefault: true },
+        const roles: Record<string, { id: string }> = {};
+        for (const def of ROLE_DEFS) {
+          const role = await tx.role.create({
+            data: { businessId: business.id, name: def.name, color: def.color, isDefault: true },
+          });
+          roles[def.name] = role;
+
+          const codes = ROLE_PERMISSIONS[def.name] ?? [];
+          const permissionIds = codes.map((c) => permissionsByCode.get(c)?.id).filter((id): id is string => !!id);
+          if (permissionIds.length > 0) {
+            await tx.rolePermission.createMany({
+              data: permissionIds.map((permissionId) => ({ roleId: role.id, permissionId })),
             });
-            roles[def.name] = role;
-
-            const codes = ROLE_PERMISSIONS[def.name] ?? [];
-            const permissionIds = codes.map((c) => permissionsByCode.get(c)?.id).filter((id): id is string => !!id);
-            if (permissionIds.length > 0) {
-              await tx.rolePermission.createMany({
-                data: permissionIds.map((permissionId) => ({ roleId: role.id, permissionId })),
-              });
-            }
           }
+        }
 
-          const member = await tx.member.create({
-            data: {
-              businessId: business.id,
-              authUserId,
-              name: dto.ownerName,
-              email: dto.email,
-              roleId: roles.owner.id,
-              status: 'ACTIVE',
-              hasTempPassword: false,
+        const member = await tx.member.create({
+          data: {
+            businessId: business.id,
+            name: dto.ownerName,
+            email: dto.email,
+            roleId: roles.owner.id,
+            status: 'ACTIVE',
+            hasTempPassword: false,
+            passwordHash,
+            emailVerified: true,
+          },
+        });
+
+        await tx.businessConfig.create({
+          data: {
+            businessId: business.id,
+            acceptsMercadopago: true,
+            acceptsCash: true,
+            acceptsTransfer: false,
+            acceptsPickup: true,
+          },
+        });
+
+        await tx.storefrontConfig.create({
+          data: {
+            businessId: business.id,
+            storeName: dto.businessName,
+            colorMode: 'light',
+            showRating: true,
+            showNewBadge: true,
+            showWhatsapp: true,
+          },
+        });
+
+        await tx.notificationConfig.create({
+          data: {
+            businessId: business.id,
+            matrix: {
+              nuevo_pedido: { panel: true, email: true, whatsapp: false },
+              pago_confirmado: { panel: true, email: true, whatsapp: false },
             },
-          });
+          },
+        });
 
-          await tx.businessConfig.create({
-            data: {
-              businessId: business.id,
-              acceptsMercadopago: true,
-              acceptsCash: true,
-              acceptsTransfer: false,
-              acceptsPickup: true,
-            },
-          });
+        return { business, branch, member, role: roles.owner };
+      },
+      { timeout: 15000 },
+    );
 
-          await tx.storefrontConfig.create({
-            data: {
-              businessId: business.id,
-              storeName: dto.businessName,
-              colorMode: 'light',
-              showRating: true,
-              showNewBadge: true,
-              showWhatsapp: true,
-            },
-          });
+    const token = this.authService.signToken({ sub: result.member.id, type: 'member', businessId: result.business.id });
 
-          await tx.notificationConfig.create({
-            data: {
-              businessId: business.id,
-              matrix: {
-                nuevo_pedido: { panel: true, email: true, whatsapp: false },
-                pago_confirmado: { panel: true, email: true, whatsapp: false },
-              },
-            },
-          });
-
-          return { business, branch, member, role: roles.owner };
-        },
-        { timeout: 15000 },
-      );
-
-      // 2. Sesión real para que el frontend siga el wizard ya autenticado.
-      const { data: session, error: signInError } = await this.supabase.adminClient.auth.signInWithPassword({
-        email: dto.email,
-        password: dto.password,
-      });
-      if (signInError || !session.session) {
-        throw new BadRequestException('Negocio creado pero no se pudo iniciar sesión automáticamente');
-      }
-
-      return {
-        token: session.session.access_token,
-        business: {
-          id: result.business.id,
-          name: result.business.name,
-          subdomain: result.business.subdomain,
-          mode: result.business.mode,
-          isActive: result.business.isActive,
-        },
-        branch: { id: result.branch.id, name: result.branch.name },
-        member: { id: result.member.id, name: result.member.name, email: result.member.email },
-      };
-    } catch (err) {
-      // Si la transacción de Postgres falla después de crear el usuario de
-      // Supabase, no dejamos un usuario de Auth huérfano sin negocio.
-      await this.supabase.adminClient.auth.admin.deleteUser(authUserId).catch(() => {});
-      throw err;
-    }
+    return {
+      token,
+      business: {
+        id: result.business.id,
+        name: result.business.name,
+        subdomain: result.business.subdomain,
+        mode: result.business.mode,
+        isActive: result.business.isActive,
+      },
+      branch: { id: result.branch.id, name: result.branch.name },
+      member: { id: result.member.id, name: result.member.name, email: result.member.email },
+    };
   }
 
   // ── Actualizar datos mientras el negocio sigue "en configuración" ───────

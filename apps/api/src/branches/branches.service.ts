@@ -36,10 +36,16 @@ export class BranchesService {
   async update(businessId: string, id: string, dto: UpdateBranchDto) {
     await this.findOne(businessId, id); // 404 si no existe o es de otro negocio
 
-    return this.prisma.branch.update({
-      where: { id },
+    // El `where` lleva businessId también acá: el aislamiento de tenant no puede
+    // depender de que el findOne() de arriba haya corrido antes — la query en sí
+    // tiene que garantizarlo, no el orden del código alrededor.
+    const { count } = await this.prisma.branch.updateMany({
+      where: { id, businessId },
       data: dto,
     });
+    if (count === 0) throw new NotFoundException('Sucursal no encontrada');
+
+    return this.findOne(businessId, id);
   }
 
   async remove(businessId: string, id: string) {
@@ -48,8 +54,9 @@ export class BranchesService {
       throw new UnprocessableEntityException('No se puede eliminar la sucursal principal');
     }
 
+    let result: Prisma.BatchPayload;
     try {
-      await this.prisma.branch.delete({ where: { id } });
+      result = await this.prisma.branch.deleteMany({ where: { id, businessId } });
     } catch (err) {
       // P2003/P2014: la sucursal tiene registros asociados (stock, órdenes, caja, etc.)
       if (
@@ -62,6 +69,7 @@ export class BranchesService {
       }
       throw err;
     }
+    if (result.count === 0) throw new NotFoundException('Sucursal no encontrada');
 
     return { ok: true };
   }
