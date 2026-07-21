@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { User, Mail, Phone, Lock, Eye } from 'lucide-react'
 import { TIENDA } from '@/lib/storefront/mock'
 import { useAuth } from '@/hooks/useAuth'
-import { AuthError } from '@/lib/auth/authClient'
+import { AuthError, googleLoginUrl } from '@/lib/auth/authClient'
 import { currentSlug, storefrontBase } from '@/lib/tenant'
 
 export default function Registro() {
@@ -102,7 +102,7 @@ export default function Registro() {
           </div>
         ) : (
         <>
-        <button type="button" style={{
+        <button type="button" onClick={() => { window.location.href = googleLoginUrl(slug) }} style={{
           width: '100%', height: 44, borderRadius: 10, marginBottom: 20,
           background: 'var(--color-bg)', border: '1.5px solid var(--color-border)',
           fontSize: 13, fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer',

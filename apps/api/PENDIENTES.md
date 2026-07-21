@@ -1097,3 +1097,90 @@ del suite, la segunda corrida encuentra el fixture ya con `passwordHash` seteado
 anterior y `register()` responde `400` (comportamiento correcto: ya no está "sin cuenta"). No
 se tocó `register()` en esta sesión — confirmado por diff, el método no cambió. Requiere correr
 `pnpm seed` antes de `test:e2e`, o hacer el test idempotente (reset del fixture al final).
+
+---
+
+## RBT-287 — Google OAuth
+
+### [2026-07-20] Librería y decisiones de diseño confirmadas antes de implementar
+**Estado:** RESUELTO (2026-07-20)
+`google-auth-library@10.9.0` instalada tras chequeo de versión y conflictos (Node >=18 —
+cumplido con Node v22.14.0; ninguna de sus dependencias transitivas — `gaxios`, `jws`,
+`gcp-metadata`, etc. — colisionaba con algo ya presente en el proyecto). No se usó
+`@nestjs/passport`/`passport-google-oauth20` — el proyecto no tiene Passport en ningún lado
+(guard custom + JWT propio), agregarlo hubiera metido un segundo paradigma de auth conviviendo
+con el existente.
+
+Campo `googleId` agregado como columna (no tabla nueva) en `Member` y `Customer`, con
+`@@unique([businessId, googleId])` — mismo criterio que `email`. Migración
+`20260720010000_add_google_id` — solo `ADD COLUMN` + `CREATE INDEX`, no destructiva, aplicada
+sin requerir confirmación previa (a diferencia del `DROP COLUMN` de `authUserId` en RBT-290).
+
+### [2026-07-20] Decisión: vincular password a cuenta creada por Google, no rechazar el registro
+**Estado:** RESUELTO (2026-07-20)
+El punto pedía elegir entre (a) rechazar el registro con password si el email ya tiene cuenta
+vía Google, o (b) permitir agregarle un password a esa cuenta existente — la que fuera más
+simple de implementar. Se eligió **(b)**, y no requirió ningún cambio de código: `register()`
+(`auth.service.ts`) ya buscaba `existingCustomer` por `businessId+email` y solo rechazaba si
+`existingCustomer.passwordHash` estaba seteado — un customer creado vía Google no tiene
+`passwordHash` (igual que un customer "cargado desde POS sin cuenta"), así que cae
+naturalmente en la rama que le agrega el password a la fila existente. La vinculación en la
+dirección opuesta (Google sobre una cuenta que ya tenía password) sí se implementó
+explícitamente en `googleLoginStorefront()`/`googleLoginApex()` — solo setea `googleId` si la
+fila no tenía uno ya vinculado (no pisa un vínculo existente).
+
+### [2026-07-20] Exchange code de Google OAuth vive en memoria — asume deployment single-instance
+**Estado:** ABIERTO — deuda técnica aceptada conscientemente
+El handoff entre `/auth/google/callback` (redirect del browser) y el BFF del frontend
+(`POST /auth/google/exchange`) usa un código de un solo uso, vida de 60s, guardado en un
+`Map` en memoria (`GoogleOAuthExchangeStore`). Si el proceso de la API reinicia dentro de esa
+ventana, el login falla (el usuario reintenta, sin pérdida de datos ni token expuesto) — pero
+en un deployment con más de una instancia/réplica, un `code` generado por la instancia A no lo
+encontraría la instancia B si el request de exchange cae ahí. Aceptable en la etapa actual del
+proyecto (mismo supuesto single-instance que ya tiene el resto del proyecto). Si en algún
+momento se escala horizontalmente, este store necesita moverse a algo compartido (Redis, o una
+tabla con TTL corto igual que `password_reset_tokens`).
+
+### [2026-07-20] Credenciales de Google OAuth son placeholders — no funciona contra Google real
+**Estado:** ABIERTO — requiere que alguien cree el OAuth Client ID real
+`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` en `.env` son valores de
+relleno (documentado en el propio `.env` y `.env.example`). El flujo completo se verificó
+manualmente hasta el límite de lo posible sin credenciales reales: `GET /auth/google/start`
+arma correctamente la URL de autorización (state firmado incluido) y redirige a
+`accounts.google.com`, que responde `invalid_client` — el rechazo esperado de Google por un
+`client_id` inexistente, no un error del backend. Falta: crear un OAuth Client ID tipo "Web
+application" en Google Cloud Console (APIs & Services → Credentials), con el Authorized
+redirect URI configurado ahí IDÉNTICO a `GOOGLE_REDIRECT_URI`, y reemplazar los tres valores en
+`.env` (dev) y en las variables de entorno de producción.
+
+### [2026-07-20] `state` de OAuth firmado con el mismo secret que los JWT (`JWT_SECRET`)
+**Estado:** RESUELTO (2026-07-20) — decisión de diseño, no pendiente de acción
+Se reutilizó `JWT_SECRET` para el HMAC del `state` (en vez de sumar una env var nueva
+`GOOGLE_STATE_SECRET`) — ya es un secreto de alta entropía gestionado vía `ConfigService`, y el
+`state` no es un JWT (no pasa por `jsonwebtoken`, es HMAC-SHA256 propio sobre
+`base64url(JSON)`), así que no hay riesgo de confusión de formato entre ambos usos. Exp corto
+(10 minutos) — tiempo de sobra para completar el consent de Google sin dejar una ventana larga
+de replay.
+
+### [2026-07-20] Fixtures del seed no reseteaban `googleId` entre corridas — corregido
+**Estado:** RESUELTO (2026-07-20)
+Al escribir los tests de Google OAuth, el test "vincula a customer existente con password" (test
+2) falló en la segunda corrida de la suite completa: `cliente@zapatoslorena.test` ya tenía un
+`googleId` vinculado de la corrida anterior, y la lógica de vinculación (correctamente) no pisa
+un vínculo existente — así que el test esperaba el `googleId` nuevo de esa corrida y encontraba
+el viejo. No era un bug de la lógica de negocio, sino que `prisma/seed.ts` no reseteaba
+`googleId: null` en sus `upsert` (mismo patrón que ya aplicaba a `passwordHash` en los fixtures
+"sin cuenta"). Agregado a los 5 upserts de member/customer con auth (`dueno`, `cajero`,
+`cliente`, `sinregistrar`, `sinregistrar2`) para mantener el seed idempotente.
+
+### [2026-07-20] Tests de Google OAuth cubiertos — 9/9, más los 8 de aislamiento sin regresión
+**Estado:** RESUELTO (2026-07-20)
+`test/google-auth.e2e-spec.ts` — mockea únicamente `OAuth2Client.getToken`/`.verifyIdToken` (las
+dos llamadas de red reales de `google-auth-library`); todo lo demás (firma/verificación de
+`state`, resolución de negocio, vinculación/creación, emisión de sesión, exchange store) corre
+con el código real. Cubre los 7 casos pedidos (cuenta nueva en A, vincula password existente en
+A, aislamiento con mismo `googleId` en B, `state` falsificado, `state` vencido, `id_token` con
+`email_verified: false`, JWT nunca en la URL de redirect) más 2 extra (single-use del exchange
+code, y split del caso 4 en falsificado/vencido). Suite completa corrida con `--runInBand`:
+6/6 suites, 69/70 tests (1 `.todo` preexistente, no relacionado). Los 8 escenarios de
+aislamiento multi-tenant originales confirmados por nombre, sin regresión.

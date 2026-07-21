@@ -102,3 +102,24 @@ fuente de verdad del flujo actual. No asumas Supabase Auth por default ni propon
 Auth. La columna `authUserId` (que se había conservado temporalmente en `Member`, `Customer` y
 `PlatformAdmin` tras la migración inicial del 2026-07-18) fue eliminada del schema, del tipo
 `AuthContext` y de `AuthGuard` — ver `PENDIENTES.md` § Fase 1 — Auth para el detalle.
+
+### Google OAuth (RBT-287)
+
+Login/registro con Google, además del propio (email+password). Mismo esquema de auth que el
+resto — sin Passport, sin tokens de Google en el JWT propio. `google-auth-library` (oficial de
+Google) hace el intercambio de `code` y la verificación del `id_token`; todo lo demás (state
+firmado, resolución de negocio, vinculación de cuentas, emisión de sesión) es código propio.
+
+- **Campo de vínculo:** `googleId` en `Member`/`Customer`, `@@unique([businessId, googleId])`
+  — mismo criterio de aislamiento que `email`. Storefront resuelve siempre contra `customer` de
+  ESE `businessId`; apex resuelve siempre contra `member` global y **nunca** crea negocio.
+- **Vincula, nunca duplica**, en ambas direcciones (ver
+  [`auth.service.ts`](apps/api/src/auth/auth.service.ts) `googleLoginStorefront()`/
+  `googleLoginApex()` y `register()` — el segundo caso no necesitó código nuevo, ver
+  `PENDIENTES.md` § RBT-287).
+- **El JWT nunca viaja en una URL:** `/auth/google/callback` intercambia un código de un solo
+  uso (60s, en memoria — ver `google-oauth-exchange.store.ts`) que el BFF de Next.js
+  (`pages/api/auth/google/exchange.ts`) canjea servidor-a-servidor por la sesión real.
+- Ver [`apps/api/src/auth/google-auth.service.ts`](apps/api/src/auth/google-auth.service.ts),
+  [`google-auth.controller.ts`](apps/api/src/auth/google-auth.controller.ts) y
+  `test/google-auth.e2e-spec.ts` como fuente de verdad del flujo y su cobertura.

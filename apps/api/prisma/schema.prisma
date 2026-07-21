@@ -204,6 +204,7 @@ model Member {
   invitationToken           String?   @unique @map("invitation_token")
   invitationTokenExpiresAt  DateTime? @map("invitation_token_expires_at")
   passwordHash        String?   @map("password_hash")
+  googleId            String?   @map("google_id") // sub del id_token de Google — vincula, no reemplaza el password
   emailVerified       Boolean   @default(false) @map("email_verified")
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
@@ -219,6 +220,7 @@ model Member {
   verifiedPayments Payment[]
 
   @@unique([businessId, email])
+  @@unique([businessId, googleId])
   @@index([businessId])
   @@map("members")
 }
@@ -278,6 +280,7 @@ model Customer {
   phone      String? // indexado para futura vinculación
   dni        String? // facturación
   passwordHash        String?   @map("password_hash")
+  googleId            String?   @map("google_id") // sub del id_token de Google — vincula, no reemplaza el password
   emailVerified       Boolean   @default(false) @map("email_verified")
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
@@ -292,6 +295,7 @@ model Customer {
   conversations Conversation[]
 
   @@unique([businessId, email])
+  @@unique([businessId, googleId])
   @@index([businessId])
   @@index([phone])
   @@map("customers")

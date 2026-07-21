@@ -189,7 +189,7 @@ async function main() {
   const ownerEmail = 'dueno@zapatoslorena.test';
   await prisma.member.upsert({
     where: { businessId_email: { businessId: business.id, email: ownerEmail } },
-    update: { passwordHash: passwordHash, status: 'ACTIVE', hasTempPassword: false, emailVerified: true },
+    update: { passwordHash: passwordHash, status: 'ACTIVE', hasTempPassword: false, emailVerified: true, googleId: null },
     create: {
       businessId: business.id,
       name: 'Lorena Dueña',
@@ -207,7 +207,7 @@ async function main() {
   const cajeroEmail = 'cajero@zapatoslorena.test';
   await prisma.member.upsert({
     where: { businessId_email: { businessId: business.id, email: cajeroEmail } },
-    update: { passwordHash: passwordHash, status: 'ACTIVE', hasTempPassword: false, emailVerified: true },
+    update: { passwordHash: passwordHash, status: 'ACTIVE', hasTempPassword: false, emailVerified: true, googleId: null },
     create: {
       businessId: business.id,
       name: 'Carlos Cajero',
@@ -225,7 +225,7 @@ async function main() {
   const clienteEmail = 'cliente@zapatoslorena.test';
   await prisma.customer.upsert({
     where: { businessId_email: { businessId: business.id, email: clienteEmail } },
-    update: { passwordHash: passwordHash, emailVerified: true },
+    update: { passwordHash: passwordHash, emailVerified: true, googleId: null },
     create: {
       businessId: business.id,
       firstName: 'Ana',
@@ -241,7 +241,7 @@ async function main() {
   const sinCuentaEmail = 'sinregistrar@zapatoslorena.test';
   await prisma.customer.upsert({
     where: { businessId_email: { businessId: business.id, email: sinCuentaEmail } },
-    update: { passwordHash: null, emailVerified: false, failedLoginAttempts: 0, lockedUntil: null },
+    update: { passwordHash: null, emailVerified: false, failedLoginAttempts: 0, lockedUntil: null, googleId: null },
     create: {
       businessId: business.id,
       firstName: 'Pedro',
@@ -256,7 +256,7 @@ async function main() {
   const sinCuentaEmail2 = 'sinregistrar2@zapatoslorena.test';
   await prisma.customer.upsert({
     where: { businessId_email: { businessId: business.id, email: sinCuentaEmail2 } },
-    update: { passwordHash: null, emailVerified: false, failedLoginAttempts: 0, lockedUntil: null },
+    update: { passwordHash: null, emailVerified: false, failedLoginAttempts: 0, lockedUntil: null, googleId: null },
     create: {
       businessId: business.id,
       firstName: 'Laura',

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Mail, Lock, Eye } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { AuthError } from '@/lib/auth/authClient'
+import { AuthError, googleLoginUrl } from '@/lib/auth/authClient'
 import { tenantUrl } from '@/lib/tenant'
 
 // Login de DUEÑO (panel), servido en el apex: orbita.local/login.
@@ -21,6 +21,18 @@ export default function AdminLogin() {
   const [showPw, setShowPw] = useState(false)
   const [error,  setError]  = useState('')
   const [enviando, setEnviando] = useState(false)
+  // Se activa con cuenta bloqueada (403) o rate-limit (429) — casos donde
+  // reintentar de inmediato no tiene sentido. Se desactiva solo cuando el
+  // usuario edita el email o la contraseña (señal de que va a intentar de
+  // nuevo con otra credencial), no con un timer arbitrario.
+  const [bloqueado, setBloqueado] = useState(false)
+
+  function onEditarCampo(setter: (v: string) => void) {
+    return (v: string) => {
+      setter(v)
+      if (bloqueado) setBloqueado(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,7 +56,15 @@ export default function AdminLogin() {
       // El backend devuelve 401 genérico tanto para contraseña incorrecta como
       // para email inexistente (anti-enumeración, decidido en la migración de
       // auth). No se puede distinguir "no tenés negocio" → mensaje genérico.
-      if (err instanceof AuthError && err.status === 401) {
+      if (err instanceof AuthError && err.status === 429) {
+        setError('Demasiados intentos. Esperá unos minutos antes de volver a intentar.')
+        setBloqueado(true)
+      } else if (err instanceof AuthError && err.status === 403) {
+        // Cuenta bloqueada por intentos fallidos — el backend manda el
+        // mensaje con los minutos restantes en err.message.
+        setError(err.message || 'Cuenta bloqueada por intentos fallidos. Intentá de nuevo más tarde.')
+        setBloqueado(true)
+      } else if (err instanceof AuthError && err.status === 401) {
         setError('Email o contraseña incorrectos.')
       } else {
         setError('No se pudo iniciar sesión. Intentá de nuevo.')
@@ -87,7 +107,7 @@ export default function AdminLogin() {
           )}
 
           <Field label="Email">
-            <Input type="email" value={email} onChange={setEmail} placeholder="tu@email.com"
+            <Input type="email" value={email} onChange={onEditarCampo(setEmail)} placeholder="tu@email.com"
               icon={<Mail size={15} strokeWidth={1.5} color="var(--color-subtle)" />} />
           </Field>
 
@@ -99,7 +119,7 @@ export default function AdminLogin() {
             <Input
               type={showPw ? 'text' : 'password'}
               value={pw}
-              onChange={setPw}
+              onChange={onEditarCampo(setPw)}
               placeholder="••••••••"
               icon={<Lock size={15} strokeWidth={1.5} color="var(--color-subtle)" />}
               rightIcon={
@@ -110,13 +130,13 @@ export default function AdminLogin() {
             />
           </div>
 
-          <button type="submit" disabled={enviando} style={{
+          <button type="submit" disabled={enviando || bloqueado} style={{
             width: '100%', height: 48, borderRadius: 10, marginTop: 8,
-            background: enviando ? 'var(--color-surface-alt)' : 'var(--color-primary)', color: '#fff',
-            fontSize: 14, fontWeight: 700, border: 'none', cursor: enviando ? 'default' : 'pointer',
-            boxShadow: enviando ? 'none' : '0 4px 16px rgba(59,130,246,0.25)',
+            background: (enviando || bloqueado) ? 'var(--color-surface-alt)' : 'var(--color-primary)', color: '#fff',
+            fontSize: 14, fontWeight: 700, border: 'none', cursor: (enviando || bloqueado) ? 'default' : 'pointer',
+            boxShadow: (enviando || bloqueado) ? 'none' : '0 4px 16px rgba(59,130,246,0.25)',
           }}>
-            {enviando ? 'Ingresando…' : 'Ingresar'}
+            {enviando ? 'Ingresando…' : bloqueado ? 'Bloqueado temporalmente' : 'Ingresar'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--color-subtle)', fontSize: 11, margin: '4px 0' }}>
@@ -125,7 +145,7 @@ export default function AdminLogin() {
             <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
           </div>
 
-          <button type="button" style={{
+          <button type="button" onClick={() => { window.location.href = googleLoginUrl() }} style={{
             width: '100%', height: 44, borderRadius: 10,
             background: 'var(--color-bg)', border: '1.5px solid var(--color-border)',
             fontSize: 13, fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer',

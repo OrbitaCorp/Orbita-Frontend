@@ -9,6 +9,19 @@
 
 import { currentSlug } from '@/lib/tenant'
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
+
+/**
+ * URL de arranque del flujo de Google OAuth. Navegación de página completa
+ * (NO fetch — el backend responde con un 302 a Google), por eso apunta
+ * directo al backend en vez de pasar por el BFF. Sin slug = apex (panel de
+ * dueño); con slug = storefront de esa tienda.
+ */
+export function googleLoginUrl(slug?: string): string {
+  const query = slug ? `?slug=${encodeURIComponent(slug)}` : ''
+  return `${API_BASE}/auth/google/start${query}`
+}
+
 let accessToken: string | null = null
 
 export const tokenStore = {

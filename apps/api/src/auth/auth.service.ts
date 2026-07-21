@@ -15,6 +15,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { LoginResponse } from './auth.types';
+import { GoogleIdentity } from './google-auth.service';
 import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
 import { createHash, randomBytes } from 'crypto';
@@ -336,6 +337,107 @@ export class AuthService {
     }
 
     await this.prisma.passwordResetToken.update({ where: { id: stored.id }, data: { usedAt: new Date() } });
+  }
+
+  // ── Google OAuth ──────────────────────────────────────────────────────────
+  // Mismo criterio de aislamiento que login()/register() con password: el
+  // storefront resuelve SIEMPRE contra customer de ESE businessId; el apex
+  // resuelve SIEMPRE contra member global, y nunca crea negocio ni member.
+
+  async googleLoginStorefront(identity: GoogleIdentity, businessSlug: string): Promise<LoginResponse> {
+    const business = await this.prisma.business.findUnique({ where: { subdomain: businessSlug } });
+    if (!business) throw new NotFoundException('Negocio no encontrado');
+
+    let customer = await this.prisma.customer.findFirst({
+      where: { businessId: business.id, googleId: identity.googleId, deletedAt: null },
+    });
+    if (!customer) {
+      customer = await this.prisma.customer.findFirst({
+        where: { businessId: business.id, email: identity.email, deletedAt: null },
+      });
+    }
+
+    if (customer) {
+      // Vincula, nunca duplica. Solo setea googleId si todavía no tenía uno
+      // vinculado (no pisa un vínculo existente).
+      if (!customer.googleId) {
+        customer = await this.prisma.customer.update({
+          where: { id: customer.id },
+          data: { googleId: identity.googleId, emailVerified: true },
+        });
+      }
+    } else {
+      customer = await this.prisma.customer.create({
+        data: {
+          businessId: business.id,
+          firstName: identity.firstName,
+          lastName: identity.lastName,
+          email: identity.email,
+          googleId: identity.googleId,
+          emailVerified: true,
+        },
+      });
+    }
+
+    const { token, refreshToken } = await this.issueSession(customer.id, 'customer', business.id);
+    return {
+      type: 'customer',
+      token,
+      refreshToken,
+      customer: { id: customer.id, firstName: customer.firstName, lastName: customer.lastName, email: customer.email },
+      business: { id: business.id, name: business.name, subdomain: business.subdomain, mode: business.mode },
+    };
+  }
+
+  // Devuelve null si no existe member (nunca crea negocio ni member acá — el
+  // controller traduce eso en el mensaje "no tenés negocio, hacé onboarding").
+  async googleLoginApex(identity: GoogleIdentity): Promise<LoginResponse | null> {
+    const include = {
+      business: true as const,
+      role: { include: { rolePermissions: { include: { permission: true } } } },
+    };
+
+    let member = await this.prisma.member.findFirst({
+      where: { googleId: identity.googleId },
+      include,
+    });
+    if (!member) {
+      member = await this.prisma.member.findFirst({
+        where: { email: identity.email },
+        include,
+      });
+    }
+    if (!member) return null;
+
+    if (!member.googleId) {
+      await this.prisma.member.update({ where: { id: member.id }, data: { googleId: identity.googleId } });
+    }
+
+    const { token, refreshToken } = await this.issueSession(member.id, 'member', member.businessId);
+    return {
+      type: 'member',
+      token,
+      refreshToken,
+      member: { id: member.id, name: member.name, email: member.email, status: member.status },
+      role: member.role.name,
+      permissions: member.role.rolePermissions.map((rp) => rp.permission.code),
+      business: {
+        id: member.business.id,
+        name: member.business.name,
+        subdomain: member.business.subdomain,
+        mode: member.business.mode,
+      },
+    };
+  }
+
+  async issueSession(
+    userId: string,
+    type: 'member' | 'customer',
+    businessId: string,
+  ): Promise<{ token: string; refreshToken: string }> {
+    const token = this.signToken({ sub: userId, type, businessId });
+    const refreshToken = await this.createRefreshToken(userId, type === 'member' ? 'MEMBER' : 'CUSTOMER', businessId);
+    return { token, refreshToken };
   }
 
   // ── Accept invitation ─────────────────────────────────────────────────────
