@@ -274,7 +274,14 @@ function GeneralView({ ir, onToast }: { ir: (v: VistaConfig) => void; onToast: (
             <ConfigTabs activo="general" ir={ir} />
             <h1 style={h1Style}>Configuración general</h1>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 720 }}>
+            {/* Las tarjetas van de a dos por fila en pantallas anchas (menos scroll);
+                en celular vuelven a una sola columna. */}
+            <style>{`
+                .cfg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; max-width: 1080px; }
+                .cfg-grid > * { height: 100%; box-sizing: border-box; }
+                @media (max-width: 980px) { .cfg-grid { grid-template-columns: 1fr; max-width: 720px; } }
+            `}</style>
+            <div className="cfg-grid">
 
                 {/* ── Información del negocio ── */}
                 <Card>
