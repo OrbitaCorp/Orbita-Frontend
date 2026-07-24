@@ -1184,3 +1184,225 @@ A, aislamiento con mismo `googleId` en B, `state` falsificado, `state` vencido, 
 code, y split del caso 4 en falsificado/vencido). Suite completa corrida con `--runInBand`:
 6/6 suites, 69/70 tests (1 `.todo` preexistente, no relacionado). Los 8 escenarios de
 aislamiento multi-tenant originales confirmados por nombre, sin regresión.
+
+---
+
+## 2026-07-24 — Pedidos: modelo y estados (Fase 2, tarjeta 1 — Alex)
+
+Primera tarjeta de Pedidos implementada: `GET /orders/:id`, alta básica (`POST /orders`) y el
+motor de estados (`PATCH /orders/:id/status`) con historial en `order_status_history`.
+Decisiones tomadas (validadas con el contrato de la API):
+
+- **Transiciones**: online `PENDING → CONFIRMED → PREPARING → SHIPPED → DELIVERED`; se puede
+  cancelar solo hasta `PREPARING` inclusive (un pedido enviado no se cancela: eso será una
+  devolución, Fase 4). POS nace `COMPLETED` y no transiciona (contrato). Salto inválido → 422
+  con mensaje que dice a qué estados sí se puede pasar.
+- **Alta básica adelantada** (decisión mía, para poder probar ya): el alta
+  manual crea pedidos `ONLINE`/`PENDING` con precios congelados desde la variante y numeración
+  correlativa por negocio (reintento ante choque de número). Se rechazan con mensaje claro:
+  canal POS, ítems libres (`isConcept`), `editedPrice`, cupones y pagos — cada uno llega con su
+  módulo (caja F3, descuentos F3, checkout F4). El descuento de stock al confirmar y la
+  validación de stock disponible llegan con la tarjeta "Crear pedido manual".
+- **Mails al entregar**: `DELIVERED` dispara `sendOrderDelivered` + `sendReviewRequest` al email
+  del comprador (snapshot) o del cliente; nunca rompen la transición (try/catch + log). La
+  `reviewUrl` apunta por ahora a la página del pedido en el storefront — revisar cuando exista
+  la pantalla de reseñas.
+- **Historial sin "quién"**: la tabla `order_status_history` no guarda qué miembro hizo el
+  cambio (solo estado + fecha). La tarjeta pedía "quién" — agregar la columna requiere migración
+  de schema (no es de esta tarjeta). Anotado para decidir en equipo.
+- **Permisos**: `orders.view` para leer, `orders.manage` para crear/cambiar estado (reemplaza el
+  `@Roles('owner','admin')` provisorio del esqueleto, según contrato).
+
+
+---
+
+## 2026-07-24 — Pedidos: lista con filtros (Fase 2, tarjeta 2 — Alex)
+
+`GET /orders` implementado según contrato: paginado (20 por página), filtros por estado, canal,
+sucursal, rango de fechas y búsqueda (nombre/email del cliente, comprador manual, o número de
+pedido si el texto es numérico). Además del `Paginated<OrderSummary>` del contrato, la respuesta
+suma dos campos aditivos que la pantalla necesita: `counts` (pedidos por estado, para los
+contadores de las pestañas, calculado con los mismos filtros menos el estado) e `items` resumidos
+por fila (la columna "Productos" de la tabla los muestra).
+
+Integración visual (PedidoLista + PedidoDetalle conectados de verdad):
+- La lista usa datos reales: pestañas con contadores del backend, filtro de fecha (hoy/7/30 días),
+  canal, búsqueda con espera de 350ms, paginación real y estados de carga/vacío/error/sin sesión.
+- El detalle carga el pedido real: línea de tiempo desde `order_status_history` (con fecha y hora),
+  cambio de estado contra la API mostrando el motivo del backend si rechaza (422), datos del
+  comprador, envío (WhatsApp si hay teléfono) y notas. Los botones ofrecen SOLO transiciones
+  válidas (mismas reglas que el backend).
+- `COMPLETED` (venta POS) se muestra como "entregado" en la UI de lista (no existe todavía como
+  estado visual propio; revisar cuando llegue el POS).
+- Siguen con datos de muestra (sus tarjetas llegan después): ModalComprobante, ModalEmail,
+  Exportar, acciones masivas, historial, cola, devoluciones y notas de crédito.
+
+Gotcha de desarrollo anotado: en Windows, `nest start --watch` a veces NO detecta cambios en los
+archivos (se pierden eventos del sistema de archivos) y sigue sirviendo el código viejo — si un
+endpoint responde "not implemented" después de un cambio, reiniciar `pnpm dev` a mano. El dev de
+Next no tiene este problema: recompila al recargar la página.
+
+
+---
+
+## 2026-07-24 — Clientes: modelo y lista con métricas (Fase 2, tarjeta 3 — Alex)
+
+`customers` implementado según contrato (6.1): `GET /customers` (búsqueda por nombre/email,
+paginado, y los calculados por cliente: `orderCount`, `totalSpent`, `avgTicket`, `lastOrderAt` —
+en una sola consulta agrupada por tanda, on-read, sin persistir), `GET /customers/:id` (detalle +
+últimos 20 pedidos + direcciones), `POST` y `PUT`. Permisos del contrato: `customers.view` /
+`customers.manage` (reemplazan el `@Roles` provisorio del esqueleto).
+
+Decisiones:
+- **Los pedidos CANCELADOS no cuentan** en las métricas (ni en cantidad ni en gastado). Los
+  pendientes sí (es una compra en curso). Verificado en vivo.
+- **Anti-duplicados del contrato**: crear con un email ya existente en el negocio (sin importar
+  mayúsculas) actualiza y devuelve el cliente existente. En PUT, chocar con el email de OTRO
+  cliente da 409.
+- `DELETE /customers/:id` NO se implementó: el contrato no lo define y el controller no tenía la
+  ruta (el plan 6.1 lo mencionaba — decidir en equipo si hace falta).
+- `POST /customers/email` sigue stub: es la tarjeta "Exportar y email masivo".
+
+Integración visual: ClienteLista con datos reales (total, búsqueda con espera, paginación,
+métricas por fila, "Sin compras" para los que nunca compraron, estados de carga/vacío/error/sin
+sesión). La flechita de cada fila carga sus últimos pedidos REALES recién al abrirla (y quedan en
+memoria). `relTime` ahora usa la fecha real de hoy (estaba clavada en una fecha de muestra). El
+"segmento" no existe en backend (contrato): la pantalla lo deriva de los números solo para el
+tipado; la lista no lo muestra. ClienteDetalle (perfil completo) sigue mock — tarjeta de Fase 3.
+
+Nota de higiene de la base compartida: los e2e de auth dejaron ~40 clientes basura
+(TestE2E/google-*/@example.com) — se ve en la lista real. Me armé un SQL de limpieza aparte
+(sin commitear, se borra después de usarlo).
+
+
+---
+
+## 2026-07-24 — Pedidos: crear pedido manual (Fase 2, tarjeta 4 — Alex)
+
+Se completó el alta de pedidos que había dejado básica en la tarjeta 1, y la pantalla "Nuevo
+pedido" del panel ya crea pedidos de verdad (3 pasos: cliente real o comprador sin registrar →
+productos del catálogo real con variantes y cantidades → revisión con envío y notas).
+
+Reglas de stock que quedaron andando (verificadas de punta a punta):
+- **Al crear**: si el producto controla stock en la sucursal, no se puede pedir más de lo que hay
+  (422 con el detalle: "hay X, pediste Y"). Si la variante NO tiene stock cargado en esa sucursal,
+  se interpreta como "no controla stock" y pasa. OJO: el flag explícito "vender sin stock" que
+  menciona la tarjeta necesita un campo en la base que hoy no existe — para decidir en equipo
+  (migración compartida).
+- **Al confirmar**: se re-chequea el stock adentro de la transacción (pudo cambiar desde que se
+  creó el pedido) y recién ahí se descuenta: `variant_stock` baja y queda el movimiento SALIDA
+  "Venta #N" en inventario, con el miembro que lo hizo. Probado el caso carrera: dos pedidos que
+  entraban con el stock inicial, el segundo no se pudo confirmar cuando el primero se llevó las
+  unidades.
+- **Al cancelar un pedido ya confirmado o en preparación**: el stock VUELVE solo (ENTRADA
+  "Cancelación #N"). Cancelar un pendiente no toca stock porque nunca lo descontó. Esta regla no
+  estaba escrita en ninguna tarjeta pero sin ella el stock se perdía para siempre al cancelar.
+- Los ítems libres (isConcept) no tocan stock, igual que en la especificación del POS.
+
+En la pantalla: el error de stock del backend se muestra tal cual en el paso de revisión, la
+miniatura de producto necesitó una caja de altura fija (el 100% se estiraba y tapaba el texto),
+y el cobro NO se registra en el alta (el pedido nace pendiente; el pago llega con la caja o el
+pago online, cada uno en su fase).
+
+
+---
+
+## 2026-07-24 — Pedidos: comprobante y acciones masivas (Fase 2, tarjetas 5 y 6 — Alex)
+
+**Comprobante**: `POST /orders/:id/receipt` implementado según contrato — devuelve la URL del
+comprobante (la misma página que verá el cliente en la tienda, Fase 4) y, si le paso `email`,
+manda el detalle de la compra con la plantilla `order-confirmation` que ya existía. El modal del
+panel ahora carga el pedido real y desde ahí: vista completa reutilizando `ComprobanteBase` (el
+componente compartido con el storefront — cero duplicación de diseño), impresión con el diálogo
+del navegador (que también sirve para "Guardar como PDF" — decisión: NO metí ninguna librería de
+PDF porque package.json es de todos y el navegador resuelve igual; si el equipo quiere PDF
+server-side, se charla), y envío por email al cliente con un click. Truco de impresión: cuando la
+vista está abierta, un estilo esconde todo lo demás para que salga solo el comprobante.
+
+**Acciones masivas**: la barra de selección de la lista ya funciona.
+- Confirmar en lote: va pedido por pedido usando el endpoint de estado (así cada uno valida SU
+  stock y SU transición como corresponde) y reporta el resultado: "2 confirmados · no se pudo con
+  #4". Decisión: sin endpoint bulk en el backend — la validación por pedido es justamente lo que
+  queremos, y un bulk que salta validaciones sería peligroso.
+- Etiquetas en lote: hoja imprimible con una etiqueta por pedido (remitente, destinatario,
+  teléfono, email, bultos). Sin backend: usa los datos del pedido.
+- Email masivo: el botón avisa que llega con el servicio de email (Fase 3). **Contrato que
+  propongo para cuando exista**: `POST /orders/bulk-email` con `{ orderIds: string[], subject:
+  string, body: string }` → `{ sent: number }`, mandando con `sendCustomEmail` a cada email único
+  de comprador (los pedidos sin email se saltean y se informan). A discutir si conviene reusar
+  `POST /customers/email` (ya tiene DTO con customerIds) — pero los pedidos de compradores sin
+  registrar quedarían afuera; por eso propongo por pedido.
+
+
+---
+
+## 2026-07-24 — Exportaciones y email masivo (Fase 2, tarjetas 7 y 8 — Alex)
+
+**Exportar pedidos y clientes**: los dos botones "Exportar" ya bajan un archivo real con TODO lo
+que cumple los filtros del momento (no solo la página visible: se recorren todas las páginas).
+Decisión de formato: **CSV que Excel abre con doble click** (con la marca de codificación para
+las tildes y separado con punto y coma, que es lo que espera el Excel de acá) — NO sumé ninguna
+librería de Excel porque el repo no tenía y `package.json` es de todos. Si el equipo prefiere
+`.xlsx` nativo (colores, anchos de columna), se charla y se agrega la dependencia entre todos.
+Columnas: las mismas de cada tabla, más DNI/cuenta/alta en clientes.
+
+**Email masivo real**: `POST /customers/email` implementado según contrato
+(`{customerIds, subject, body}` → `{sent}`). El texto admite variables que el backend completa
+POR PERSONA: `{nombre}`, `{email}`, `{total_gastado}` y `{ultima_compra}` (con las métricas de
+verdad de cada cliente). Los clientes sin email se saltean y no cuentan; si un envío falla, sigue
+con los demás. El modal de la pantalla manda a la lista FILTRADA (búsqueda aplicada), reemplaza
+la marca de las plantillas por el nombre real del negocio, y muestra cuántos salieron.
+En local sin mail configurado cada envío sale como [MAIL STUB] en la consola.
+
+**Arreglo de paso**: el modal de email era más alto que la pantalla en ventanas chicas y el botón
+de enviar quedaba inalcanzable — mismo problema que había tenido el modal de roles, mismo
+arreglo (el contenido se desliza adentro, título y botones siempre a la vista).
+
+**FASE 2 COMPLETA (8/8)**: modelo y estados, lista con filtros, clientes con métricas, crear
+pedido manual con stock, comprobante, acciones masivas, exportar pedidos, exportar clientes +
+email masivo. Todo verificado contra el backend real y pendiente de commit.
+
+
+---
+
+## 2026-07-24 — Auditoría de mis fases + arreglos (Alex)
+
+Me hice una auditoría completa de todo lo mío (F1 + F2) buscando lagunas. Lo que encontré y
+arreglé (todo en mis archivos, sin tocar schema ni módulos ajenos):
+
+- **GRAVE — stock esquivable con renglones repetidos** (probado: con stock 27 pedí 15+15 del
+  mismo producto en dos renglones → pasaba y el stock quedaba en -3). El control validaba cada
+  renglón por separado. Ahora las cantidades se suman POR PRODUCTO antes de comparar, en el alta,
+  en la confirmación (y la devolución por cancelación también quedó agrupada). La pantalla nunca
+  generaba renglones duplicados, pero la API los aceptaba — y el servidor no debe confiar en la
+  pantalla.
+- Buscar "#4" con numeral ahora encuentra el pedido 4 (se ignora el #).
+- **El permiso `orders.export` por fin se usa**: el botón Exportar de pedidos solo aparece para
+  quien lo tiene (dueño/admin). Para clientes NO existe un permiso de exportar en el catálogo —
+  anotado acá para decidir en equipo si se agrega al seed.
+- **Botones según permisos**: el cajero/empleado ya no ve botones que le daban 403 — "Nuevo
+  pedido", "Confirmar" en lote, cambiar estado en el detalle (le dice que su rol no puede) y
+  "Email masivo" de clientes se muestran solo con el permiso que corresponde.
+- El modal de email individual ya no miente: avisa que ese envío llega en una fase más adelante
+  (es la tarjeta "Enviar email al cliente"; no la implementé porque no es de mis fases).
+- Email masivo con 0 destinatarios: botón deshabilitado ("Sin destinatarios").
+- Email inválido del comprador manual: se avisa en criollo en la pantalla antes de mandar (antes
+  llegaba el error del backend en inglés).
+- "Hace 3 mes" → "Hace 3 meses" en clientes.
+
+Mejoras visuales que me pedí a mí mismo:
+- **Configuración general en dos columnas** en pantallas anchas (la página era un scroll eterno);
+  en celular vuelve a una columna.
+- **Wizard de Nuevo pedido mejorado**: stock con color en cada tarjeta (gris/amarillo/rojo según
+  cantidad), marca "×N" y borde en los productos que ya están en el carrito, total siempre visible
+  abajo junto a los botones, se puede volver a un paso anterior tocándolo, catálogo con grilla
+  fluida (se acomoda en celular), y aviso "mostrando 9 de N" cuando la búsqueda esconde productos.
+
+
+Última pasada de validaciones del wizard (mismo día): los productos sin stock quedan bloqueados
+desde la tarjeta (el + se apaga, "Sin stock" en rojo) — no tiene sentido dejar armar un pedido
+que va a rebotar; el contador del carrito frena en el stock disponible (para productos de una
+sola variante; con varias variantes valida el backend al crear); botón para volver a la lista
+desde el primer paso; el teléfono del comprador solo acepta números. OJO anotado: un producto
+que NO controla stock hoy se ve como "Sin stock" en el wizard y queda bloqueado — cuando el
+equipo agregue el campo "vender sin stock" hay que destrabarlo acá también.
