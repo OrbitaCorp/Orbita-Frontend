@@ -13,6 +13,13 @@ class OrderPaymentInput {
   @IsNumber() amount!: number;
   @IsOptional() @IsString() reference?: string;
 }
+// (Fase 2 — Alex) Datos del comprador para pedidos manuales/online sin cliente
+// registrado: el pedido necesita saber a nombre de quién va y a qué email avisar.
+class OrderBuyerInput {
+  @IsString() name!: string;
+  @IsEmail() email!: string;
+  @IsOptional() @IsString() phone?: string;
+}
 export class CreateOrderDto {
   @IsIn(['POS', 'ONLINE']) channel!: 'POS' | 'ONLINE';
   @IsOptional() @IsUUID() branch_id?: string;
@@ -23,5 +30,6 @@ export class CreateOrderDto {
   @IsOptional() @IsUUID() cashSessionId?: string;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => OrderPaymentInput) payments?: OrderPaymentInput[];
   @IsOptional() @IsUUID() shippingAddressId?: string;
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => OrderBuyerInput) buyer?: OrderBuyerInput;
   @IsOptional() @IsNumber() shippingCost?: number;
 }

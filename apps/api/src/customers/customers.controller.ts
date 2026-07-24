@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
-import { Roles } from '../common/decorators/roles.decorator';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentBusiness } from '../common/decorators/current-business.decorator';
 import { AuthContext } from '../common/types/auth-context.type';
 import { assertMemberContext } from '../common/utils/assert-member-context';
@@ -13,48 +13,37 @@ export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Get()
-  @Roles('owner', 'admin')
+  @RequirePermission('customers.view')
   findAll(@CurrentBusiness() ctx: AuthContext, @Query() query: FindCustomersQueryDto) {
     const member = assertMemberContext(ctx);
-    void member;
-    void query;
-    return { message: 'not implemented' };
+    return this.customersService.findAll(member.businessId, query);
   }
 
   @Get(':id')
-  @Roles('owner', 'admin')
+  @RequirePermission('customers.view')
   findOne(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string) {
     const member = assertMemberContext(ctx);
-    void member;
-    void id;
-    return { message: 'not implemented' };
+    return this.customersService.findOne(member.businessId, id);
   }
 
   @Post()
-  @Roles('owner', 'admin')
+  @RequirePermission('customers.manage')
   create(@CurrentBusiness() ctx: AuthContext, @Body() dto: UpsertCustomerDto) {
     const member = assertMemberContext(ctx);
-    void member;
-    void dto;
-    return { message: 'not implemented' };
+    return this.customersService.create(member.businessId, dto);
   }
 
   @Put(':id')
-  @Roles('owner', 'admin')
+  @RequirePermission('customers.manage')
   update(@CurrentBusiness() ctx: AuthContext, @Param('id') id: string, @Body() dto: UpsertCustomerDto) {
     const member = assertMemberContext(ctx);
-    void member;
-    void id;
-    void dto;
-    return { message: 'not implemented' };
+    return this.customersService.update(member.businessId, id, dto);
   }
 
   @Post('email')
-  @Roles('owner', 'admin')
+  @RequirePermission('customers.manage')
   sendEmail(@CurrentBusiness() ctx: AuthContext, @Body() dto: CustomerEmailDto) {
     const member = assertMemberContext(ctx);
-    void member;
-    void dto;
-    return { message: 'not implemented' };
+    return this.customersService.sendEmail(member.businessId, dto);
   }
 }
