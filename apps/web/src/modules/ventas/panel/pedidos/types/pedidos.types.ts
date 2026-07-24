@@ -22,6 +22,7 @@ export interface LineaPedido {
 
 export interface Pedido {
     id:         string
+    numero?:    string   // número de pedido para mostrar (con datos reales, id es el uuid)
     clienteId:  string
     cliente:    string
     email:      string

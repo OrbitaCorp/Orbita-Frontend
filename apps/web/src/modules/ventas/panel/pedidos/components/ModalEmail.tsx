@@ -53,7 +53,7 @@ export function ModalEmail({ isOpen, onClose, cliente, onToast }: ModalEmailProp
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-                    <Button variant="primary" icon={<Send size={15} />} onClick={() => { onClose(); onToast?.(`Email enviado a ${cliente.email}`) }}>
+                    <Button variant="primary" icon={<Send size={15} />} onClick={() => { onClose(); onToast?.('El envío de emails individuales llega en una fase más adelante.') }}>
                         Enviar email
                     </Button>
                 </>

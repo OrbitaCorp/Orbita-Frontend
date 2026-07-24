@@ -39,6 +39,11 @@ interface PedidoTableProps {
     onRowClick:    (p: Pedido) => void
     onComprobante: (p: Pedido) => void
     onEmail:       (p: Pedido) => void
+    // (Fase 2 — Alex) Acciones masivas: la barra de selección le avisa al padre
+    // qué pedidos están tildados. Opcionales para no romper otros usos.
+    onConfirmarLote?: (ids: string[]) => void
+    onEtiquetas?:     (ids: string[]) => void
+    onEmailLote?:     (ids: string[]) => void
 }
 
 // ── Card mobile ────────────────────────────────────────────────────────────────
@@ -65,7 +70,7 @@ function PedidoCard({ p, onRowClick, onComprobante, onEmail }: { p: Pedido } & O
         >
             {/* id + canal */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', fontFamily: '"Geist Mono", monospace' }}>#{p.id}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', fontFamily: '"Geist Mono", monospace' }}>#{p.numero ?? p.id}</span>
                 {canalChip(p.canal)}
             </div>
 
@@ -96,7 +101,7 @@ function PedidoCard({ p, onRowClick, onComprobante, onEmail }: { p: Pedido } & O
 }
 
 // ── Tabla + Cards ──────────────────────────────────────────────────────────────
-export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: PedidoTableProps) {
+export function PedidoTable({ rows, onRowClick, onComprobante, onEmail, onConfirmarLote, onEtiquetas, onEmailLote }: PedidoTableProps) {
     const [sel,     setSel]     = useState<Set<string>>(new Set())
     const [hovered, setHovered] = useState<string | null>(null)
 
@@ -120,9 +125,9 @@ export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: Pedido
                 <div className="ped-table-wrap" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--color-primary-bg)', border: '1px solid var(--color-border)', borderRadius: 10, marginBottom: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-primary)', fontFamily: '"Geist Mono", monospace' }}>{sel.size} seleccionados</span>
                     <div style={{ flex: 1 }} />
-                    <Button variant="outline" size="sm">Confirmar</Button>
-                    <Button variant="outline" size="sm">Imprimir etiquetas</Button>
-                    <Button variant="outline" size="sm">Email masivo</Button>
+                    {onConfirmarLote && <Button variant="outline" size="sm" onClick={() => { onConfirmarLote([...sel]); setSel(new Set()) }}>Confirmar</Button>}
+                    <Button variant="outline" size="sm" onClick={() => onEtiquetas?.([...sel])}>Imprimir etiquetas</Button>
+                    <Button variant="outline" size="sm" onClick={() => onEmailLote?.([...sel])}>Email masivo</Button>
                     <button onClick={() => setSel(new Set())} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
                         <X size={14} strokeWidth={1.8} />
                     </button>
@@ -161,7 +166,7 @@ export function PedidoTable({ rows, onRowClick, onComprobante, onEmail }: Pedido
                             }}
                         >
                             <input type="checkbox" checked={s} onClick={e => e.stopPropagation()} onChange={() => toggle(p.id)} style={{ width: 15, height: 15, accentColor: 'var(--color-primary)' }} />
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>#{p.id}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', fontFamily: '"Geist Mono", monospace' }}>#{p.numero ?? p.id}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                                 <Avatar name={p.cliente} size={26} />
                                 <div style={{ minWidth: 0 }}>

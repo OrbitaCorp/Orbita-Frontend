@@ -1,7 +1,7 @@
 // Modal de email masivo a segmentos de clientes, con plantillas y variables.
 // Construido sobre el Modal genérico del design system.
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { Modal } from '@/design-system/components/Modal'
 import { Button } from '@/design-system/components/Button'
@@ -29,20 +29,46 @@ const VARIABLES = ['{nombre}', '{email}', '{ultima_compra}', '{total_gastado}']
 interface EmailMasivoModalProps {
     isOpen:  boolean
     onClose: () => void
+    // (Fase 2 — Alex) Si me pasan los destinatarios reales y la función de
+    // envío, el modal manda emails DE VERDAD (a la lista filtrada, con las
+    // variables completadas por persona en el backend). Sin estos datos sigue
+    // funcionando como muestra, para no romper nada.
+    negocio?:       string
+    destinatarios?: { id: string; nombre: string; email: string }[]
+    onEnviar?:      (ids: string[], asunto: string, cuerpo: string) => Promise<number>
 }
 
-export function EmailMasivoModal({ isOpen, onClose }: EmailMasivoModalProps) {
+export function EmailMasivoModal({ isOpen, onClose, negocio, destinatarios, onEnviar }: EmailMasivoModalProps) {
+    const marca = negocio ?? 'Rama Indumentaria'
+    const conMarca = (t: string) => t.replace(/Rama Indumentaria/g, marca)
+    const esReal = !!(destinatarios && onEnviar)
+
     const [dest, setDest] = useState('todos')
     const [pl, setPl] = useState<PlantillaKey>('nueva')
-    const [asunto, setAsunto] = useState(PLANTILLAS.nueva.a)
-    const [cuerpo, setCuerpo] = useState(PLANTILLAS.nueva.c)
+    const [asunto, setAsunto] = useState(() => conMarca(PLANTILLAS.nueva.a))
+    const [cuerpo, setCuerpo] = useState(() => conMarca(PLANTILLAS.nueva.c))
     const [enviando, setEnviando] = useState(false)
     const [enviado, setEnviado] = useState(false)
+    const [enviadosReal, setEnviadosReal] = useState<number | null>(null)
+    const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
     const taRef = useRef<HTMLTextAreaElement>(null)
 
-    const count = DEST.find(d => d[0] === dest)![2]
-    const pick = (k: PlantillaKey) => { setPl(k); setAsunto(PLANTILLAS[k].a); setCuerpo(PLANTILLAS[k].c) }
-    const render = (txt: string) => txt.replace(/\{nombre\}/g, 'María')
+    const count = destinatarios ? destinatarios.length : DEST.find(d => d[0] === dest)![2]
+    const pick = (k: PlantillaKey) => { setPl(k); setAsunto(conMarca(PLANTILLAS[k].a)); setCuerpo(conMarca(PLANTILLAS[k].c)) }
+    const nombreEjemplo = destinatarios?.[0]?.nombre?.split(' ')[0] ?? 'María'
+    const render = (txt: string) => txt.replace(/\{nombre\}/g, nombreEjemplo)
+
+    // Cada vez que se abre, arranca una redacción fresca con el nombre del
+    // negocio ya cargado (y limpia el resultado del envío anterior).
+    useEffect(() => {
+        if (!isOpen) return
+        setEnviado(false)
+        setEnviadosReal(null)
+        setErrorEnvio(null)
+        setAsunto(conMarca(PLANTILLAS[pl].a))
+        setCuerpo(conMarca(PLANTILLAS[pl].c))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen])
 
     const insertVar = (v: string) => {
         const ta = taRef.current
@@ -52,7 +78,20 @@ export function EmailMasivoModal({ isOpen, onClose }: EmailMasivoModalProps) {
         setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = s + v.length }, 0)
     }
 
-    const enviar = () => { setEnviando(true); setTimeout(() => { setEnviando(false); setEnviado(true) }, 2000) }
+    // Con datos reales manda por el backend y cuenta cuántos salieron;
+    // en modo muestra solo simula.
+    const enviar = () => {
+        if (destinatarios && onEnviar) {
+            setEnviando(true)
+            setErrorEnvio(null)
+            onEnviar(destinatarios.map(d => d.id), asunto, cuerpo)
+                .then(n => { setEnviadosReal(n); setEnviado(true) })
+                .catch(() => setErrorEnvio('No se pudieron enviar los emails. Probá de nuevo.'))
+                .finally(() => setEnviando(false))
+            return
+        }
+        setEnviando(true); setTimeout(() => { setEnviando(false); setEnviado(true) }, 2000)
+    }
 
     const inputBase: React.CSSProperties = {
         width: '100%', boxSizing: 'border-box', background: 'var(--color-bg)',
@@ -69,17 +108,26 @@ export function EmailMasivoModal({ isOpen, onClose }: EmailMasivoModalProps) {
             footer={enviado
                 ? <>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-success)', fontWeight: 600 }}>
-                        <Check size={16} strokeWidth={2.4} /> Email enviado a {count} clientes
+                        <Check size={16} strokeWidth={2.4} /> Email enviado a {enviadosReal ?? count} clientes
                     </div>
                     <Button variant="outline" onClick={onClose}>Cerrar</Button>
                 </>
                 : <>
                     <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-                    <Button variant="primary" loading={enviando} onClick={enviar}>{enviando ? 'Enviando…' : `Enviar a ${count} clientes`}</Button>
+                    <Button variant="primary" loading={enviando} disabled={count === 0} onClick={enviar}>{enviando ? 'Enviando…' : count === 0 ? 'Sin destinatarios' : `Enviar a ${count} cliente${count === 1 ? '' : 's'}`}</Button>
                 </>}
         >
+            {/* Mismo arreglo que en el modal de roles: el contenido es más alto que
+                la pantalla en ventanas chicas, así que se desliza acá adentro y el
+                título y los botones quedan siempre a la vista. */}
+            <div style={{ maxHeight: '58vh', overflowY: 'auto', paddingRight: 6 }}>
             {/* Destinatarios */}
             <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-body)', display: 'block', marginBottom: 8 }}>¿A quiénes enviás?</label>
+            {esReal ? (
+                <div style={{ padding: '10px 14px', border: '1px solid var(--color-primary)', background: 'var(--color-primary-bg)', borderRadius: 8, marginBottom: 16, fontSize: 13, color: 'var(--color-text)' }}>
+                    A los <strong>{count}</strong> clientes de la lista filtrada que tienen email.
+                </div>
+            ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
                 {DEST.map(([id, l, n]) => {
                     const a = dest === id
@@ -94,6 +142,11 @@ export function EmailMasivoModal({ isOpen, onClose }: EmailMasivoModalProps) {
                     )
                 })}
             </div>
+            )}
+
+            {errorEnvio && (
+                <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: 'var(--color-error-bg)', fontSize: 13, color: 'var(--color-error)' }}>{errorEnvio}</div>
+            )}
 
             {/* Plantillas */}
             <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-body)', display: 'block', marginBottom: 8 }}>Plantillas rápidas</label>
@@ -124,10 +177,11 @@ export function EmailMasivoModal({ isOpen, onClose }: EmailMasivoModalProps) {
             {/* Vista previa */}
             <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderTop: '3px solid var(--color-primary)', borderRadius: 10, padding: 16 }}>
                 <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 8 }}>Vista previa</div>
-                <div style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>De: Rama Indumentaria</div>
-                <div style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--color-border)' }}>Para: María Fernández</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace' }}>De: {marca}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted)', fontFamily: '"Geist Mono", monospace', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--color-border)' }}>Para: {destinatarios?.[0]?.nombre ?? 'María Fernández'}{count > 1 ? ` (+${count - 1} más)` : ''}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>{render(asunto) || '(sin asunto)'}</div>
                 <div style={{ fontSize: 13, color: 'var(--color-body)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{render(cuerpo) || '(sin contenido)'}</div>
+            </div>
             </div>
         </Modal>
     )

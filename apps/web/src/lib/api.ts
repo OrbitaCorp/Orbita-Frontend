@@ -420,3 +420,205 @@ export function updateRole(id: string, input: UpsertRoleInput) {
 export function deleteRole(id: string) {
   return panelRequest<{ ok: boolean }>(`/roles/${id}`, { method: 'DELETE' })
 }
+
+
+// ─── Panel: Pedidos (Fase 2 — Alex) ─────────────────────────────────────────
+// Las pantallas de pedidos del panel usan estas funciones: la lista con
+// filtros, el detalle y el cambio de estado. Mismo mecanismo que Configuración:
+// la sesión real del panel.
+
+export type ApiOrderStatus =
+  | 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
+
+export type ApiOrderSummary = {
+  id: string
+  orderNumber: number
+  channel: 'POS' | 'ONLINE'
+  status: ApiOrderStatus
+  customerId: string | null
+  customerName: string | null
+  customerEmail: string | null
+  total: number
+  itemCount: number
+  items: { productName: string; quantity: number; unitPrice: number }[]
+  createdAt: string
+}
+
+export type ApiOrdersPage = {
+  data: ApiOrderSummary[]
+  total: number
+  page: number
+  limit: number
+  // Cuántos pedidos hay en cada estado (para los contadores de las pestañas).
+  counts: Partial<Record<ApiOrderStatus, number>>
+}
+
+export type ApiOrderDetail = {
+  id: string
+  orderNumber: number
+  fiscalNumber: string | null
+  channel: 'POS' | 'ONLINE'
+  status: ApiOrderStatus
+  customerId: string | null
+  customer: { id: string; firstName: string; lastName: string | null; email: string | null } | null
+  subtotal: number
+  discountTotal: number
+  total: number
+  notes: string | null
+  createdAt: string
+  items: {
+    id: string; variantId: string; productName: string; variantLabel: string | null
+    quantity: number; unitPrice: number; editedPrice: number | null
+    discountAmount: number; isConcept: boolean; notes: string | null
+  }[]
+  payments: { id: string; method: string; status: string; amount: number }[]
+  onlineOrderDetails?: {
+    buyerName: string; buyerEmail: string; buyerPhone: string | null
+    tracking: string | null; shippingCost: number | null
+  } | null
+  statusHistory: { status: ApiOrderStatus; createdAt: string }[]
+}
+
+export function getOrders(params: {
+  status?: ApiOrderStatus
+  channel?: 'POS' | 'ONLINE'
+  search?: string
+  from?: string
+  to?: string
+  page?: number
+  limit?: number
+} = {}) {
+  const q = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') q.set(k, String(v))
+  })
+  const qs = q.toString()
+  return panelRequest<ApiOrdersPage>(`/orders${qs ? `?${qs}` : ''}`)
+}
+
+export function getOrder(id: string) {
+  return panelRequest<ApiOrderDetail>(`/orders/${id}`)
+}
+
+export function updateOrderStatus(id: string, status: ApiOrderStatus) {
+  return panelRequest<ApiOrderDetail>(`/orders/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}
+
+
+// ─── Panel: Clientes (Fase 2 — Alex) ────────────────────────────────────────
+// La pantalla de clientes usa estas funciones: la lista con sus números
+// (pedidos, gastado, ticket, última compra — los calcula el backend mirando
+// los pedidos reales) y el detalle con los pedidos del cliente.
+
+export type ApiCustomer = {
+  id: string
+  firstName: string
+  lastName: string | null
+  email: string | null
+  phone: string | null
+  dni: string | null
+  hasAccount: boolean
+  orderCount: number
+  totalSpent: number
+  avgTicket: number
+  lastOrderAt: string | null
+  createdAt: string
+}
+
+export type ApiCustomersPage = { data: ApiCustomer[]; total: number; page: number; limit: number }
+
+export type ApiCustomerDetail = ApiCustomer & {
+  orders: {
+    id: string; orderNumber: number; channel: 'POS' | 'ONLINE'
+    status: ApiOrderStatus; total: number; itemCount: number; createdAt: string
+  }[]
+  addresses: {
+    id: string; alias: string | null; street: string; floor: string | null
+    city: string; zip: string | null; isDefault: boolean
+  }[]
+}
+
+export function getCustomers(params: { search?: string; page?: number; limit?: number } = {}) {
+  const q = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') q.set(k, String(v))
+  })
+  const qs = q.toString()
+  return panelRequest<ApiCustomersPage>(`/customers${qs ? `?${qs}` : ''}`)
+}
+
+export function getCustomer(id: string) {
+  return panelRequest<ApiCustomerDetail>(`/customers/${id}`)
+}
+
+
+// ─── Panel: catálogo liviano + alta de pedido (Fase 2, tarjeta 4 — Alex) ────
+// Lo mínimo que necesita la pantalla "Nuevo pedido": buscar productos del
+// catálogo real (con su stock), elegir la variante, y crear el pedido.
+
+export type ApiProductListItem = {
+  id: string
+  name: string
+  basePrice: number
+  totalStock: number
+  variantCount: number
+  primaryImageUrl: string | null
+  status: string
+}
+
+export function panelGetProducts(search?: string) {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : ''
+  return panelRequest<{ data: ApiProductListItem[]; total: number }>(`/products${qs}`)
+}
+
+export type ApiProductDetail = {
+  id: string
+  name: string
+  basePrice: number
+  variants: { id: string; price: number; variantLabel?: string | null }[]
+}
+
+export function panelGetProduct(id: string) {
+  return panelRequest<ApiProductDetail>(`/products/${id}`)
+}
+
+export type CreateOrderInput = {
+  customerId?: string
+  buyer?: { name: string; email: string; phone?: string }
+  items: { variantId: string; quantity: number; notes?: string }[]
+  notes?: string
+  shippingCost?: number
+}
+
+// Crea un pedido manual desde el panel: nace "pendiente" y el stock se
+// descuenta recién al confirmarlo. Si falta stock, el backend lo rechaza
+// con el detalle de qué producto no alcanza.
+export function createOrder(input: CreateOrderInput) {
+  return panelRequest<ApiOrderDetail>('/orders', {
+    method: 'POST',
+    body: JSON.stringify({ channel: 'ONLINE', ...input }),
+  })
+}
+
+
+// Comprobante del pedido: devuelve la dirección para verlo y, si le paso un
+// email, se lo manda al cliente con el detalle de la compra.
+export function receiptOrder(id: string, email?: string) {
+  return panelRequest<{ url: string; sent: boolean }>(`/orders/${id}/receipt`, {
+    method: 'POST',
+    body: JSON.stringify(email ? { email } : {}),
+  })
+}
+
+
+// Email individual o masivo a clientes. El asunto y el cuerpo admiten
+// variables por persona: {nombre}, {email}, {total_gastado}, {ultima_compra}.
+export function sendCustomersEmail(customerIds: string[], subject: string, body: string) {
+  return panelRequest<{ sent: number }>('/customers/email', {
+    method: 'POST',
+    body: JSON.stringify({ customerIds, subject, body }),
+  })
+}
